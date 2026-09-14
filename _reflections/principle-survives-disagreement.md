@@ -67,13 +67,11 @@ They are not the same thing.
 
 To take another person's experience seriously does not require us to adopt their interpretation. To treat someone with dignity does not require us to conclude that their behavior was appropriate.
 
-Compassion does not require closeness. Understanding does not eliminate accountability. And listening does not mean surrendering our own experience.
+Compassion does not require closeness. Understanding does not eliminate accountability. Listening does not mean surrendering our own experience.
 
 There is another possibility.
 
 I can believe that my perspective matters and still make room for yours. I can believe that something needs to change and still care about what happens to you in the process. I can choose greater distance without requiring you to become less human in my mind.
-
-That distinction matters.
 
 Sometimes the healthiest response to a difficult relationship is not greater agreement or greater intimacy.
 
@@ -109,7 +107,7 @@ But those choices no longer have to emerge entirely from the force coming toward
 
 I have somewhere else to stand.
 
-## What Power Feels Like From the Inside
+## Power and the Ability to Escalate
 
 Power introduces another complication.
 
@@ -139,11 +137,7 @@ That does not mean I abandon judgment.
 
 It means judgment is no longer the only capacity available to me.
 
-## The Ability to Escalate
-
-There is a particular form of power that appears frequently in conflict:
-
-The ability to escalate.
+One of the most consequential forms of power in conflict is the ability to escalate.
 
 We can send the email. Invoke the rule. Call the lawyer. Expose the inconsistency. Apply pressure. Demand an answer. Prove the point.
 
@@ -171,13 +165,7 @@ Those goals do not always require the same response.
 
 Sometimes strength means moving toward. Sometimes it means stepping away. Sometimes it means changing the distance without changing the principle.
 
-## Distance Is Not Indifference
-
-This distinction matters because we often treat distance as evidence that a relationship has failed.
-
-But distance can serve many purposes.
-
-It can reduce force. It can make perspective possible. It can create room for emotion to settle. It can protect something fragile from repeated pressure. It can allow two people to remain connected without continually activating the worst parts of one another.
+## Distance and Expression
 
 The amount of distance a relationship can sustain is not necessarily a measure of how much we care.
 
@@ -201,9 +189,7 @@ The principle remains.
 
 The distance adapts.
 
-## The Principle and Its Expression
-
-If a principle has to survive disagreement, that does not mean it should always produce identical behavior.
+And if a principle has to survive disagreement, that does not mean it should always produce identical behavior.
 
 Dignity may require listening in one situation. Greater distance in another. Consequences somewhere else. Patience here. Directness there. Restraint now. Intervention later.
 
@@ -219,11 +205,17 @@ And because that discernment is imperfect, we will sometimes get it wrong.
 
 ## The Things We Learn About Ourselves
 
-Conflict also has an uncomfortable way of revealing patterns we did not previously understand.
+Conflict has an uncomfortable way of revealing patterns we did not previously understand.
 
-Sometimes recovering our center also changes what we are able to see about our own participation in the conflict. We may discover that what felt from the inside like urgency, persistence, or an attempt to restore connection was experienced by someone else as pressure. We may see that our response to distance created more distance, or that our effort to resolve an activated situation contributed to keeping it activated.
+Sometimes recovering our center also changes what we are able to see about our own participation in the conflict.
 
-That recognition does not require us to abandon our account of what happened. It asks us to make our account large enough to include our own effect on the field.
+We may discover that what felt from the inside like urgency, persistence, or an attempt to restore connection was experienced by someone else as pressure.
+
+We may see that our response to distance created more distance, or that our effort to resolve an activated situation contributed to keeping it activated.
+
+That recognition does not require us to abandon our account of what happened.
+
+It asks us to make our account large enough to include our own effect on the field.
 
 Recognizing those patterns can be painful.
 
