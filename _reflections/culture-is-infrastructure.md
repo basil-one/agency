@@ -22,7 +22,7 @@ Longstanding conflicts remained longstanding. Building issues that had survived 
 
 An owner would approach the property manager and discover that something required a Board decision. They would approach the Board and hear that management was supposed to handle it.
 
-The property manager would operate reasonably within its scope. The Board might reasonably believe it had delegated the work. And a difficult problem could remain unresolved while everyone involved sincerely believed someone else was responsible for moving it forward.
+The property manager might reasonably operate within its scope. The Board might reasonably believe it had delegated the work. And a difficult problem could remain unresolved while everyone involved sincerely believed someone else was responsible for moving it forward.
 
 Eventually, I began to suspect that the strongest variable was not the property management company.
 
@@ -42,8 +42,6 @@ A professional property manager can administer a system. It cannot substitute fo
 
 That distinction took me a while to understand.
 
-The economics of professional management helped make it clearer.
-
 A management company has many clients. It needs defined scopes, standardized processes, repeatable ways of working, and enough consistency across accounts to operate economically.
 
 That is not a criticism. It is the structure of the model.
@@ -56,11 +54,11 @@ A management company inevitably has to apply some degree of standardization to s
 
 When the underlying organization is healthy, that can work extremely well.
 
-When the underlying organization is not healthy, another layer does not necessarily repair it.
+When it is not, another layer does not necessarily repair it.
 
 Sometimes it simply gives the dysfunction somewhere else to travel.
 
-## What Can Be Delegated
+## What the System Can Delegate
 
 Eventually, we tried a different approach.
 
@@ -76,7 +74,7 @@ A lot can be purchased.
 
 Bookkeeping can be purchased. Legal expertise can be purchased. Insurance expertise can be purchased. Administrative support can be purchased. Specialized work can be purchased. A property manager can be useful augmentation for many of those things.
 
-But some things remain stubbornly difficult to outsource.
+But some things remain difficult to outsource.
 
 Leadership. Accountability. Transparency. Ownership. Culture.
 
@@ -94,7 +92,13 @@ I no longer see those things as separate.
 
 The social fabric was part of the infrastructure through which governance happened.
 
-I have learned that the environment itself teaches. A system continually teaches people what participation means, where responsibility lives, whether disagreement is safe, whether reasoning will be visible, and whether speaking up is likely to lead to understanding or escalation. None of those lessons need to be written into a policy. People learn them by participating in the system.
+I have learned that the environment itself teaches.
+
+A system continually teaches people what participation means, where responsibility lives, whether disagreement is safe, whether reasoning will be visible, and whether speaking up is likely to lead to understanding or escalation.
+
+None of those lessons need to be written into a policy.
+
+People learn them by participating in the system.
 
 Knowing one another mattered. It helped us understand who had relevant expertise. Who cared about particular issues. Who might enjoy contributing. Where old tensions existed. Where misunderstandings were forming. Who could help. Who needed help.
 
@@ -184,9 +188,9 @@ There is another reason this matters now.
 
 The informational environment has changed.
 
-AI has dramatically reduced the amount of time and specialized skill required to understand complex systems.
+AI has dramatically reduced the amount of time and specialized skill required to begin understanding complex systems.
 
-A person can take governing documents, correspondence, timelines, policies, competing arguments, and years of institutional material and begin organizing them in ways that once required far more time and expertise.
+A person can take governing documents, correspondence, timelines, policies, competing arguments, and years of institutional material and organize them in ways that once required far more time and expertise.
 
 That does not make every conclusion correct. It does not replace professional judgment. It does not replace legal advice where legal advice is needed.
 
@@ -202,7 +206,9 @@ The healthier response is not to become more defensive.
 
 It is to become more legible.
 
-Make the information available. Make the reasoning visible. Acknowledge where judgment exists. Explain how discretion is being exercised. Allow people to inspect the system. Trust that clarity can withstand scrutiny.
+Make the information available. Make the reasoning visible. Acknowledge where judgment exists. Explain how discretion is being exercised. Allow people to inspect the system.
+
+Trust that clarity can withstand scrutiny.
 
 In that environment, legitimacy comes less from informational advantage and more from the quality and visibility of the reasoning itself.
 
@@ -212,7 +218,9 @@ This is also how I have come to think about outside expertise more broadly.
 
 The best outside support increases the capacity of the people inside the system.
 
-It augments agency. It helps people understand more. See more. Decide more clearly. Execute more effectively.
+It augments agency.
+
+It helps people understand more. See more. Decide more clearly. Execute more effectively.
 
 It does not quietly become the place where ownership goes to disappear.
 
@@ -224,19 +232,13 @@ It still has to make decisions. It still has to live with those decisions. It st
 
 That part cannot be outsourced.
 
-## A Few People Can Change a System
+## Enough Healthy Participation
 
-None of this requires everyone to become equally enthusiastic about governance.
-
-That may be another mistake we make.
-
-We imagine that healthy systems require universal engagement.
-
-Usually they do not.
+Healthy systems do not require everyone to become equally enthusiastic about governance.
 
 A few people working well together can change the trajectory of a system.
 
-Two people create movement. Three creates more resilience. Four or five people with complementary strengths can distribute work enough that participation stops consuming anyone's life.
+Two people create movement. Three create more resilience. Four or five people with complementary strengths can distribute work enough that participation stops consuming anyone's life.
 
 The goal is not maximum involvement.
 
@@ -256,7 +258,7 @@ A principle has to survive disagreement.
 
 It is not much of a principle if it applies only when everyone is aligned.
 
-But I think organizations face a parallel challenge.
+But organizations face a parallel challenge.
 
 For a principle to survive disagreement repeatedly, the culture itself has to be capable of carrying disagreement.
 
@@ -292,7 +294,7 @@ We can outsource work. We can outsource expertise. We can outsource administrati
 
 But eventually, human beings still have to decide how they are going to participate with one another.
 
-They have to tolerate some disagreement. Own decisions. Make reasoning visible. Create enough trust for other people to participate. And establish a culture capable of carrying the weight placed upon it.
+They have to tolerate some disagreement. Own decisions. Make reasoning visible. Create enough trust for other people to participate. Establish a culture capable of carrying the weight placed upon it.
 
 That is infrastructure too.
 
