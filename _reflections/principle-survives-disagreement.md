@@ -221,7 +221,9 @@ And because that discernment is imperfect, we will sometimes get it wrong.
 
 Conflict also has an uncomfortable way of revealing patterns we did not previously understand.
 
-Ways we communicate when frightened. Ways we become forceful when something matters deeply. Ways we pursue someone else's understanding when we have lost connection with our own center. Ways our history enters the present without announcing itself.
+Sometimes recovering our center also changes what we are able to see about our own participation in the conflict. We may discover that what felt from the inside like urgency, persistence, or an attempt to restore connection was experienced by someone else as pressure. We may see that our response to distance created more distance, or that our effort to resolve an activated situation contributed to keeping it activated.
+
+That recognition does not require us to abandon our account of what happened. It asks us to make our account large enough to include our own effect on the field.
 
 Recognizing those patterns can be painful.
 

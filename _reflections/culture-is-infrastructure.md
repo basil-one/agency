@@ -94,6 +94,8 @@ I no longer see those things as separate.
 
 The social fabric was part of the infrastructure through which governance happened.
 
+I have learned that the environment itself teaches. A system continually teaches people what participation means, where responsibility lives, whether disagreement is safe, whether reasoning will be visible, and whether speaking up is likely to lead to understanding or escalation. None of those lessons need to be written into a policy. People learn them by participating in the system.
+
 Knowing one another mattered. It helped us understand who had relevant expertise. Who cared about particular issues. Who might enjoy contributing. Where old tensions existed. Where misunderstandings were forming. Who could help. Who needed help.
 
 It gave us ways to distribute responsibility rather than continually asking the same few people to carry everything.
@@ -156,9 +158,7 @@ When that reasoning remains invisible, people fill in the gaps.
 
 Usually with whatever explanation makes sense from where they are standing.
 
-Sometimes that interpretation is generous. Sometimes it is not.
-
-But opacity creates the conditions for speculation.
+Different people can observe the same decision from different histories, assumptions, and positions within the system and construct very different explanations for what occurred.
 
 Transparency does not guarantee agreement.
 
@@ -260,7 +260,7 @@ But I think organizations face a parallel challenge.
 
 For a principle to survive disagreement repeatedly, the culture itself has to be capable of carrying disagreement.
 
-Without hiding from it. Without immediately escalating it. Without outsourcing it. Without turning the people involved into the problem.
+Without hiding from it. Without automatically escalating it. Without outsourcing what the system itself still has to own. Without reducing the people involved to the problem.
 
 That requires more than procedures.
 
