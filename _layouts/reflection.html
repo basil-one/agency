@@ -5,8 +5,14 @@ layout: default
 <section id="hero">
   <h1>{{ page.title }}</h1>
 
+  {% assign reading_words = content | number_of_words %}
+  {% assign reading_minutes = reading_words | divided_by: 200.0 | ceil %}
+  {% if reading_minutes < 1 %}{% assign reading_minutes = 1 %}{% endif %}
   {% if page.date %}
-    <p class="publish-date"><time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%B %-d, %Y" }}</time></p>
+    <p class="publish-date">
+      <time datetime="{{ page.date | date_to_xmlschema }}">{{ page.date | date: "%B %-d, %Y" }}</time>
+      &middot; {{ reading_minutes }} min read
+    </p>
   {% endif %}
 
   {% if page.subtitle %}
