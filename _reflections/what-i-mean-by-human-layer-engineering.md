@@ -56,7 +56,7 @@ Instead, one of our instructors placed two foam noodles on the mat to create a l
 
 Suddenly the path became visible.
 
-We still had to learn how to roll. But the environment was now helping us learn.
+We still had to learn how to roll. But the environment was now helping us learn. It's a small story, but I've come back to it before — it's also at the center of [We Walk Together](/reflections/we-walk-together/).
 
 That is close to what I've come to mean by **human-layer engineering**:
 
@@ -86,11 +86,17 @@ Once I had language for this, I began recognizing that much of my work had alway
 
 Sometimes I am brought into an initiative that has been discussed for months but cannot seem to move. Everyone may be competent. Everyone may care. There may already be meetings, plans, project managers, executive sponsors, and communication channels.
 
+I've come to think of what happens next as shepherding. Not driving the initiative from the front. Staying close enough to it, and to the people in it, that it can find its own way forward.
+
 What is missing is not more activity.
 
 Different people may be operating from different interpretations of the problem. Important perspectives are isolated. Tension consumes attention. Decisions are made but do not hold.
 
-In those situations, the work may look like facilitation: bring some of the right people into the same conversation, slow things down enough to understand what each person is seeing, surface tension without allowing it to consume the room, make the intention visible, and stay with the conversation long enough for something shared to form.
+In those situations, the work may look like facilitation.
+
+Bring the right people into the same conversation. Slow things down enough to understand what each person is seeing. Surface the tension without letting it consume the room. Make the intention visible.
+
+Stay with the conversation long enough for something shared to form.
 
 Then let people act.
 
@@ -98,9 +104,9 @@ Sometimes the work looks like coaching.
 
 Leadership requires learning to perceive a field that includes more than our own intentions. What am I actually noticing? What am I assuming? What energy am I bringing into the situation? What happens to the room when I bring it? What am I protecting? What am I actually trying to create?
 
-Under enough pressure, ten possible responses can feel like one: fight, defend, prove, withdraw, make them understand.
+Under enough pressure, ten possible responses can feel like one: fight, defend, prove, withdraw, make them understand — the same collapse I describe in [The Moral Mirror](/reflections/the-moral-mirror/).
 
-Awareness can reopen the field.
+The [Paradigm Awareness Reflection](https://circle.basil.one/lenses/paradigm/) names the shift underneath this: a survival orientation narrows the field to protecting what is. Neutrality opens enough space to be with what is. From there, curiosity can reopen the field toward creating what could be.
 
 When another choice becomes visible, agency becomes possible.
 
@@ -114,7 +120,7 @@ That capacity may not appear on an organizational chart.
 
 But it may determine almost everything the organization is capable of doing.
 
-**Culture is infrastructure.** It is not the soft material surrounding the operating system. It is part of the operating system.
+Elsewhere, I've come to see [culture as infrastructure](/reflections/culture-is-infrastructure/) — not the soft material surrounding the operating system, but part of it.
 
 ## Noticing the Water
 
@@ -132,9 +138,9 @@ Not because every current needs to be changed. Sometimes the water is fine. Some
 
 But when capable people repeatedly care and repeatedly fail to move together, it may be worth looking somewhere other than the people themselves.
 
-Look at the conditions through which they are trying to participate.
+Look at the water they are trying to swim in.
 
-I've been exploring some of these conditions more explicitly through [Circle3](https://circle.basil.one/paper), a compact pattern language for making the practice of creating shared understanding, alignment, and coordinated action more visible and repeatable.
+Some of this I've tried to make more explicit through [Circle3](https://circle.basil.one/paper), a compact pattern language for making the practice of creating shared understanding, alignment, and coordinated action more visible and repeatable.
 
 ## Creating the Conditions for Agency
 
@@ -144,7 +150,7 @@ The more seriously we take the human layer, the less interested we should become
 
 People still have to choose whether to participate, listen, speak, reconsider, take responsibility, or change. No facilitator, coach, leader, framework, or methodology can make those choices for another person.
 
-The work is to create conditions in which more choices become possible.
+The work is to create conditions in which people can choose with more discernment.
 
 Sometimes that means creating a conversation. Sometimes it means changing a structure. Sometimes it means making reasoning visible. Sometimes it means helping someone recover their center.
 
@@ -153,6 +159,10 @@ Sometimes it means getting out of the way.
 The people still have to walk.
 
 We can make the path more visible.
+
+The team still gets reorganized. The process still gets rewritten. The strategy still gets revised.
+
+But now something else gets engineered too.
 
 Perhaps that is ultimately what human-layer engineering is for:
 
