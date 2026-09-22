@@ -134,6 +134,8 @@ But when capable people repeatedly care and repeatedly fail to move together, it
 
 Look at the conditions through which they are trying to participate.
 
+I've been exploring some of these conditions more explicitly through [Circle3](https://circle.basil.one/paper), a compact pattern language for making the practice of creating shared understanding, alignment, and coordinated action more visible and repeatable.
+
 ## Creating the Conditions for Agency
 
 There is a paradox here.
