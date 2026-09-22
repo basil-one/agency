@@ -4,8 +4,8 @@ title: What I Mean by Human-Layer Engineering
 subtitle: When we reorganize the team, rewrite the process, and still nothing changes, what haven't we touched?
 description: >-
   On the invisible layer of interpretation, relationship, and trust beneath
-  every strategy and structure — and why engineering the conditions people
-  act within matters as much as engineering the systems themselves.
+  every strategy and structure — and what it means to engineer the conditions
+  in which people participate without engineering the people themselves.
 date: 2026-09-22
 css_id: reflection-what-i-mean-by-human-layer-engineering
 ---
@@ -50,13 +50,13 @@ Someone is resistant. Leadership isn't aligned. The team lacks accountability. C
 
 Sometimes those descriptions are accurate. But sometimes they are symptoms of something happening in the environment around the people.
 
-A teacher can keep telling a student to roll straight.
+I saw a simple example of this while learning Aikido with my children. We were struggling with forward roll-outs, repeatedly drifting sideways instead of rolling straight. An instructor could have kept correcting us: *roll straight.*
 
-Or they can put two foam noodles on the mat and create a lane.
+Instead, one of our instructors placed two foam noodles on the mat to create a lane.
 
-Suddenly the path becomes visible.
+Suddenly the path became visible.
 
-The student still has to roll. But now the environment is helping them learn.
+We still had to learn how to roll. But the environment was now helping us learn.
 
 That is close to what I've come to mean by **human-layer engineering**:
 
