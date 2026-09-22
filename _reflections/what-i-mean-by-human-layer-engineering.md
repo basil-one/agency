@@ -40,17 +40,15 @@ Suddenly the path became visible.
 
 We still had to learn how to roll. The noodles did not do the work for us. But they changed the environment in which we were learning.
 
-Something that had looked like a problem with our performance was partly a problem with the conditions surrounding the performance.
+Something that had looked like a problem with our performance was partly a problem with the conditions surrounding it.
 
 It is a small example, but I've returned to it often. It is also at the center of [We Walk Together](/reflections/we-walk-together/).
 
 Organizations have environments too.
 
-Some of them are visible: reporting structures, processes, roles, incentives, technologies, meeting cadences.
+Some are visible: reporting structures, processes, roles, incentives, technologies, meeting cadences.
 
-Others are much harder to see.
-
-Who can disagree with whom. Whose opinion everyone waits for. Which concerns can be raised safely. What people believe the project is actually for. Whether a decision is really a decision. Whether people feel responsible for something or merely assigned to it.
+Others are harder to see: who can disagree with whom, what people believe the work is actually for, whether a decision is really a decision, whether people feel responsible for something or merely assigned to it.
 
 These conditions shape what people are able and willing to do together.
 
@@ -76,9 +74,7 @@ Human-layer work makes those conditions workable.
 
 Sometimes that means bringing people into the same conversation and slowing it down enough to understand what each person is actually seeing.
 
-Sometimes it means making the intention of an initiative explicit enough that people can decide how they relate to it.
-
-Sometimes it means surfacing a disagreement before it hardens into resistance.
+Sometimes it means making an intention or disagreement explicit before people organize themselves around different assumptions.
 
 Sometimes it means helping a leader notice what they are bringing into a room — what they are assuming, protecting, reacting to, or trying to create.
 
@@ -96,23 +92,13 @@ It is part of the operating system.
 
 ## The Problem Is That the Conditions Are Invisible
 
-The difficulty is that most of this does not appear on a diagram.
+Most of this does not appear on a diagram.
 
 An organizational chart can show who reports to whom. It cannot show whose approval everyone quietly waits for before speaking.
 
 A project plan can show who owns a deliverable. It cannot show that three people have fundamentally different understandings of why the project exists.
 
-A meeting invitation can show twelve attendees. It cannot show whether twelve people are participating in the same conversation.
-
-And because these conditions are largely invisible, we easily mistake them for reality itself.
-
-A group learns who can say what.
-
-It learns which disagreements are safe.
-
-It learns what happens when someone challenges the center of gravity.
-
-It learns which ideas receive energy and which quietly disappear.
+Groups learn who can say what. Which disagreements are safe. What happens when someone challenges the center of gravity. Which ideas receive energy and which quietly disappear.
 
 Eventually nobody has to explain these rules. People simply move within them.
 
@@ -120,23 +106,19 @@ A fish does not need a theory of water to swim.
 
 Neither do we.
 
-That is part of what makes the human layer powerful. It is also what makes it difficult to change.
+The environment can begin to feel less like an environment and more like reality.
 
 We are inside the conditions we are trying to perceive.
 
 ## Why This Work Is Hard to Do Alone
 
-This creates a strange problem.
-
 The people closest to a situation usually know the most about it.
 
 They are also the people most immersed in the interpretations, relationships, histories, and assumptions that make up the situation.
 
-That can make it surprisingly difficult to see the system while participating in it.
+That makes it difficult to see the system while participating in it.
 
 Under pressure, the field can narrow further. Ten possible responses begin to feel like one: defend, prove, withdraw, push harder, make them understand.
-
-From inside the situation, the response can feel obvious because the conditions producing it are invisible.
 
 This is one reason another person, a practice, or a framework can matter.
 
@@ -168,15 +150,11 @@ The work is not to determine what people should think.
 
 It is to create conditions in which people can think together.
 
-Conditions where different interpretations can become visible.
+Where different interpretations can become visible.
 
 Where disagreement can remain workable.
 
-Where someone can say what everyone else is quietly noticing.
-
 Where intention becomes clear enough for people to decide whether and how they want to contribute.
-
-Where more than one response remains possible.
 
 That does not guarantee an outcome.
 
