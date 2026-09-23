@@ -19,11 +19,11 @@ When our behavior is interpreted without the context we are living through, we u
 
 From underneath power, the principle often seems obvious.
 
-They should listen.
+*They should listen.*
 
-They should try to understand.
+*They should try to understand.*
 
-They should not use their position simply because they can.
+*They should not use their position simply because they can.*
 
 And perhaps we are right.
 
