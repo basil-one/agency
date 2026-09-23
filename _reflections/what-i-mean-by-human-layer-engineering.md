@@ -28,7 +28,7 @@ But sometimes what looks like a problem with people is really a problem with the
 
 ## The Person or the Environment?
 
-I saw a simple version of this while learning Aikido with my children.
+I saw a simple version of this while learning Aikido with my children, a story I've also told in [We Walk Together](/reflections/we-walk-together/).
 
 We were practicing forward roll-outs and repeatedly drifting sideways. An instructor could have kept correcting us:
 
