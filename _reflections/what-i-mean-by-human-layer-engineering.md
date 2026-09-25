@@ -24,7 +24,7 @@ They are resistant. Leadership is not aligned. Communication is poor. People nee
 
 Sometimes those descriptions are accurate.
 
-But sometimes what looks like a problem with people is really a problem with the conditions around them.
+But sometimes what looks like a problem with people is really a problem with the conditions shaping what happens between them.
 
 ## The Person or the Environment?
 
@@ -48,9 +48,13 @@ Some are visible: roles, processes, incentives, technologies.
 
 Others are harder to see: who can disagree with whom, what people believe the work is actually for, whether a decision is really a decision, whether people feel responsible for something or merely assigned to it.
 
-These conditions shape what people are able and willing to do together.
+These conditions are not located in any one person.
 
-I think of this as the **human layer**: the interpretations, relationships, conversations, and intentions through which people make sense of what is happening and become capable of acting together.
+They emerge between people — from the interpretations they carry, the relationships they inhabit, the conversations they have, and the structures through which they coordinate.
+
+Together, these conditions shape what people are able and willing to do with one another.
+
+I think of this as the **human layer**: the relational conditions through which people's different interpretations, intentions, conversations, and commitments become — or fail to become — collective action.
 
 And **human-layer engineering** is the deliberate shaping of those conditions.
 
@@ -60,7 +64,7 @@ Not engineering people.
 
 ## Seeing the Water
 
-The difficulty is that much of this layer is invisible.
+The difficulty is that much of this layer is invisible, especially to the people inside it.
 
 Groups learn who can say what. Which disagreements are safe. Whose approval everyone quietly waits for. Which ideas gain energy and which disappear.
 
@@ -76,7 +80,11 @@ The challenge is that we are often inside the conditions we are trying to see.
 
 An initiative can have a sponsor, a strategy, a timeline, and months of meetings — and still be unable to move because people are carrying different interpretations of the problem, avoiding an important disagreement, or acting on decisions that never became shared commitments.
 
-Human-layer work makes those conditions visible enough to work with.
+None of that necessarily appears on the project plan.
+
+So the first move in human-layer work is often the same as the noodles:
+
+**Make the conditions visible enough to work with.**
 
 At times, that means slowing the conversation down enough to understand what people are actually seeing.
 
@@ -88,7 +96,7 @@ The form can vary: facilitation, coaching, community building, or changes to the
 
 But the underlying move is the same:
 
-**Make the conditions shaping collective action visible enough that people can work with them.**
+**Make the conditions shaping collective action visible enough that people can work with them instead of only moving inside them.**
 
 This is why I have come to think of [culture as infrastructure](/reflections/culture-is-infrastructure/).
 
@@ -100,7 +108,7 @@ This is also part of what I have been trying to make explicit through [Circle3](
 
 The patterns do not substitute for the people involved.
 
-They help people see the water.
+Like the noodles, they help make the lane visible.
 
 ## Engineering for Agency
 
@@ -132,9 +140,15 @@ But before concluding that the people are the problem, it may be worth asking:
 
 **What conditions are these people trying to act within?**
 
-The people still have to walk.
+The noodles did not roll for us.
 
-We can make the path more visible.
+They made the conditions of the roll visible enough that we could work with them.
+
+Human-layer engineering does something similar.
+
+Not deciding how people should move.
+
+Making more of what shapes their movement visible, so they can decide together what to do with it.
 
 Perhaps that is what human-layer engineering is ultimately for:
 
