@@ -100,9 +100,16 @@ Another participant described becoming clearer about where they had choices, whe
 
 ## About Your Coach
 
+<div class="coach-introduction">
+<div markdown="1">
+
 I'm Michael Basil, a certified Zen Leadership Coach with experience helping individuals, groups, and organizations navigate difficult situations and pursue meaningful change.
 
 I also use AI extensively in my own reflection and reasoning. *Know Your Patterns* brings these practices together, developing greater awareness and agency while learning to work intentionally with increasingly capable tools.
+
+</div>
+<img src="{{ '/assets/images/profile.jpg' | relative_url }}" alt="Michael Basil" class="profile-image" loading="lazy">
+</div>
 
 </section>
 
