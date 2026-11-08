@@ -14,7 +14,7 @@ We value your privacy and are committed to being transparent about the informati
 
 ## Information We Collect
 
-Our site uses Google Analytics to help us understand how visitors interact with our content. Google Analytics collects non-identifiable information, such as:
+Google Analytics helps us understand how visitors use this website and may collect information such as:
 
 * **Browser type**
 * **Device type**
@@ -22,32 +22,25 @@ Our site uses Google Analytics to help us understand how visitors interact with 
 * **Time spent on pages**
 * **Geographic location** (approximate)
 
-This data is aggregated and anonymized, meaning it cannot be used to identify you personally.
+Google Analytics may use cookies and other identifiers to distinguish visits and understand site activity. We use the resulting information to understand website usage and improve the site.
 
 ## Cookies and Tracking Technologies
 
 Google Analytics uses cookies to collect site usage data. These cookies help us improve our site’s functionality and content. You can manage or disable cookies in your browser settings. For more details on how Google collects and processes data, refer to [Google’s Privacy Policy](https://policies.google.com/privacy).
 
-## Information We Do Not Collect
+## Information You Share
 
-We do **not** collect personal data such as:
-
-* Names
-* Email addresses
-* Phone numbers
-* Payment information
-
-Our site is designed to respect your privacy and limits data collection to analytics purposes only.
+This website does not directly request your name, contact details, or payment information. If you choose to contact me or follow a link to arrange an engagement, you may share information through that separate interaction or service. External services have their own privacy practices.
 
 ## How We Use Collected Data
 
-The anonymized data from Google Analytics is used to:
+Website analytics data is used to:
 
 1. **Analyze site performance**
 2. **Optimize user experience**
 3. **Identify trends and patterns**
 
-We do not sell, share, or use this data for any purposes beyond site improvement.
+We do not sell visitor data or share it for advertising or unrelated purposes. We use Google Analytics to understand and improve this website.
 
 ## Changes to This Privacy Policy
 
