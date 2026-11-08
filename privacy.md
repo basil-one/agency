@@ -40,7 +40,7 @@ Website analytics data is used to:
 2. **Optimize user experience**
 3. **Identify trends and patterns**
 
-We do not sell visitor data or share it for advertising or unrelated purposes. We use Google Analytics to understand and improve this website.
+We do not sell visitor data or share it for advertising or unrelated purposes.
 
 ## Changes to This Privacy Policy
 
@@ -48,4 +48,4 @@ We may update this policy periodically to reflect changes in our practices. Plea
 
 ## Contact Us
 
-If you have any questions about this Privacy Policy, please [contact us]({{site.action_links.connect}}){: data-ga-event="contact_meet" data-ga-label="privacy_contact"}.
+If you have any questions about this Privacy Policy, please [contact us]({{site.action_links.email}}).
