@@ -53,8 +53,9 @@ containers:
       related_link:
         url: /engagement/know-your-patterns/
         label: Explore Know Your Patterns
+        offer_id: know-your-patterns
         description: >
-          For an AI-focused assessment and coaching engagement ($350):
+          For an AI-focused assessment and coaching engagement ([price]):
 
     - subheading: Five-session integration engagement
       meta:

@@ -1,0 +1,117 @@
+---
+layout: default
+---
+{% assign offer = site.data.offers[page.offer_id] %}
+
+{% if offer.hero %}
+<section id="hero">
+  {% capture heading %}# {{ offer.hero.heading }}{% endcapture %}{{ heading | markdownify }}
+  {% capture heading %}## {{ offer.hero.subheading }}{% endcapture %}{{ heading | markdownify }}
+  {% for paragraph in offer.hero.paragraphs %}
+    {{ paragraph | markdownify }}
+  {% endfor %}
+  <div class="hero-offer">
+    <p><strong>{{ offer.price }} · {{ offer.hero.offer_label }}</strong><br>
+    {{ offer.hero.offer_description }}</p>
+    <p><a class="reserve-button" href="{{ site.action_links[offer.booking.action_link] | escape }}">{{ offer.booking.label | escape }}</a></p>
+  </div>
+</section>
+{% endif %}
+
+{% if offer.recognition %}
+<section id="recognition">
+  {% capture heading %}## {{ offer.recognition.heading }}{% endcapture %}{{ heading | markdownify }}
+  {% for paragraph in offer.recognition.paragraphs %}
+    {{ paragraph | markdownify }}
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if offer.experience %}
+<section id="experience">
+  {% capture heading %}## {{ offer.experience.heading }}{% endcapture %}{{ heading | markdownify }}
+  {% for item in offer.experience.items %}
+    {% capture heading %}### {{ item.heading }}{% endcapture %}{{ heading | markdownify }}
+    {% for paragraph in item.paragraphs %}
+      {{ paragraph | markdownify }}
+    {% endfor %}
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if offer.takeaways %}
+<section id="takeaways">
+  {% capture heading %}## {{ offer.takeaways.heading }}{% endcapture %}{{ heading | markdownify }}
+  <ul>
+    {% for item in offer.takeaways.items %}
+      <li>{{ item | markdownify | remove: '<p>' | remove: '</p>' | strip }}</li>
+    {% endfor %}
+  </ul>
+  {% if offer.takeaways.closing %}{{ offer.takeaways.closing | markdownify }}{% endif %}
+</section>
+{% endif %}
+
+{% if offer.testimonials %}
+<section id="testimonials">
+  {% capture heading %}## {{ offer.testimonials.heading }}{% endcapture %}{{ heading | markdownify }}
+  {% if offer.testimonials.introduction %}{{ offer.testimonials.introduction | markdownify }}{% endif %}
+  {% if offer.testimonials.quote %}<blockquote>{{ offer.testimonials.quote | markdownify }}</blockquote>{% endif %}
+  {% if offer.testimonials.reflection %}{{ offer.testimonials.reflection | markdownify }}{% endif %}
+</section>
+{% endif %}
+
+{% if offer.coach %}
+<section id="coach">
+  {% capture heading %}## {{ offer.coach.heading }}{% endcapture %}{{ heading | markdownify }}
+  <div class="coach-introduction">
+    <div>
+      {% for paragraph in offer.coach.paragraphs %}
+        {{ paragraph | markdownify }}
+      {% endfor %}
+    </div>
+    {% if offer.coach.image %}<img src="{{ offer.coach.image | relative_url }}" alt="{{ offer.coach.image_alt | escape }}" class="profile-image" loading="lazy">{% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if offer.process %}
+<section id="process">
+  {% capture heading %}## {{ offer.process.heading }}{% endcapture %}{{ heading | markdownify }}
+  <div class="reservation-summary">
+    {{ offer.process.summary | replace: '[price]', offer.price | markdownify }}
+  </div>
+  <details>
+    <summary>{{ offer.process.details_label }}</summary>
+    {% for step in offer.process.steps %}
+      <h3{% if step.id %} id="{{ step.id | escape }}"{% endif %}>{{ forloop.index }}. {{ step.heading | markdownify | remove: '<p>' | remove: '</p>' | strip }}</h3>
+      {% for paragraph in step.paragraphs %}
+        {{ paragraph | replace: '[price]', offer.price | markdownify }}
+      {% endfor %}
+    {% endfor %}
+  </details>
+</section>
+{% endif %}
+
+{% if offer.questions %}
+<section id="questions">
+  {% capture heading %}## {{ offer.questions.heading }}{% endcapture %}{{ heading | markdownify }}
+  {% for item in offer.questions.items %}
+    <details>
+      <summary>{{ item.question }}</summary>
+      {% for paragraph in item.paragraphs %}
+        {{ paragraph | markdownify }}
+      {% endfor %}
+    </details>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if offer.invitation %}
+<section id="booking">
+  {% capture heading %}## {{ offer.invitation.heading }}{% endcapture %}{{ heading | markdownify }}
+  {{ offer.invitation.paragraph | markdownify }}
+  <p><strong>{{ offer.price }} | {{ offer.invitation.offer_description }}</strong></p>
+  <p><a class="reserve-button" href="{{ site.action_links[offer.booking.action_link] | escape }}">{{ offer.booking.label | escape }}</a></p>
+  {{ offer.invitation.reservation_note | markdownify }}
+</section>
+{% endif %}

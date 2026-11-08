@@ -40,7 +40,8 @@ layout: default
     {% endfor %}
 
     {% if item.related_link %}
-      <p>{{ item.related_link.description }}
+      {% assign related_offer = site.data.offers[item.related_link.offer_id] %}
+      <p>{{ item.related_link.description | replace: '[price]', related_offer.price }}
         <a href="{{ item.related_link.url | relative_url }}">{{ item.related_link.label }}</a>.
       </p>
     {% endif %}

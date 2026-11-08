@@ -1,0 +1,122 @@
+price: "$350"
+booking:
+  action_link: know_your_patterns_calendly
+  label: Reserve Your Session
+hero:
+  heading: Know Your Patterns
+  subheading: Ever leave a great AI conversation with more possibilities, but less clarity?
+  paragraphs:
+    - AI is becoming increasingly capable. But getting better answers doesn't automatically mean we're developing better judgment.
+    - What if understanding your own patterns could help you think, relate, and choose more intentionally, with people and with AI?
+  offer_label: Individual coaching engagement
+  offer_description: Personal assessment, report, and up to two hours of private coaching.
+recognition:
+  heading: When This Makes Sense
+  paragraphs:
+    - Maybe you've started using AI for more than getting things done.
+    - "You're thinking with it: exploring ideas, working through decisions, preparing for difficult conversations, and considering different perspectives."
+    - The conversation moves. The responses sound convincing. New possibilities keep emerging.
+    - "**Yet somehow, what you're trying to understand isn't coming into clearer focus.**"
+    - What if another lens could help you see something you've been missing?
+    - We all bring patterns into how we think, interpret situations, interact with others, and engage with AI. Some serve us well. Others can limit what we notice or how we respond, particularly under pressure.
+    - "*Know Your Patterns* is for people curious about developing their own capabilities alongside AI. It's not simply about becoming better at using the technology, but becoming more aware of what they bring to the interaction."
+experience:
+  heading: What You'll Experience
+  items:
+    - heading: Discover another lens
+      paragraphs:
+        - Before we meet, you'll complete the Focus Energy Balance Indicator (FEBI®), an assessment that helps illuminate patterns in how you direct your energy, engage with situations, and respond under pressure.
+        - You'll receive your personal report and have time to begin reflecting on what stands out.
+    - heading: Explore what it reveals
+      paragraphs:
+        - In our private coaching session, we'll connect the lens to situations that matter to you.
+        - You bring your experience. I bring questions, perspective, and a framework for reflection. Together, we'll explore distinctions, connections, and possibilities that may not have been apparent before.
+    - heading: Bring the lens into your work with AI
+      paragraphs:
+        - We'll explore practical ways to reason with the lens using AI. This might include examining situations from different perspectives, questioning assumptions, or considering responses that might not come naturally.
+        - I'll also share approaches I've found useful in my own AI-assisted reflection and reasoning. You may find some worth considering or experimenting with in your own way.
+        - The lens becomes something you can continue working with, not simply a report you receive.
+takeaways:
+  heading: What You Take With You
+  items:
+    - Your personal FEBI report and a lens for recognizing your patterns.
+    - Reflection and integration grounded in situations that matter to you.
+    - Ways to use the lens with AI, with others, and on your own.
+    - Greater awareness of your options when it's time to choose.
+  closing: "**The aim isn't to change who you are. It's to expand what's available to you.**"
+testimonials:
+  heading: What People Have Said
+  introduction: "*Reflections from previous individual coaching engagements.*"
+  quote: I'm able to prepare for difficult conversations instead of reacting in the moment.
+  reflection: Another participant described becoming clearer about where they had choices, where they didn't, and how that understanding changed the way they engaged.
+coach:
+  heading: About Your Coach
+  paragraphs:
+    - I'm Michael Basil, a certified Zen Leadership Coach with experience helping individuals, groups, and organizations navigate difficult situations and pursue meaningful change.
+    - "I also use AI extensively in my own reflection and reasoning. *Know Your Patterns* brings these practices together, developing greater awareness and agency while learning to work intentionally with increasingly capable tools."
+  image: /assets/images/profile.jpg
+  image_alt: Michael Basil
+process:
+  heading: How It Works
+  summary: "**[price] includes your FEBI assessment, personal report, a private coaching session of up to two hours, and opportunities for reflection beforehand.**"
+  details_label: From Reservation to Session
+  steps:
+    - heading: Reserve your time
+      id: reserve-your-time
+      paragraphs:
+        - Choose an available session through Calendly.
+        - I'll hold your reservation for at least 24 hours while we coordinate payment and the next steps for your assessment.
+    - heading: Connect if you'd like
+      id: connect-if-youd-like
+      paragraphs:
+        - If you have questions before confirming your engagement, you can reply to your reservation email.
+        - If it would be helpful to connect personally, we can arrange a voice conversation through Signal.
+    - heading: Confirm your engagement
+      id: confirm-your-engagement
+      paragraphs:
+        - I'll provide a secure Stripe payment link for [price].
+        - Once payment is received, I'll confirm your engagement and send your assessment invitation.
+        - Reservations that remain unconfirmed after the initial 24-hour hold may be released.
+    - heading: Complete your assessment
+      id: complete-your-assessment
+      paragraphs:
+        - Complete FEBI before our coaching session. Once you've finished, I'll share your personal report so you have time to review it.
+        - As the session approaches, you're welcome to exchange a few initial questions, observations, or reflections with me by email or Signal.
+        - Signal is particularly useful for brief voice or text notes. These optional exchanges provide some context and light calibration as we approach our session, rather than additional coaching.
+    - heading: Explore together
+      id: explore-together
+      paragraphs:
+        - We'll meet privately for up to two hours to reflect on your patterns, explore situations that matter to you, and consider practical ways to continue reasoning with the lens, including with AI.
+    - heading: Carry it forward
+      id: carry-it-forward
+      paragraphs:
+        - You'll leave with your report, the distinctions we've explored, and ways to continue applying the lens in your own life and work.
+        - There's no ongoing coaching commitment.
+questions:
+  heading: Common Questions
+  items:
+    - question: What will we actually do with AI?
+      paragraphs:
+        - We'll explore how to bring the patterns and distinctions into AI conversations so you can examine situations, explore different perspectives, and continue reflecting beyond our session.
+        - You can use an AI tool you're already comfortable with.
+    - question: Do I have to share my report with AI?
+      paragraphs:
+        - No. You can explore the framework without uploading your personal assessment or sharing sensitive information. What you choose to share with AI is up to you.
+    - question: Is Signal required?
+      paragraphs:
+        - No. Email works fine for scheduling and questions.
+        - Signal is available for optional voice or text exchanges that provide context and light calibration before our session.
+    - question: Can I speak with you before paying?
+      paragraphs:
+        - Yes. If you'd like to connect before confirming your engagement, we can arrange a voice conversation through Signal.
+    - question: What if I need to reschedule?
+      paragraphs:
+        - If you've completed the assessment and received your report but cannot attend your scheduled coaching session, we can reschedule once, subject to availability.
+    - question: Is this therapy?
+      paragraphs:
+        - No. This is a coaching and reflective learning experience, not psychotherapy or mental health treatment.
+invitation:
+  heading: Ready for Another Lens?
+  paragraph: If this feels relevant to how you're thinking, working, and engaging with AI, you can begin by reserving a session.
+  offer_description: Personal assessment, report, and private coaching
+  reservation_note: Your reservation is held for at least 24 hours while we coordinate confirmation of your engagement.

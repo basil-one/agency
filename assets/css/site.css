@@ -158,74 +158,74 @@ a:hover {
   margin-top: 0;
 }
 
-/* Know Your Patterns engagement */
+/* Individual engagement offers */
 
-#patterns-page #hero h2 {
+#offer-page #hero h2 {
   font-size: clamp(23px, 3vw, 28px);
 }
 
-#patterns-page #hero h2::after {
+#offer-page #hero h2::after {
   display: none;
 }
 
-#patterns-page .hero-offer {
+#offer-page .hero-offer {
   margin-top: 24px;
 }
 
-#patterns-page .coach-introduction {
+#offer-page .coach-introduction {
   display: flex;
   align-items: flex-start;
   gap: 24px;
 }
 
-#patterns-page .coach-introduction .profile-image {
+#offer-page .coach-introduction .profile-image {
   width: 150px;
   flex-shrink: 0;
   margin: 0;
 }
 
 @media (max-width: 600px) {
-  #patterns-page .coach-introduction {
+  #offer-page .coach-introduction {
     flex-direction: column;
   }
 
-  #patterns-page .coach-introduction .profile-image {
+  #offer-page .coach-introduction .profile-image {
     margin: 0 auto;
   }
 }
 
-#patterns-page .reservation-summary {
+#offer-page .reservation-summary {
   padding: 20px 24px;
   background: var(--tone-soft);
   border-left: 3px solid var(--accent-muted);
 }
 
-#patterns-page details {
+#offer-page details {
   border-top: 1px solid var(--rule-muted);
   padding: 16px 0;
 }
 
-#patterns-page details:last-child {
+#offer-page details:last-child {
   border-bottom: 1px solid var(--rule-muted);
 }
 
-#patterns-page summary {
+#offer-page summary {
   color: var(--accent-muted);
   cursor: pointer;
   font-weight: 600;
 }
 
-#patterns-page details[open] summary {
+#offer-page details[open] summary {
   margin-bottom: 16px;
 }
 
-#patterns-page blockquote {
+#offer-page blockquote {
   margin: 24px 0;
   padding-left: 20px;
   border-left: 3px solid var(--accent-muted);
 }
 
-#patterns-page .reserve-button {
+#offer-page .reserve-button {
   display: inline-block;
   padding: 12px 20px;
   border: 0;
@@ -237,11 +237,11 @@ a:hover {
   text-decoration: none;
 }
 
-#patterns-page .reserve-button:hover {
+#offer-page .reserve-button:hover {
   background: #142e2e;
 }
 
-#patterns-page :focus-visible {
+#offer-page :focus-visible {
   outline: 3px solid #0f4873;
   outline-offset: 3px;
 }
