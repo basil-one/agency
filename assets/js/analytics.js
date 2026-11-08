@@ -12,42 +12,19 @@
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof window.gtag !== 'function') return;
     document.querySelectorAll('[data-ga-event]').forEach(function(el) {
-      el.addEventListener('click', function(event) {
+      function trackClick() {
         var action = el.getAttribute('data-ga-event');
         var label = el.getAttribute('data-ga-label') || el.getAttribute('href') || 'unknown';
-        var href = el.getAttribute('href');
-        var target = el.getAttribute('target');
-
-        var navigate = function() {
-          if (!href) return;
-          if (target === '_blank') {
-            window.open(href, '_blank');
-          } else {
-            window.location = href;
-          }
-        };
-
-        var hasDestination = href && href.charAt(0) !== '#';
-        if (hasDestination) {
-          event.preventDefault();
-        }
-
-        var eventSent = false;
         window.gtag('event', action, {
           event_category: 'engagement',
           event_label: label,
-          transport_type: 'beacon',
-          event_callback: function() {
-            eventSent = true;
-            navigate();
-          }
+          transport_type: 'beacon'
         });
+      }
 
-        if (hasDestination) {
-          setTimeout(function() {
-            if (!eventSent) navigate();
-          }, 500);
-        }
+      el.addEventListener('click', trackClick);
+      el.addEventListener('auxclick', function(event) {
+        if (event.button === 1) trackClick();
       });
     });
   });

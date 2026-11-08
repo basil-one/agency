@@ -42,7 +42,7 @@ layout: default
     {% if item.related_link %}
       {% assign related_offer = site.data.offers[item.related_link.offer_id] %}
       <p>{{ item.related_link.description | replace: '[price]', related_offer.price }}
-        <a href="{{ item.related_link.url | relative_url }}">{{ item.related_link.label }}</a>.
+        <a href="{{ item.related_link.url | relative_url }}" data-ga-event="offer_detail_click" data-ga-label="{{ item.related_link.offer_id | replace: '-', '_' | escape }}">{{ item.related_link.label }}</a>.
       </p>
     {% endif %}
   {% endfor %}
