@@ -38,6 +38,12 @@ layout: default
     {% for paragraph in item.paragraphs %}
       <p>{{ paragraph }}</p>
     {% endfor %}
+
+    {% if item.related_link %}
+      <p>{{ item.related_link.description }}
+        <a href="{{ item.related_link.url | relative_url }}">{{ item.related_link.label }}</a>.
+      </p>
+    {% endif %}
   {% endfor %}
 
   {% if data.containers.closing_emphasis %}

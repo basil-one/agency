@@ -50,6 +50,11 @@ containers:
           apply what they learn,
           and decide later
           whether further support would be useful.
+      related_link:
+        url: /engagement/know-your-patterns/
+        label: Explore Know Your Patterns
+        description: >
+          For an AI-focused assessment and coaching engagement ($350):
 
     - subheading: Five-session integration engagement
       meta:
