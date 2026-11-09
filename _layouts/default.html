@@ -32,7 +32,7 @@
         <span class="site-name-secondary">Michael Basil</span>
       </a>
       <nav aria-label="Main navigation">
-        <a href="{{ '/#coaching' | relative_url }}"{% if page.url contains '/coaching/' %} class="active"{% endif %}>Coaching</a>
+        <a href="{{ '/#coaching' | relative_url }}"{% if page.url == '/know-your-patterns/' %} class="active"{% endif %}>Coaching</a>
         <a href="{{ '/reflections/' | relative_url }}"{% if page.url contains '/reflections/' %} class="active"{% endif %}{% if page.url == '/reflections/' %} aria-current="page"{% endif %}>Reflections</a>
       </nav>
     </div>

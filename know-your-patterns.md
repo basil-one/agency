@@ -6,6 +6,6 @@ fine_print: >
   FEBI® is a coaching framework and registered trademark
   associated with the Institute for Zen Leadership.
 offer_id: know-your-patterns
-permalink: /coaching/know-your-patterns/
+permalink: /know-your-patterns/
 css_id: offer-page
 ---
