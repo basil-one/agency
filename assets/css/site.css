@@ -208,12 +208,6 @@ p + p {
   margin-top: 8px;
 }
 
-.fine-print {
-  margin-top: 16px;
-  font-size: 13px;
-  color: #5b5b5b;
-}
-
 .publish-date {
   font-size: 16px;
   font-style: italic;
@@ -279,8 +273,6 @@ a:hover {
   border-radius: 50%;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
-
-/* Option A: Testimonial section toning */
 
 #testimonials {
   background: var(--tone-soft);

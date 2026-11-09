@@ -27,8 +27,13 @@ ways:
         A personal assessment and coaching experience to recognize
         your patterns, gain another lens on your situation, and expand
         your available choices.
-      url: /know-your-patterns/
-      link_label: Explore Know Your Patterns
+      cta:
+        destination: /know-your-patterns/
+        destination_type: path
+        class: primary-link
+        event: offer_detail_click
+        analytics_label: know_your_patterns
+        label: Explore Know Your Patterns
     - heading: Integration Coaching
       label: Ongoing support
       body: >
@@ -36,7 +41,13 @@ ways:
         to you. We revisit real situations, reflect on and integrate what
         emerges, and develop your capacity to respond intentionally over time.
         This work can follow Know Your Patterns, but it doesn't have to.
-      link_label: Inquire about Integration Coaching
+      cta:
+        destination: connect
+        destination_type: action_link
+        class: ""
+        event: conversion
+        analytics_label: discovery_consultation
+        label: Inquire about Integration Coaching
 
 reflections:
   heading: Reflections
