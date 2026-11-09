@@ -15,6 +15,7 @@ layout: default
     <p><strong>{{ offer.price }} · {{ offer.hero.offer_label }}</strong><br>
     {{ offer.hero.offer_description }}</p>
     <p><a class="reserve-button" href="{{ site.action_links[offer.booking.action_link] | escape }}" data-ga-event="reserve_session_click" data-ga-label="{{ analytics_label | escape }}_hero">{{ offer.booking.label | escape }}</a></p>
+    {% if offer.hero.reservation_note %}<p class="reservation-reassurance">{{ offer.hero.reservation_note | escape }}</p>{% endif %}
   </div>
 </section>
 {% endif %}
