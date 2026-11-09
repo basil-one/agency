@@ -15,6 +15,78 @@ body {
   background: #fdfcf9;
 }
 
+/* Shared header */
+
+.site-header {
+  background: var(--accent-muted);
+}
+
+.site-header-inner {
+  max-width: 70ch;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  font-size: 18px;
+}
+
+.site-header .site-name {
+  color: #fff;
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+.site-name-primary,
+.site-name-secondary {
+  display: block;
+}
+
+.site-name-primary {
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  font-size: 21px;
+  font-weight: 600;
+}
+
+.site-name-secondary {
+  margin-top: 2px;
+  font-size: 13px;
+}
+
+.site-header nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 16px;
+}
+
+.site-header nav a {
+  color: #fff;
+  text-decoration-color: transparent;
+}
+
+.site-header nav a:hover,
+.site-header nav a.active {
+  text-decoration-color: currentColor;
+}
+
+.site-header a:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+
+.site-header .site-name:hover .site-name-primary {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent-muted);
+  outline-offset: 3px;
+}
+
 /* Main reading column */
 
 main {
@@ -55,6 +127,42 @@ h1 {
   font-size: clamp(30px, 4vw, 36px);
   margin-bottom: 24px;
   color: #0a0a0a;
+}
+
+#home .home-introduction {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+#home .home-introduction-text {
+  flex: 1;
+}
+
+#home .origin-link {
+  font-size: 15px;
+}
+
+#home .home-introduction .profile-image {
+  width: 150px;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+@media (max-width: 600px) {
+  #home .home-introduction {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  #home .home-introduction .profile-image {
+    align-self: center;
+  }
+}
+
+#reflections #hero {
+  margin-bottom: 40px;
 }
 
 /* Section headers */
@@ -126,13 +234,39 @@ li {
 /* Links */
 
 a {
-  color: #0f4873;
+  color: var(--accent-muted);
+  text-decoration-line: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 a:hover {
   text-decoration-thickness: 2px;
+}
+
+/* Coaching pathways */
+
+.pathway + .pathway {
+  border-top: 1px solid var(--rule-muted);
+  margin-top: 32px;
+  padding-top: 24px;
+}
+
+.pathway-label {
+  margin-bottom: 4px;
+  color: #5b5b5b;
+  font-size: 14px;
+}
+
+.pathway h3 {
+  margin-top: 0;
+  font-style: normal;
+  font-size: 20px;
+}
+
+.pathway-primary h3 {
+  font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  font-size: 23px;
 }
 
 /* Profile image */
@@ -225,7 +359,8 @@ a:hover {
   border-left: 3px solid var(--accent-muted);
 }
 
-#offer-page .reserve-button {
+#offer-page .reserve-button,
+.primary-link {
   display: inline-block;
   padding: 12px 20px;
   border: 0;
@@ -237,12 +372,13 @@ a:hover {
   text-decoration: none;
 }
 
-#offer-page .reserve-button:hover {
+#offer-page .reserve-button:hover,
+.primary-link:hover {
   background: #142e2e;
 }
 
-#offer-page :focus-visible {
-  outline: 3px solid #0f4873;
+#offer-page main :focus-visible {
+  outline: 3px solid var(--accent-muted);
   outline-offset: 3px;
 }
 
@@ -255,6 +391,10 @@ footer {
   margin: 20px auto 0;
   font-size: 14px;
   color: #3a3a3a;
+}
+
+footer a {
+  margin-right: 8px;
 }
 
 .footer-fine-print {

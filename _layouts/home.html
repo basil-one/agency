@@ -5,48 +5,40 @@ layout: default
 
 <section id="hero">
   <h1>{{ data.hero.heading }}</h1>
-
-  <p>{{ data.hero.body }}</p>
-
-  <img
-    src="{{ data.hero.image | relative_url }}"
-    alt="{{ data.hero.image_alt | default: site.profile.name }}"
-    class="profile-image"
-  />
+  <div class="home-introduction">
+    <div class="home-introduction-text">
+      <p>{{ data.hero.body }}</p>
+      <p class="origin-link">{{ data.hero.origin_intro }} <a href="{{ '/origin/' | relative_url }}">{{ data.hero.origin_link_label }}</a></p>
+    </div>
+    <img src="{{ data.hero.image | relative_url }}" alt="{{ data.hero.image_alt }}" class="profile-image">
+  </div>
 </section>
 
 <section id="moment">
   <h2>{{ data.moment.heading }}</h2>
-
   {% for paragraph in data.moment.paragraphs %}
     <p>{{ paragraph }}</p>
   {% endfor %}
 </section>
 
-<section id="credibility">
-  <p>
-    <em>{{ data.credibility.line }}</em>
-  </p>
-</section>
-
-<section id="situations">
-  <h2>{{ data.situations.heading }}</h2>
-
-  {% for item in data.situations.items %}
-    <h3>{{ item.subheading }}</h3>
-
-    {% for paragraph in item.paragraphs %}
-      <p>{{ paragraph }}</p>
-    {% endfor %}
-
-    {% if item.link %}
-      <p>
-        👉 <a href="{{ item.link.url | relative_url }}">{{ item.link.label }}</a>
-      </p>
-    {% endif %}
+<section id="coaching">
+  <h2>{{ data.ways.heading }}</h2>
+  {% for item in data.ways.items %}
+    <div class="pathway{% if forloop.first %} pathway-primary{% endif %}">
+      <p class="pathway-label">{{ item.label }}</p>
+      <h3>{{ item.heading }}</h3>
+      <p>{{ item.body }}</p>
+      {% if item.url %}
+        <p><a class="primary-link" href="{{ item.url | relative_url }}" data-ga-event="offer_detail_click" data-ga-label="know_your_patterns">{{ item.link_label }}</a></p>
+      {% else %}
+        <p><a href="{{ site.action_links.connect }}" data-ga-event="conversion" data-ga-label="discovery_consultation">{{ item.link_label }}</a></p>
+      {% endif %}
+    </div>
   {% endfor %}
 </section>
 
-<section id="closing">
-  <p>{{ data.closing.line }}</p>
+<section id="writing">
+  <h2>{{ data.reflections.heading }}</h2>
+  <p>{{ data.reflections.body }}</p>
+  <p><a href="{{ '/reflections/' | relative_url }}">{{ data.reflections.link_label }}</a></p>
 </section>

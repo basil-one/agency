@@ -1,78 +1,46 @@
 hero:
   heading: Adaptive Leadership, Applied
   body: >
-    Practical support for meaningful change —
-    building clarity,
-    restoring agency,
-    and developing the capacity to respond wisely under pressure.
+    I help people navigate difficult personal and professional situations
+    by recognizing patterns, seeing more clearly, and choosing how to respond.
   image: /assets/images/profile.jpg
   image_alt: Michael Basil
+  origin_intro: Interested in the story behind my work?
+  origin_link_label: Creating Conditions
 
 moment:
-  heading: When knowing isn't enough
+  heading: When Knowing Isn't Enough
   paragraphs:
     - >
-      In complex situations, more information or advice
-      often does not create movement.
-      The challenge is rarely a lack of intelligence
-      or effort.
+      When a situation is difficult, more information or advice doesn't
+      necessarily help you see it clearly or decide how to respond.
     - >
-      What is needed is the ability to see the system more clearly,
-      recognize patterns,
-      and choose responses that create meaningful change.
+      Coaching offers space to look at what's happening, recognize your
+      patterns, and consider choices you may not have noticed.
 
-credibility:
-  line: >
-    My work is informed by my training as a Zen Leadership Coach
-    through the <a href="https://zenleader.global">Institute for Zen Leadership</a>,
-    and by practical experience helping people and organizations navigate complex change.
-
-situations:
-  heading: Where Adaptive Leadership helps
-
+ways:
+  heading: Ways to Work Together
   items:
-    - subheading: Individuals navigating complexity
-      paragraphs:
-        - >
-          You are facing a situation where the stakes are real,
-          other people are involved,
-          and the obvious answers are not working.
-        - >
-          The work helps you increase your agency,
-          understand patterns,
-          and choose how you want to engage.
-      link:
-        url: /individuals/
-        label: Adaptive Leadership for Individuals
+    - heading: Know Your Patterns
+      label: A place to begin
+      body: >
+        A personal assessment and coaching experience to recognize
+        your patterns, gain another lens on your situation, and expand
+        your available choices.
+      url: /coaching/know-your-patterns/
+      link_label: Explore Know Your Patterns
+    - heading: Integration Coaching
+      label: Ongoing support
+      body: >
+        For situations that continue to unfold, ongoing coaching is tailored
+        to you. We revisit real situations, reflect on and integrate what
+        emerges, and develop your capacity to respond intentionally over time.
+        This work can follow Know Your Patterns, but it doesn't have to.
+      link_label: Inquire about Integration Coaching
 
-    - subheading: Groups working through change
-      paragraphs:
-        - >
-          Teams and groups often get stuck in recurring patterns,
-          competing perspectives,
-          or unclear ways of working together.
-        - >
-          The work supports clearer communication,
-          better decisions,
-          and more adaptive responses.
-      link:
-        url: /groups/
-        label: Adaptive Leadership for Groups
-
-    - subheading: Communities building capacity
-      paragraphs:
-        - >
-          Communities face challenges that no individual
-          can solve alone.
-        - >
-          The work supports shared understanding,
-          collective learning,
-          and the ability to navigate complexity together.
-      link:
-        url: /communities/
-        label: Adaptive Leadership for Communities
-
-closing:
-  line: >
-    Meaningful change begins with how we choose to engage
-    with the situation we are already part of.
+reflections:
+  heading: Reflections
+  body: >
+    Explore my writing about agency, relationships, leadership, and
+    navigating complexity.
+  link_label: Read Reflections
