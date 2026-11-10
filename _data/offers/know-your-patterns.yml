@@ -1,4 +1,4 @@
-price: "$350"
+price: "$TBD"
 booking:
   action_link: know_your_patterns_reservation
   label: Reserve Your Session
@@ -25,7 +25,7 @@ experience:
   items:
     - heading: Discover another lens
       paragraphs:
-        - Before we meet, you'll complete the Focus Energy Balance Indicator (FEBI®), an assessment that helps illuminate patterns in how you direct your energy, engage with situations, and respond under pressure.
+        - Before we meet, you'll complete the [Focus Energy Balance Indicator (FEBI®)](#what-is-febi), an assessment that helps illuminate patterns in how you direct your energy, engage with situations, and respond under pressure.
         - You'll receive your personal report and have time to begin reflecting on what stands out.
     - heading: Explore what it reveals
       paragraphs:
@@ -39,7 +39,7 @@ experience:
 takeaways:
   heading: What You Take With You
   items:
-    - Your personal FEBI report and a lens for recognizing your patterns.
+    - Your personal [FEBI](#what-is-febi) report and a lens for recognizing your patterns.
     - Reflection and integration grounded in situations that matter to you.
     - Ways to use the lens with AI, with others, and on your own.
     - A clearer sense of your options and where your response might make a difference.
@@ -52,19 +52,19 @@ testimonials:
 coach:
   heading: About Your Coach
   paragraphs:
-    - I'm Michael Basil, a certified Zen Leadership Coach with experience helping individuals, groups, and organizations navigate difficult situations and pursue meaningful change.
+    - I'm Michael Basil, a [certified Zen Leadership Coach](https://zenleader.global/resources/coach-directory/michael-basil) with experience helping individuals, groups, and organizations navigate difficult situations and pursue meaningful change.
     - "I also use AI extensively in my own reflection and reasoning. *Know Your Patterns* brings these practices together, developing greater awareness and agency while learning to work intentionally with increasingly capable tools."
   image: /assets/images/profile.jpg
   image_alt: Michael Basil
 process:
   heading: How It Works
-  summary: "**[price] includes your FEBI assessment, personal report, a private coaching session of up to two hours, and opportunities for reflection beforehand.**"
+  summary: "**This experience includes your [FEBI](#what-is-febi) assessment, personal report, a private coaching session of up to two hours, and opportunities for reflection beforehand.**"
   details_label: From Reservation to Session
   steps:
     - heading: Reserve your time
       id: reserve-your-time
       paragraphs:
-        - Choose an available session through Calendly.
+        - Choose an available time for your session.
         - I'll hold your reservation for at least 24 hours while we coordinate payment and the next steps for your assessment.
     - heading: Connect if you'd like
       id: connect-if-youd-like
@@ -74,13 +74,13 @@ process:
     - heading: Confirm your engagement
       id: confirm-your-engagement
       paragraphs:
-        - I'll provide a secure Stripe payment link for [price].
+        - I'll provide a secure payment link for [price]
         - Once payment is received, I'll confirm your engagement and send your assessment invitation.
         - Reservations that remain unconfirmed after the initial 24-hour hold may be released.
     - heading: Complete your assessment
       id: complete-your-assessment
       paragraphs:
-        - Complete FEBI before our coaching session. Once you've finished, I'll share your personal report so you have time to review it.
+        - Complete [FEBI](#what-is-febi) before our coaching session. Once you've finished, I'll share your personal report so you have time to review it.
         - As the session approaches, you're welcome to exchange a few initial questions, observations, or reflections with me by email or Signal.
         - Signal is particularly useful for brief voice or text notes. These optional exchanges provide some context and light calibration as we approach our session, rather than additional coaching.
     - heading: Explore together
@@ -95,6 +95,12 @@ process:
 questions:
   heading: Common Questions
   items:
+    - id: what-is-febi
+      question: What is FEBI?
+      paragraphs:
+        - "The Focus Energy Balance Indicator (FEBI®) is an assessment that helps you recognize four patterns in how you think, engage, and respond: Driver, Organizer, Collaborator, and Visionary."
+        - Rather than putting you into a fixed personality type, FEBI helps you understand your natural preferences and explore how to access different patterns when situations call for them.
+        - "For more about the framework and its research, explore the [FEBI Technical Manual](https://zenleader.global/s/FEBI-Technical-Manual-2024.pdf)."
     - question: Is this just another personality assessment?
       paragraphs:
         - "The assessment is a starting point, not the destination. We'll use the results to examine real situations, notice patterns, and explore responses that might otherwise remain outside your awareness."

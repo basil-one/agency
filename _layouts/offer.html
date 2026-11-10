@@ -97,7 +97,7 @@ layout: default
 <section id="questions">
   <h2 id="{{ offer.questions.heading | slugify }}">{{ offer.questions.heading | escape }}</h2>
   {% for item in offer.questions.items %}
-    <details>
+    <details{% if item.id %} id="{{ item.id | escape }}"{% endif %}>
       <summary>{{ item.question }}</summary>
       {% for paragraph in item.paragraphs %}
         {{ paragraph | markdownify }}
@@ -115,4 +115,26 @@ layout: default
   <p><a class="reserve-button" href="{{ site.action_links[offer.booking.action_link] | escape }}" data-ga-event="reserve_session_click" data-ga-label="{{ analytics_label | escape }}_booking">{{ offer.booking.label | escape }}</a></p>
   {{ offer.invitation.reservation_note | markdownify }}
 </section>
+{% endif %}
+
+{% if offer.questions %}
+<script>
+  (function() {
+    function openQuestionFromHash() {
+      var id = window.location.hash.slice(1);
+      var question = document.getElementById(id);
+      if (!question || question.tagName !== 'DETAILS') return;
+
+      question.open = true;
+      var summary = question.querySelector('summary');
+      if (summary) {
+        summary.focus();
+        question.scrollIntoView();
+      }
+    }
+
+    window.addEventListener('hashchange', openQuestionFromHash);
+    openQuestionFromHash();
+  })();
+</script>
 {% endif %}
