@@ -6,10 +6,11 @@ hero:
   heading: Know Your Patterns
   subheading: When the challenge is human, better answers aren't always enough.
   paragraphs:
-    - You may be comfortable with technology and increasingly use AI as a thinking partner. Yet relationships, competing perspectives, and difficult decisions can still be hard to navigate.
+    - You’re used to solving complex problems. Yet relationships, competing perspectives, and difficult decisions can still leave you unsure how to respond.
     - "*Know Your Patterns* is a private coaching experience to recognize how you think, engage, and respond—and expand what's available to you in situations that matter."
   offer_label: Individual coaching engagement
   offer_description: FEBI® assessment and up to two hours of private coaching.
+  connect_invitation: true
 recognition:
   heading: When This Makes Sense
   paragraphs:
@@ -26,14 +27,14 @@ experience:
         - You'll receive your personal report and have time to reflect on what stands out.
     - heading: Explore what the patterns reveal
       paragraphs:
-        - "In our private coaching conversation, we’ll explore situations that matter to you through two reflective practices:"
+        - "In our private coaching conversation, we’ll begin with a real situation you bring—a conversation, relationship, or decision. We’ll explore it through two reflective practices:"
         - "**Energy Awareness** — Notice how your energy patterns show up and shift across situations and emotional contexts."
         - "**Paradigm Awareness** — Explore how protection, openness, or possibility may be shaping how you respond."
         - Through reflection and conversation, we’ll explore what these perspectives reveal and what other choices might become available.
     - heading: Bring the insights into practice
       paragraphs:
-        - "We'll explore ways to apply these distinctions in relationships, decisions, and conversations—including using AI as a thinking partner for continued reflection."
-        - I'll share approaches I've found useful in my own AI-assisted reflection and reasoning. You can consider what fits your own practice.
+        - We’ll explore ways to apply these distinctions in relationships, decisions, and conversations.
+        - If you’re interested in using AI, I’ll share approaches I’ve found useful for AI-assisted reflection and reasoning. You can decide what fits your own practice.
         - These reflections can become part of how you notice patterns, explore perspectives, and respond to situations over time.
 takeaways:
   heading: What You Take With You
@@ -73,7 +74,7 @@ process:
     - heading: Explore together
       id: explore-together
       paragraphs:
-        - We'll meet privately for up to two hours to explore your energy patterns in situations that matter to you, consider what may be shaping your responses, and apply what emerges—including with AI.
+        - We’ll meet privately for up to two hours to explore your patterns in situations that matter to you, consider what may be shaping your responses, and identify ways to apply what emerges. We can include AI if it’s useful to you.
     - heading: Carry it forward
       id: carry-it-forward
       paragraphs:
@@ -90,12 +91,12 @@ questions:
         - "For more about the framework and its research, explore the [FEBI Technical Manual](https://zenleader.global/s/FEBI-Technical-Manual-2024.pdf)."
     - question: Is this just another personality assessment?
       paragraphs:
-        - "No. FEBI provides a starting point for recognizing your energy patterns. The coaching goes further, using reflective lenses to explore how those patterns show up in real situations, what may be shaping your responses, and what other choices might become available."
+        - "No. FEBI provides a starting point for recognizing your energy patterns. The coaching goes further through reflective practices that help you explore how those patterns show up in real situations, what may be shaping your responses, and what other choices might become available."
         - The aim isn't to label you. It's to expand your awareness and agency.
-    - question: What will we actually do with AI?
+    - question: How might AI fit into the experience?
       paragraphs:
-        - We'll explore how to bring the patterns and distinctions into AI conversations so you can examine situations, explore different perspectives, and continue reflecting beyond our session.
-        - You can use an AI tool you're already comfortable with.
+        - AI is optional. If you’re interested, we can explore how to use it as a thinking partner to consider different perspectives and continue reflecting beyond our session.
+        - You can use a tool you’re already comfortable with, or participate without using AI.
     - question: Do I have to share my report with AI?
       paragraphs:
         - No. You can explore the framework without uploading your personal assessment or sharing sensitive information. What you choose to share with AI is up to you.
