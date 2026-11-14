@@ -14,6 +14,7 @@ action_links:
   email: "mailto:michael@basil.one"
   connect: "https://connect.michael.basil.one"
   know_your_patterns_reservation: "https://know-your-patterns.michael.basil.one"
+  integration_session: "https://integration-session.michael.basil.one"
 analytics:
   ga_measurement_id: G-EEW23EJSSR
 footer:

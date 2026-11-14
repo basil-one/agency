@@ -45,12 +45,12 @@ ways:
         and explore your next choices. Sessions are available independently
         or following Know Your Patterns.
       cta:
-        destination: connect
+        destination: integration_session
         destination_type: action_link
         class: ""
         event: conversion
-        analytics_label: discovery_consultation
-        label: Inquire about Integration Coaching
+        analytics_label: integration_session_booking
+        label: Book an Integration Session
 
 reflections:
   heading: Reflections
