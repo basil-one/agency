@@ -9,7 +9,7 @@ hero:
     - You may be comfortable with technology and increasingly use AI as a thinking partner. Yet relationships, competing perspectives, and difficult decisions can still be hard to navigate.
     - "*Know Your Patterns* is a private coaching experience to recognize how you think, engage, and respond—and expand what's available to you in situations that matter."
   offer_label: Individual coaching engagement
-  offer_description: FEBI® assessment, personal report, and up to two hours of private coaching.
+  offer_description: FEBI® assessment and up to two hours of private coaching.
 recognition:
   heading: When This Makes Sense
   paragraphs:
@@ -26,21 +26,21 @@ experience:
         - You'll receive your personal report and have time to reflect on what stands out.
     - heading: Explore what the patterns reveal
       paragraphs:
-        - "In our private coaching conversation, we'll explore situations that matter to you using two reflective lenses:"
+        - "In our private coaching conversation, we’ll explore situations that matter to you through two reflective practices:"
         - "**Energy Awareness** — Notice how your energy patterns show up and shift across situations and emotional contexts."
         - "**Paradigm Awareness** — Explore how protection, openness, or possibility may be shaping how you respond."
-        - Together, we'll examine how these patterns interact and what other choices might become available.
+        - Through reflection and conversation, we’ll explore what these perspectives reveal and what other choices might become available.
     - heading: Bring the insights into practice
       paragraphs:
         - "We'll explore ways to apply these distinctions in relationships, decisions, and conversations—including using AI as a thinking partner for continued reflection."
         - I'll share approaches I've found useful in my own AI-assisted reflection and reasoning. You can consider what fits your own practice.
-        - The lenses become something you can continue working with, not simply a report you receive.
+        - These reflections can become part of how you notice patterns, explore perspectives, and respond to situations over time.
 takeaways:
   heading: What You Take With You
   items:
-    - Your personal [FEBI](#what-is-febi) report and two reflective lenses for recognizing patterns in context.
-    - Reflection and integration grounded in situations that matter to you.
-    - Ways to use the lenses with AI, with others, and on your own.
+    - Your personal [FEBI®](#what-is-febi) results report as a reference for continued reflection.
+    - Greater awareness of how your patterns and responses may shift across situations.
+    - Reflective practices you can revisit on your own, with others, or with AI.
     - A clearer sense of your options and where your response might make a difference.
   closing: "**The aim isn't to change who you are. It's to expand what's available to you.**"
 testimonials:
@@ -52,12 +52,12 @@ coach:
   heading: About Your Coach
   paragraphs:
     - I'm Michael Basil, a [certified Zen Leadership Coach](https://zenleader.global/resources/coach-directory/michael-basil) with experience helping individuals, groups, and organizations navigate difficult situations and pursue meaningful change.
-    - "I also use AI extensively in my own reflection and reasoning. *Know Your Patterns* brings these practices together, developing greater awareness and agency while learning to work intentionally with increasingly capable tools."
+    - I also use AI as a thinking partner in my own reflection and reasoning. Know Your Patterns brings reflective practice and coaching together, with AI offering another way to explore perspectives and develop greater awareness and agency.
   image: /assets/images/profile.jpg
   image_alt: Michael Basil
 process:
   heading: How It Works
-  summary: "**Includes your [FEBI®](#what-is-febi) assessment, personal report, time to reflect beforehand, and up to two hours of private coaching.**"
+  summary: "**Includes your [FEBI®](#what-is-febi) assessment and personal results report, time to reflect beforehand, and up to two hours of private coaching.**"
   details_label: From Reservation to Session
   steps:
     - heading: Reserve and pay
@@ -77,7 +77,7 @@ process:
     - heading: Carry it forward
       id: carry-it-forward
       paragraphs:
-        - You'll leave with your report, the distinctions we've explored, and ways to continue applying the lens in your own life and work.
+        - You’ll leave with your FEBI results, the distinctions we’ve explored, and ways to continue reflecting and applying what emerges in your life and work.
         - There's no expectation of ongoing coaching. If you'd like continued support, we can explore additional integration sessions.
 questions:
   heading: Common Questions
@@ -114,5 +114,5 @@ questions:
 invitation:
   heading: Ready to Explore Your Patterns?
   paragraph: If this feels relevant to your life, work, or relationships, you can begin by reserving your session.
-  offer_description: FEBI® assessment, personal report, and private coaching
+  offer_description: FEBI® assessment and private coaching
   reservation_note: Payment is collected at booking. I'll follow up with your FEBI assessment invitation and next steps.

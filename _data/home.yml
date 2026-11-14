@@ -27,9 +27,9 @@ ways:
     - heading: Know Your Patterns
       label: A place to begin
       body: >
-        A personal assessment and coaching experience to recognize
-        your patterns, gain another lens on your situation, and expand
-        your available choices.
+        A FEBI® assessment and private coaching experience to explore how
+        your patterns show up in real situations and expand your available
+        choices.
       cta:
         destination: /know-your-patterns/
         destination_type: path
@@ -40,10 +40,10 @@ ways:
     - heading: Integration Coaching
       label: Ongoing support
       body: >
-        For situations that continue to unfold, ongoing coaching is tailored
-        to you. We revisit real situations, reflect on and integrate what
-        emerges, and develop your capacity to respond intentionally over time.
-        This work can follow Know Your Patterns, but it doesn't have to.
+        For situations that continue to unfold, private coaching offers space
+        to revisit what’s happening, integrate what emerges,
+        and explore your next choices. Sessions are available independently
+        or following Know Your Patterns.
       cta:
         destination: connect
         destination_type: action_link
