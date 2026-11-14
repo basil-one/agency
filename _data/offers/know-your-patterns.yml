@@ -9,7 +9,7 @@ hero:
     - You may be comfortable with technology and increasingly use AI as a thinking partner. Yet relationships, competing perspectives, and difficult decisions can still be hard to navigate.
     - "*Know Your Patterns* is a private coaching experience to recognize how you think, engage, and respond—and expand what's available to you in situations that matter."
   offer_label: Individual coaching engagement
-  offer_description: Personal assessment, report, and up to two hours of private coaching.
+  offer_description: FEBI® assessment, personal report, and up to two hours of private coaching.
 recognition:
   heading: When This Makes Sense
   paragraphs:
@@ -57,7 +57,7 @@ coach:
   image_alt: Michael Basil
 process:
   heading: How It Works
-  summary: "**This experience includes your [FEBI](#what-is-febi) assessment, personal report, a private coaching session of up to two hours, and opportunities for reflection beforehand.**"
+  summary: "**Includes your [FEBI®](#what-is-febi) assessment, personal report, time to reflect beforehand, and up to two hours of private coaching.**"
   details_label: From Reservation to Session
   steps:
     - heading: Reserve and pay
@@ -78,7 +78,7 @@ process:
       id: carry-it-forward
       paragraphs:
         - You'll leave with your report, the distinctions we've explored, and ways to continue applying the lens in your own life and work.
-        - There's no ongoing coaching commitment.
+        - There's no expectation of ongoing coaching. If you'd like continued support, we can explore additional integration sessions.
 questions:
   heading: Common Questions
   items:
@@ -101,11 +101,10 @@ questions:
         - No. You can explore the framework without uploading your personal assessment or sharing sensitive information. What you choose to share with AI is up to you.
     - question: Is Signal required?
       paragraphs:
-        - No. Email works fine for scheduling and questions.
-        - Signal is available for optional voice or text exchanges that provide context and light calibration before our session.
+        - No. We can coordinate details and questions by email. Signal is available for optional voice or text exchanges before our session.
     - question: Can I speak with you before paying?
       paragraphs:
-        - "Of course. You're welcome to schedule a free [25-minute Connect conversation](https://connect.michael.basil.one) to ask questions, get acquainted, and see whether the experience is a good fit."
+        - "Yes. You're welcome to book a free 25-minute [Connect conversation](https://connect.michael.basil.one) to get acquainted and ask questions before deciding."
     - question: What if I need to reschedule?
       paragraphs:
         - If you've completed the assessment and received your report but cannot attend your scheduled coaching session, we can reschedule once, subject to availability.
@@ -115,5 +114,5 @@ questions:
 invitation:
   heading: Ready to Explore Your Patterns?
   paragraph: If this feels relevant to your life, work, or relationships, you can begin by reserving your session.
-  offer_description: Personal assessment, report, and private coaching
+  offer_description: FEBI® assessment, personal report, and private coaching
   reservation_note: Payment is collected at booking. I'll follow up with your FEBI assessment invitation and next steps.
