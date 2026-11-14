@@ -70,7 +70,7 @@ process:
       id: complete-your-assessment
       paragraphs:
         - Complete [FEBI](#what-is-febi) before our coaching session. Once you've finished, I'll share your personal report so you have time to review it.
-        - As the session approaches, you're welcome to exchange a few initial questions, observations, or reflections with me by email or Signal. These optional exchanges help us prepare, rather than adding coaching sessions.
+        - As the session approaches, you’re welcome to share a few initial questions, observations, or reflections by replying to my email. If you’d prefer Signal, we can arrange that after booking. These optional exchanges help us prepare, rather than adding coaching sessions.
     - heading: Explore together
       id: explore-together
       paragraphs:
@@ -100,9 +100,9 @@ questions:
     - question: Do I have to share my report with AI?
       paragraphs:
         - No. You can explore the framework without uploading your personal assessment or sharing sensitive information. What you choose to share with AI is up to you.
-    - question: Is Signal required?
+    - question: How do we communicate before the session?
       paragraphs:
-        - No. We can coordinate details and questions by email. Signal is available for optional voice or text exchanges before our session.
+        - After you book, I’ll follow up by email. We can continue there, or arrange Signal for optional voice or text exchanges.
     - question: Can I speak with you before paying?
       paragraphs:
         - "Yes. You're welcome to [connect](https://connect.michael.basil.one) for a few minutes to get acquainted and ask questions before deciding."
