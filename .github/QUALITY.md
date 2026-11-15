@@ -42,6 +42,7 @@ The next quality capabilities extend the same stance:
 | SEO integrity (CI-06) | Validate generated metadata and discoverability signals; monitor live endpoints where they can drift |
 | Performance (CI-07) | Establish a measured baseline and detect meaningful regressions without chasing perfect scores |
 | Security and maintenance (CI-08) | Use dependency advisories and automated update PRs, with human review of security and compatibility |
+| Maintainability and changeability (CI-09) | Keep the code understandable, cohesive, and economical to change; detect meaningful structural deterioration and favor simpler alternatives when they improve the system |
 
 These are commitments under development, **not existing checks**. Each becomes an operating safeguard only after its behavior, reporting, and action path are verified. Checks run on PRs or a schedule according to the risk they address—not because every dimension needs the same frequency.
 
