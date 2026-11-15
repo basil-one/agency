@@ -13,27 +13,14 @@ The site will be available at http://localhost:4000.
 
 ### Build verification
 
-From the repository root, install the locked dependencies and build as CI does:
+Pull requests to `main` run an automated Jekyll build.
 
 ```sh
 BUNDLE_FROZEN=true bundle install
 JEKYLL_ENV=production bundle exec jekyll build --trace
 ```
 
-The generated site is in `_site/` (ignored by Git). Pull requests targeting
-`main`, including drafts, run the **Jekyll build / Build Jekyll site** check.
-A failed dependency installation or build fails the check; open its failing
-step in the PR's Checks tab for the error and build trace.
-
-If installation fails, check `ruby --version` and `bundle --version` against
-the Ruby version above and `BUNDLED WITH` in `Gemfile.lock`. Install that
-Bundler version with `gem install bundler -v 2.4.19` if needed. Use the committed
-lockfile rather than running `bundle update` to work around errors. For build
-failures, reproduce the command above and inspect the file and line named in
-the trace (for example, YAML configuration, Liquid templates, or Sass).
-
-This check only builds the site. GitHub Pages continues to build and publish
-from the root of `main` to https://agency.basil.one/ after merge.
+Build failures are reported in the PR's Checks tab.
 
 ## License
 
