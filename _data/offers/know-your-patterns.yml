@@ -10,7 +10,6 @@ hero:
     - "*Know Your Patterns* is a private coaching experience to recognize how you think, engage, and respond—and expand what's available to you in situations that matter."
   offer_label: Individual coaching engagement
   offer_description: FEBI® assessment and up to two hours of private coaching.
-  connect_invitation: true
 recognition:
   heading: When This Makes Sense
   paragraphs:
@@ -44,11 +43,6 @@ takeaways:
     - Reflective practices you can revisit on your own, with others, or with AI.
     - A clearer sense of your options and where your response might make a difference.
   closing: "**The aim isn't to change who you are. It's to expand what's available to you.**"
-testimonials:
-  heading: What People Have Said
-  introduction: "*Reflections from previous individual coaching engagements.*"
-  quote: I'm able to prepare for difficult conversations instead of reacting in the moment.
-  reflection: Another participant described becoming clearer about where they had choices, where they didn't, and how that understanding changed the way they engaged.
 coach:
   heading: About Your Coach
   paragraphs:
@@ -58,7 +52,7 @@ coach:
   image_alt: Michael Basil
 process:
   heading: How It Works
-  summary: "**Includes your [FEBI®](#what-is-febi) assessment and personal results report, time to reflect beforehand, and up to two hours of private coaching.**"
+  summary: "After booking, you'll complete the [FEBI®](#what-is-febi) assessment and review your results before we meet for up to two hours of private coaching."
   details_label: From Reservation to Session
   steps:
     - heading: Reserve and pay
@@ -114,6 +108,4 @@ questions:
         - No. This is a coaching and reflective learning experience, not psychotherapy or mental health treatment.
 invitation:
   heading: Ready to Explore Your Patterns?
-  paragraph: If this feels relevant to your life, work, or relationships, you can begin by reserving your session.
   offer_description: FEBI® assessment and private coaching
-  reservation_note: Payment is collected at booking. I'll follow up with your FEBI assessment invitation and next steps.
