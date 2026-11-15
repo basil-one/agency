@@ -26,10 +26,7 @@ ways:
   items:
     - heading: Know Your Patterns
       label: A place to begin
-      body: >
-        A FEBI® assessment and private coaching experience to explore how
-        your patterns show up in real situations and expand your available
-        choices.
+      body: A personal assessment and private coaching experience to recognize your patterns in real situations and explore new ways to respond.
       cta:
         destination: /know-your-patterns/
         destination_type: path
@@ -58,9 +55,3 @@ reflections:
     Explore my writing about agency, relationships, leadership, and
     navigating complexity.
   link_label: Read Reflections
-
-fine_print:
-  body: >
-    <a href="/know-your-patterns/#what-is-febi">FEBI®</a> is a coaching
-    framework and registered trademark associated with the
-    Institute for Zen Leadership.
