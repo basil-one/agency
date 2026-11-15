@@ -304,7 +304,7 @@ def report_for_site(
     config_path: Path,
     check_externals: bool = True,
     external_delay: float = 0.25,
-) -> tuple[str, int]:
+) -> tuple[str, int, int]:
     site_url, baseurl, action_links = parse_config(config_path)
     if not site_url:
         raise ValueError(f"{config_path} must define the site's url")
@@ -359,8 +359,8 @@ def report_for_site(
         f"- Unique external destinations: {len(external_sources)}",
         f"- External destinations checked: {len(external_results)}",
         "",
-        "External results are informational and never fail this check; 401/403/429, "
-        "server errors, and network failures are treated as uncertain.",
+        "Uncertain external responses never fail. Likely broken external links fail only "
+        "with `--fail-on-likely-external`; internal failures always fail.",
         "",
         "## Broken internal links and assets",
         "",
@@ -404,7 +404,10 @@ def report_for_site(
         lines.extend(("", f"## {title}", ""))
         lines.extend(findings[category] or ["None."])
 
-    return "\n".join(lines) + "\n", len(internal)
+    likely_broken_count = sum(
+        category == "likely broken" for category, _ in external_results.values()
+    )
+    return "\n".join(lines) + "\n", len(internal), likely_broken_count
 
 
 def main() -> int:
@@ -413,10 +416,11 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=Path("_config.yml"))
     parser.add_argument("--report", type=Path, default=Path("link-audit-report.md"))
     parser.add_argument("--skip-external", action="store_true")
+    parser.add_argument("--fail-on-likely-external", action="store_true")
     args = parser.parse_args()
 
     try:
-        report, internal_errors = report_for_site(
+        report, internal_errors, likely_external_errors = report_for_site(
             args.site_dir, args.config, check_externals=not args.skip_external
         )
     except (OSError, ValueError) as error:
@@ -424,7 +428,7 @@ def main() -> int:
 
     args.report.write_text(report, encoding="utf-8")
     print(report, end="")
-    return 1 if internal_errors else 0
+    return 1 if internal_errors or (args.fail_on_likely_external and likely_external_errors) else 0
 
 
 if __name__ == "__main__":

@@ -63,7 +63,7 @@ class CheckLinksTests(unittest.TestCase):
         config = self.root / "_config.yml"
         config.write_text('url: "https://agency.example"\nbaseurl: "/preview"\n')
 
-        report, errors = report_for_site(self.site, config, check_externals=False)
+        report, errors, _ = report_for_site(self.site, config, check_externals=False)
 
         self.assertEqual(errors, 2)
         self.assertIn("Generated HTML pages scanned: 2", report)
@@ -87,7 +87,7 @@ class CheckLinksTests(unittest.TestCase):
         self.assertFalse(public_destination("http://127.0.0.1/private")[0])
         self.assertFalse(public_destination("not-a-url")[0])
 
-    def test_external_failures_are_reported_without_failing_internal_check(self):
+    def test_uncertain_external_failures_are_reported_without_failing_audit(self):
         self.write(
             "index.html",
             '<a href="https://connect.example/blocked">Action</a>',
@@ -113,6 +113,7 @@ class CheckLinksTests(unittest.TestCase):
                     str(config),
                     "--report",
                     str(report_path),
+                    "--fail-on-likely-external",
                 ],
             ):
                 self.assertEqual(main(), 0)
@@ -123,6 +124,59 @@ class CheckLinksTests(unittest.TestCase):
         self.assertIn("ACTION: `connect`", report)
         self.assertIn("## Coaching and contact destinations", report)
         self.assertIn("source pages: /", report)
+
+    def test_likely_broken_external_link_fails_scheduled_audit(self):
+        self.write("index.html", '<a href="https://broken.example/path">Broken</a>')
+        config = self.root / "_config.yml"
+        config.write_text('url: "https://agency.example"\nbaseurl: ""\n')
+        report_path = self.root / "report.md"
+
+        with patch(
+            "scripts.check_links.check_external",
+            return_value=("likely broken", "HTTP 404 Not Found"),
+        ):
+            with patch(
+                "sys.argv",
+                [
+                    "check_links.py",
+                    "--site-dir",
+                    str(self.site),
+                    "--config",
+                    str(config),
+                    "--report",
+                    str(report_path),
+                    "--fail-on-likely-external",
+                ],
+            ):
+                self.assertEqual(main(), 1)
+        report = report_path.read_text(encoding="utf-8")
+        self.assertIn("Likely broken external links", report)
+        self.assertIn("Source:** `/`", report)
+        self.assertIn("Destination:** `https://broken.example/path`", report)
+
+    def test_skip_external_does_not_make_requests(self):
+        self.write("index.html", '<a href="https://external.example/path">External</a>')
+        config = self.root / "_config.yml"
+        config.write_text('url: "https://agency.example"\nbaseurl: ""\n')
+        report_path = self.root / "report.md"
+
+        with patch("scripts.check_links.check_external") as check_external_mock:
+            with patch(
+                "sys.argv",
+                [
+                    "check_links.py",
+                    "--site-dir",
+                    str(self.site),
+                    "--config",
+                    str(config),
+                    "--report",
+                    str(report_path),
+                    "--skip-external",
+                ],
+            ):
+                self.assertEqual(main(), 0)
+        check_external_mock.assert_not_called()
+        self.assertIn("External destinations checked: 0", report_path.read_text(encoding="utf-8"))
 
     def test_command_fails_for_broken_internal_target(self):
         self.write(
@@ -147,9 +201,9 @@ class CheckLinksTests(unittest.TestCase):
             ],
         ):
             self.assertEqual(main(), 1)
-            report = report_path.read_text(encoding="utf-8")
-            self.assertIn("/missing-page/", report)
-            self.assertIn("/missing.png", report)
+        report = report_path.read_text(encoding="utf-8")
+        self.assertIn("/missing-page/", report)
+        self.assertIn("/missing.png", report)
 
 
 if __name__ == "__main__":
