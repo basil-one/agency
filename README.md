@@ -32,6 +32,21 @@ python3 scripts/check_links.py --site-dir _site --config _config.yml
 
 Broken internal links, fragments, and assets fail the existing Jekyll build check. Pull requests skip external requests; weekly/manual audits report outbound results in Actions. Only likely broken links fail those runs; uncertain responses do not.
 
+### Code quality
+
+The `Code quality` check runs Super-Linter on code and configuration in pull requests. To run it locally, install Docker and run:
+
+```sh
+docker run --rm --env-file .github/linters/super-linter.env \
+  -e RUN_LOCAL=true \
+  -e DEFAULT_WORKSPACE=/tmp/lint \
+  -e DEFAULT_BRANCH="$(git branch --show-current)" \
+  -v "$PWD:/tmp/lint" \
+  ghcr.io/super-linter/super-linter:slim-v9.0.0
+```
+
+Liquid layouts and Markdown are checked through the Jekyll build; generated-page links are checked by the existing audit. Markdown prose is not linted or reformatted. PR results appear in the Checks tab.
+
 ## License
 
 The HTML structure and site code in this repository are licensed under the MIT License.
