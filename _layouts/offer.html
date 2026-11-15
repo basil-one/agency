@@ -52,15 +52,6 @@ layout: default
 </section>
 {% endif %}
 
-{% if offer.testimonials %}
-<section id="testimonials">
-  <h2 id="{{ offer.testimonials.heading | slugify }}">{{ offer.testimonials.heading | escape }}</h2>
-  {% if offer.testimonials.introduction %}{{ offer.testimonials.introduction | markdownify }}{% endif %}
-  {% if offer.testimonials.quote %}<blockquote>{{ offer.testimonials.quote | markdownify }}</blockquote>{% endif %}
-  {% if offer.testimonials.reflection %}{{ offer.testimonials.reflection | markdownify }}{% endif %}
-</section>
-{% endif %}
-
 {% if offer.coach %}
 <section id="coach">
   <h2 id="{{ offer.coach.heading | slugify }}">{{ offer.coach.heading | escape }}</h2>
@@ -112,7 +103,7 @@ layout: default
   <h2 id="{{ offer.invitation.heading | slugify }}">{{ offer.invitation.heading | escape }}</h2>
   <p><strong>{{ offer.price }} | {{ offer.invitation.offer_description }}</strong></p>
   <p><a class="reserve-button" href="{{ site.action_links[offer.booking.action_link] | escape }}" data-ga-event="reserve_session_click" data-ga-label="{{ analytics_label | escape }}_booking">{{ offer.booking.label | escape }}</a></p>
-  <p>Questions before booking? You're welcome to <a href="{{ site.action_links.connect | escape }}">connect</a> first.</p>
+  <p>Questions before booking? You're welcome to <a href="{{ site.action_links.connect | escape }}" data-ga-event="conversion" data-ga-label="know_your_patterns_prebooking_connect">connect</a> first.</p>
 </section>
 {% endif %}
 
