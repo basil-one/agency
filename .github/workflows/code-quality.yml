@@ -1,0 +1,25 @@
+name: Code quality
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint source and configuration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Load Super-Linter configuration
+        run: cat .github/linters/super-linter.env >> "$GITHUB_ENV"
+      - name: Check Gemfile syntax
+        run: ruby -c Gemfile
+      - name: Super-Linter
+        uses: super-linter/super-linter/slim@v9.0.0

@@ -1,8 +1,8 @@
 import http.server
-from pathlib import Path
 import tempfile
 import threading
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from scripts.check_links import check_external, main, public_destination, report_for_site
@@ -94,8 +94,8 @@ class CheckLinksTests(unittest.TestCase):
         )
         config = self.root / "_config.yml"
         config.write_text(
-            f'url: "https://agency.example"\n'
-            f'baseurl: ""\naction_links:\n  connect: "https://connect.example/blocked"\n'
+            'url: "https://agency.example"\n'
+            'baseurl: ""\naction_links:\n  connect: "https://connect.example/blocked"\n'
         )
         report_path = self.root / "report.md"
 

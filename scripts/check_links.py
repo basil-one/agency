@@ -4,17 +4,16 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass, field
-from html.parser import HTMLParser
 import ipaddress
-from pathlib import Path
 import re
 import socket
 import time
+from dataclasses import dataclass, field
+from html.parser import HTMLParser
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import unquote, urldefrag, urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
-
 
 LINK_ATTRIBUTES = ("href", "src", "poster", "data")
 UNCERTAIN_STATUSES = {401, 403, 407, 408, 425, 429}
@@ -220,11 +219,7 @@ def broken_internal_links(
                 continue
             fragment = unquote(parts.fragment)
             target_page = page_by_path.get(target)
-            if (
-                fragment
-                and target_page
-                and fragment not in target_page.identifiers
-            ):
+            if fragment and target_page and fragment not in target_page.identifiers:
                 issues.append((page.url, raw_url, f"fragment '#{fragment}' not found in target"))
 
     return issues, checked
@@ -346,8 +341,7 @@ def report_for_site(
             label = f" **ACTION: `{action[0]}`**" if action else ""
             for source in sorted(external_sources[url]):
                 findings[category].append(
-                    f"- **Source:** `{source}` → **Destination:** `{url}` — "
-                    f"{detail}{label}"
+                    f"- **Source:** `{source}` → **Destination:** `{url}` — {detail}{label}"
                 )
 
     lines = [
@@ -393,9 +387,7 @@ def report_for_site(
             category, detail = external_results[destination]
             status = f"{category}: {detail}"
             sources = f" — source pages: {', '.join(sorted(external_sources[destination]))}"
-        lines.append(
-            f"- **{action}**: `{configured_url}` — {status}{sources}"
-        )
+        lines.append(f"- **{action}**: `{configured_url}` — {status}{sources}")
 
     for category, title in (
         ("likely broken", "Likely broken external links"),
