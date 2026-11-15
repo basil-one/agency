@@ -1,15 +1,15 @@
-# Quality at Agency
+# Quality stance
 
 **Quality is a continuous practice in service of human connection.**
 
-Agency exists to support individual coaching, reflection, and human agency. Its technical quality protects visitors' ability to understand, trust, navigate, and engage. The practice also respects the time and attention of the people caring for the site.
+Technical quality protects people's ability to understand, trust, navigate, and engage. A sustainable quality practice also respects the time and attention of the people caring for the experience.
 
 ## Our stance
 
 - **Human connection is the purpose.** Reliability, accessibility, clarity, and performance serve the visitor's experience. A passing score is evidence, not a substitute for human judgment.
 - **Quality is sustained.** Relevant changes are checked before merging; conditions that can deteriorate without a code change are revisited over time.
 - **Automation brings actionable work to human judgment.** When a problem has a safe, practical remedy, an agent or workflow brings a reviewable pull request. Otherwise it brings a focused finding with evidence, impact, and a recommended next action. Humans decide what matters, approve changes, and merge.
-- **Care creates capacity.** Healthy checks stay quiet. Alerts are proportionate, understandable, and worth acting on. The practice reduces maintenance work rather than competing with the human work Agency exists to support.
+- **Care creates capacity.** Healthy checks stay quiet. Alerts are proportionate, understandable, and worth acting on. The practice reduces maintenance work rather than displacing attention from human connection.
 
 ## How we operate
 
