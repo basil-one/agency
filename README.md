@@ -1,51 +1,27 @@
-# agency
+# Agency
 
-This repository contains the source for a Jekyll site for individual coaching
-and reflections.
+Source for [Agency](https://agency.basil.one), a Jekyll site for individual coaching and reflections.
+
+## Quality
+
+**Quality is a continuous practice in service of human connection.**
+
+We keep Agency dependable, accessible, and easy to use so the site supports meaningful human encounters. Automation carries repetitive checks and brings evidence and practical remedies to human judgment. The practice creates capacity rather than maintenance overhead.
+
+Our [quality stance and practice](QUALITY.md) describes the commitment, the safeguards in operation, and the capabilities being established.
 
 ## Development
 
-1. Open in GitHub Codespaces (uses the provided dev container), or use Ruby 3.2+ with Bundler locally. CI uses Ruby 3.3.
-2. Install dependencies via terminal: `bundle install`
-3. Run locally via terminal: `bundle exec jekyll serve`
-
-The site will be available at http://localhost:4000.
-
-### Build verification
-
-Pull requests to `main` run an automated Jekyll build.
+Use GitHub Codespaces or Ruby 3.2+ with Bundler locally (CI uses Ruby 3.3).
 
 ```sh
-BUNDLE_FROZEN=true bundle install
-JEKYLL_ENV=production bundle exec jekyll build --trace
+bundle install
+bundle exec jekyll serve
 ```
 
-Build failures are reported in the PR's Checks tab.
+The local site is available at http://localhost:4000.
 
-### Link integrity
-
-After building the site, run the generated-site audit:
-
-```sh
-python3 scripts/check_links.py --site-dir _site --config _config.yml
-```
-
-Broken internal links, fragments, and assets fail the existing Jekyll build check. Pull requests skip external requests; weekly/manual audits report outbound results in Actions. Only likely broken links fail those runs; uncertain responses do not.
-
-### Code quality
-
-The `Code quality` check runs Super-Linter on code and configuration in pull requests. To run it locally, install Docker and run:
-
-```sh
-docker run --rm --env-file .github/linters/super-linter.env \
-  -e RUN_LOCAL=true \
-  -e DEFAULT_WORKSPACE=/tmp/lint \
-  -e DEFAULT_BRANCH="$(git branch --show-current)" \
-  -v "$PWD:/tmp/lint" \
-  ghcr.io/super-linter/super-linter:slim-v9.0.0
-```
-
-Liquid layouts and Markdown are checked through the Jekyll build; generated-page links are checked by the existing audit. Markdown prose is not linted or reformatted. PR results appear in the Checks tab.
+Pull requests to `main` run a production Jekyll build, link-integrity checks, and source linting. Results and diagnostics appear in the pull request's **Checks** tab. A weekly workflow also audits external links.
 
 ## License
 
