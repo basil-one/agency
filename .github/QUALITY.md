@@ -1,17 +1,17 @@
-# Quality stance
+# Quality Stance
 
 **Quality is a continuous practice in service of human connection.**
 
 Technical quality protects people's ability to understand, trust, navigate, and engage. A sustainable quality practice also respects the time and attention of the people caring for the experience.
 
-## Our stance
+## Our Stance
 
 - **Human connection is the purpose.** Reliability, accessibility, clarity, and performance serve the visitor's experience. A passing score is evidence, not a substitute for human judgment.
 - **Quality is sustained.** Relevant changes are checked before merging; conditions that can deteriorate without a code change are revisited over time.
 - **Automation brings actionable work to human judgment.** When a problem has a safe, practical remedy, an agent or workflow brings a reviewable pull request. Otherwise it brings a focused finding with evidence, impact, and a recommended next action. Humans decide what matters, approve changes, and merge.
 - **Care creates capacity.** Healthy checks stay quiet. Alerts are proportionate, understandable, and worth acting on. The practice reduces maintenance work rather than displacing attention from human connection.
 
-## How we operate
+## How We Operate
 
 **On change:** Pull requests are checked against the safeguards in operation below. Failures require correction or an explicit authorized human decision.
 
@@ -21,7 +21,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 **Through learning:** Useful misses improve coverage. Noisy checks, fragile automation, and maintenance disproportionate to the site's needs are refined or retired. The practice evolves with evidence.
 
-## Safeguards in operation
+## Safeguards in Operation
 
 | Dimension | On pull requests | Over time |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 | [Dependency security](workflows/dependency-security.yml) | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
 | [Rendered-site integrity](workflows/rendered-site-integrity.yml) | Production-generated pages load in Chromium; main navigation and visitor actions work | No separate scheduled check |
 
-## Commitments being established
+## Commitments Being Established
 
 The next quality capabilities extend the same stance:
 
