@@ -13,7 +13,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 ## How we operate
 
-**On change:** Pull requests are checked for build integrity, internal and external links, source quality, and dependency security. Failures require correction or an explicit authorized human decision.
+**On change:** Pull requests are checked against the safeguards in operation below. Failures require correction or an explicit authorized human decision.
 
 **Over time:** Risks that can change without a code change are revisited. Meaningful findings or proposed remedies come to human judgment; healthy checks stay quiet.
 
@@ -28,7 +28,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 | Build integrity | Production Jekyll build | No separate scheduled check |
 | Link integrity | Generated-site internal links, fragments, assets, and external destinations | Weekly/manual external-link audit; uncertain responses reported separately |
 | SEO integrity | Generated page titles, canonical URLs, and indexing directives | No separate scheduled/deployed-site check |
-| Source quality | Super-Linter and Ruby syntax validation | Conventions enforced on subsequent PRs |
+| Source quality | Super-Linter (including Ruff C901 complexity) and Ruby syntax validation | Conventions enforced on subsequent PRs |
 | Dependency security | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
 
 See [build integrity](workflows/build-integrity.yml), [link integrity](workflows/link-integrity.yml), [SEO integrity](workflows/seo-integrity.yml), [source quality](workflows/source-quality.yml), and [dependency security](workflows/dependency-security.yml) for the checks and their diagnostics.
@@ -41,9 +41,7 @@ The next quality capabilities extend the same stance:
 | --- | --- |
 | Accessibility (CI-04) | Validate rendered accessibility on changes; revisit the live experience where useful |
 | Responsive usability (CI-05) | Exercise representative viewports and visitor pathways |
-| SEO integrity (CI-06) | Validate generated metadata and discoverability signals; monitor live endpoints where they can drift |
 | Performance (CI-07) | Establish a measured baseline and detect meaningful regressions without chasing perfect scores |
-| Maintainability and changeability (CI-09) | Keep the code understandable, cohesive, and economical to change; detect meaningful structural deterioration and favor simpler alternatives when they improve the system |
 
 These are commitments under development, **not existing checks**. Each becomes an operating safeguard only after its behavior, reporting, and action path are verified. Checks run on PRs or a schedule according to the risk they address—not because every dimension needs the same frequency.
 
