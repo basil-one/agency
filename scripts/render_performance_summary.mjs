@@ -291,7 +291,7 @@ function renderPerformanceSummary(inputs) {
   lines.push(...baselineLines(comparison));
   if (comparison?.deltasAvailable) {
     lines.push(...deltaTable(comparison));
-  } else     if (complete) {
+  } else if (complete) {
     lines.push(...representativeTable(summary));
   }
 
