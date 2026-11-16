@@ -21,21 +21,6 @@ bundle exec jekyll serve
 
 The local site is available at http://localhost:4000.
 
-PR checks report their results in the pull request's **Checks** tab. The [quality practice](.github/QUALITY.md) describes which safeguards run on PRs and over time.
-
-The separate rendered-site browser workflow builds the production site and runs Chromium smoke tests against generated pages at `http://127.0.0.1:4173`. To run them locally:
-
-```sh
-BUNDLE_FROZEN=true JEKYLL_ENV=production bundle exec jekyll build --trace
-npm ci
-npx playwright install --only-shell chromium
-npm run test:browser
-```
-
-The smoke tests cover `/`, `/know-your-patterns/`, `/reflections/`, and `/reflections/where-does-leadership-live/`; they check generated route files, page loading, main navigation, and visible calls to action without following external links. Set `BROWSER_VIEWPORT_WIDTH` and `BROWSER_VIEWPORT_HEIGHT` to change the browser viewport. `npm run test:browser:negative` deliberately requests a missing route to show the failure diagnostic (it is expected to fail).
-
-Future accessibility, additional viewport, and performance tests can reuse `playwright.config.js`, the local generated-site server, and the Chromium installation. Those checks are not part of this smoke-test foundation.
-
 ## License
 
 The HTML structure and site code in this repository are licensed under the MIT License.
