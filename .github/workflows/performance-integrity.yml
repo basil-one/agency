@@ -101,6 +101,6 @@ jobs:
             else
               echo '- Raw Lighthouse JSON artifact: unavailable; inspect the **Upload Lighthouse reports** step.'
             fi
-            echo '- Sources: Lighthouse JSON reports supply route/profile measurements, tool versions, and network observations; generated `_site` supplies the pages and external-script inventory; Actions step outcomes supply execution and diagnostic status.'
+            echo "- Sources: Lighthouse JSON reports supply route/profile measurements, tool versions, and network observations; generated \`_site\` supplies the pages and external-script inventory; Actions step outcomes supply execution and diagnostic status."
             echo '- Runtime: measurement runtime is reported separately from the total Actions job duration, which includes setup, build, dependency/browser installation, diagnostic verification, and artifact upload and is shown in the run overview.'
           } >> "$GITHUB_STEP_SUMMARY"
