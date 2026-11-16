@@ -4,6 +4,9 @@ _site/
 .jekyll-metadata
 .bundle/
 vendor/
+node_modules/
+playwright-report/
+test-results/
 .DS_Store
 link-audit-report.md
 __pycache__/

@@ -1,0 +1,12 @@
+{
+  "name": "agency-browser-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:browser": "playwright test tests/browser/smoke.spec.js",
+    "test:browser:negative": "playwright test tests/browser/negative.spec.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}

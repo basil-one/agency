@@ -30,8 +30,9 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 | SEO integrity | Generated page titles, canonical URLs, and indexing directives | No separate scheduled/deployed-site check |
 | Source quality | Super-Linter (including Ruff C901 complexity) and Ruby syntax validation | Conventions enforced on subsequent PRs |
 | Dependency security | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
+| Rendered-site integrity | Production-generated pages load in Chromium; main navigation and visitor actions work | No separate scheduled check |
 
-See [build integrity](workflows/build-integrity.yml), [link integrity](workflows/link-integrity.yml), [SEO integrity](workflows/seo-integrity.yml), [source quality](workflows/source-quality.yml), and [dependency security](workflows/dependency-security.yml) for the checks and their diagnostics.
+See [build integrity](workflows/build-integrity.yml), [link integrity](workflows/link-integrity.yml), [SEO integrity](workflows/seo-integrity.yml), [source quality](workflows/source-quality.yml), [dependency security](workflows/dependency-security.yml), and [rendered-site integrity](workflows/rendered-site-integrity.yml) for the checks and their diagnostics.
 
 ## Commitments being established
 
