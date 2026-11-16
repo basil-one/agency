@@ -409,6 +409,7 @@ function buildComparison(current, reference, history) {
             : 'No versioned successful main reference has been established.'
         },
     deltasAvailable,
+    conditions: differences,
     comparisons: [...currentResults].map(([slot, result]) => {
       const fixedResult = referenceResults.get(slot);
       const rollingResult = rolling.get(slot);
@@ -463,9 +464,6 @@ async function main() {
   const summary = getCurrentSummary(reportDirectory);
   if (!summary) {
     const line = '- Baseline comparison unavailable: measurement did not produce a complete summary; inspect the measurement step and any partial JSON artifacts.';
-    if (process.env.GITHUB_STEP_SUMMARY) {
-      writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${line}\n`, { flag: 'a' });
-    }
     process.stdout.write(`${line}\n`);
     return;
   }
@@ -494,9 +492,6 @@ async function main() {
       `deltas_available=${comparison.deltasAvailable}\nhistory_status=${comparison.history.status}\nhistory_count=${comparison.history.availableDailySamples}\n`,
       { flag: 'a' }
     );
-  }
-  if (process.env.GITHUB_STEP_SUMMARY) {
-    writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`, { flag: 'a' });
   }
   process.stdout.write(`${lines.join('\n')}\n`);
 }

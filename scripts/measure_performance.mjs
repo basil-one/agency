@@ -227,9 +227,6 @@ function renderSummary(
     resolve(reportDirectory, 'performance-summary.json'),
     `${JSON.stringify(machineSummary, null, 2)}\n`
   );
-  if (process.env.GITHUB_STEP_SUMMARY) {
-    writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`, { flag: 'a' });
-  }
   process.stdout.write(`${lines.join('\n')}\n`);
 }
 
@@ -330,6 +327,7 @@ async function main() {
           : null
       };
     });
+    const elapsedSeconds = (Date.now() - startedAt) / 1000;
     const machineSummary = {
       schemaVersion: 1,
       complete: true,
@@ -365,6 +363,9 @@ async function main() {
         analyticsCollectionBlocked: true,
         labOnly: true
       },
+      timing: {
+        measurementSeconds: elapsedSeconds
+      },
       firstPartyAssets: [...loadedAssets.values()].sort(
         (left, right) => right.bytes - left.bytes || left.path.localeCompare(right.path)
       ),
@@ -380,7 +381,7 @@ async function main() {
       chromeVersion,
       rubyVersion,
       jekyllVersion,
-      (Date.now() - startedAt) / 1000,
+      elapsedSeconds,
       machineSummary
     );
   } finally {
