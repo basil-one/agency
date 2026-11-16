@@ -13,9 +13,9 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 ## How we operate
 
-**On change:** Pull requests run applicable checks and make failures inspectable. A failing check identifies the affected area and provides enough context to reproduce or investigate the problem. The `PR Quality Gate` ruleset must require the Jekyll build, source linting, and `Review dependency changes` checks; a check that is not required only reports a failure and does not enforce the gate.
+**On change:** Pull requests must pass checks for the production build and internal links, source quality, and newly introduced known dependency vulnerabilities before merging. Failures should be clear and actionable.
 
-**Over time:** Scheduled checks cover external references. GitHub's native Dependency graph and Dependabot alerts identify known dependency risks, while Dependabot security updates propose repair PRs for human review. We do not schedule routine dependency version updates. Routine successful runs require no attention.
+**Over time:** External references are checked periodically. GitHub's built-in dependency services identify known vulnerabilities and propose security fixes for human review. Routine successful checks require no attention.
 
 **With judgment:** Human judgment governs intent, editorial decisions, priorities, approval, and merge. Automation supports those decisions with evidence and reviewable proposals; it does not replace them. Privileged automation remains narrowly scoped.
 
@@ -28,9 +28,9 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 | Build integrity | Production Jekyll build and tests | Weekly build as part of the link-audit workflow |
 | Link integrity | Generated-site internal links, fragments, and assets | Weekly/manual external-link audit; uncertain responses reported separately |
 | Source quality | Super-Linter and Ruby syntax validation | Conventions enforced on subsequent PRs |
-| Dependency security (CI-08) | `Review dependency changes` rejects PR-introduced known vulnerabilities of moderate or higher severity | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
+| Dependency security | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
 
-See [Jekyll build and link audit](workflows/jekyll-build.yml), [code quality](workflows/code-quality.yml), and [dependency review](workflows/dependency-review.yml) for the actual check configurations and diagnostics. The dependency check becomes an enforced merge gate only when `Review dependency changes` is added as a **required status check** in the repository's [PR Quality Gate ruleset](https://github.com/basil-one/agency/rules/27318804); enabling the workflow alone is insufficient.
+See [Jekyll build and link audit](workflows/jekyll-build.yml), [code quality](workflows/code-quality.yml), and [dependency review](workflows/dependency-review.yml) for the checks and their diagnostics.
 
 ## Commitments being established
 
