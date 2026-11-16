@@ -1,4 +1,4 @@
-name: Dependency review
+name: Dependency security
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   dependency-review:
-    name: Review dependency changes
+    name: Dependency security
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
