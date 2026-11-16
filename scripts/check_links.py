@@ -294,7 +294,7 @@ def check_external(url: str, timeout: float = 8.0, retries: int = 1) -> tuple[st
     return "uncertain", "request failed after retries"
 
 
-def report_for_site(
+def report_for_site(  # noqa: C901 - legacy hotspot (21); refactor deferred
     root: Path,
     config_path: Path,
     check_externals: bool = True,
