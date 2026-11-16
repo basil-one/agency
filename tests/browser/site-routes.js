@@ -37,10 +37,14 @@ export function discoverReflections(siteDirectory) {
     .map((filePath) => {
       const route = routeForFile(siteDirectory, filePath);
       const html = readFileSync(filePath, 'utf8');
+      return { route, filePath, html };
+    })
+    .filter(({ html }) => /<section\b[^>]*\bid=["']reflection["']/i.test(html))
+    .map(({ route, filePath, html }) => {
       const dateTime = html.match(/<time\b[^>]*\bdatetime=["']([^"']+)["']/i)?.[1];
       const publishedAt = dateTime ? Date.parse(dateTime) : Number.NaN;
 
-      if (!/<section\b[^>]*\bid=["']reflection["']/i.test(html) || !Number.isFinite(publishedAt)) {
+      if (!Number.isFinite(publishedAt)) {
         throw new Error(`Could not read the publication date for generated reflection ${route}.`);
       }
 

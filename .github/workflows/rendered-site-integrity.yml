@@ -100,120 +100,150 @@ jobs:
             if (value === 'failure') return 'failed';
             return 'not completed';
           };
-          const suites = [];
-          let resultsAvailable = false;
-          let resultsError;
+          const tests = [];
+          let reportUnavailableReason = 'Playwright JSON report was not produced; the build or browser test step may not have completed.';
           let playwrightDuration;
 
           if (fs.existsSync(process.env.RESULTS_FILE)) {
             try {
-              const content = fs.readFileSync(process.env.RESULTS_FILE, 'utf8');
-              const report = JSON.parse(content);
+              const report = JSON.parse(fs.readFileSync(process.env.RESULTS_FILE, 'utf8'));
+              if (!Array.isArray(report.suites)) {
+                throw new Error('Playwright JSON report has no suite list.');
+              }
               playwrightDuration = report.stats?.duration ?? report.duration;
               const collect = (suite) => {
                 for (const spec of suite.specs ?? []) {
                   for (const test of spec.tests ?? []) {
                     const result = test.results?.at(-1);
-                    suites.push({
+                    tests.push({
                       title: spec.title,
                       status: result?.status ?? 'not completed',
                       axeScanned: test.annotations?.some(
                         (annotation) => annotation.type === 'axe-scan-complete',
                       ) ?? false,
+                      diagnostic: [...new Set([
+                        result?.error?.message,
+                        ...(result?.errors ?? []).map((error) => error.message),
+                      ].filter(Boolean))].join('\n'),
                     });
                   }
                 }
                 for (const child of suite.suites ?? []) collect(child);
               };
               for (const suite of report.suites ?? []) collect(suite);
-              resultsAvailable = suites.length > 0;
+              if (tests.length === 0) {
+                reportUnavailableReason = 'Playwright JSON report contained no test cases.';
+              } else {
+                reportUnavailableReason = undefined;
+              }
             } catch {
-              resultsError = 'Playwright JSON results could not be read.';
+              reportUnavailableReason = 'Playwright JSON report was unreadable or malformed.';
             }
           }
 
-          const passed = suites.filter(
-            (test) => test.status === 'passed',
-          ).length;
-          const skipped = suites.filter(
-            (test) => test.status === 'skipped',
-          ).length;
-          const incomplete = suites.filter(
-            (test) => test.status === 'not completed',
-          ).length;
-          const failed = suites.length - passed - skipped - incomplete;
-          const selectedSmokeRoutes = suites.filter(
+          const statusCounts = (items) => ({
+            passed: items.filter((test) => test.status === 'passed').length,
+            failed: items.filter((test) => !['passed', 'skipped', 'not completed'].includes(test.status)).length,
+            skipped: items.filter((test) => test.status === 'skipped').length,
+            incomplete: items.filter((test) => test.status === 'not completed').length,
+          });
+          const routeTests = tests.filter(
             (test) => test.title.endsWith('is present in generated output and loads'),
-          ).length;
-          const axeTests = suites.filter(
+          );
+          const axeTests = tests.filter(
             (test) => test.title.endsWith('has no detectable accessibility violations'),
           );
-          const discoveredHtmlPages = axeTests.length;
-          const axeScannedRoutes = axeTests.filter((test) => test.axeScanned).length;
+          const routeCounts = statusCounts(routeTests);
+          const axeCounts = statusCounts(axeTests);
+          const allBrowserCounts = statusCounts(tests);
+          const scansCompleted = axeTests.filter((test) => test.axeScanned).length;
+          const noAxeViolations =
+            axeTests.length > 0 &&
+            scansCompleted === axeTests.length &&
+            axeCounts.passed === axeTests.length;
           const lines = [
             '# Rendered-site integrity',
             '',
-            `- Production Jekyll: **${outcome(process.env.BUILD_OUTCOME)}**.`,
-            `- Browser test step: **${outcome(process.env.SMOKE_OUTCOME)}**.`,
-            `- Generated HTML pages discovered: **${discoveredHtmlPages}**.`,
-            `- Generated HTML pages axe-scanned: **${axeScannedRoutes}**.`,
-            `- Smoke routes selected: **${selectedSmokeRoutes}**.`,
-            `- Playwright duration: **${Number.isFinite(playwrightDuration) ? `${(playwrightDuration / 1000).toFixed(1)}s` : 'not available'}**.`,
+            `- Production build (GitHub step \`Build site\`): **${outcome(process.env.BUILD_OUTCOME)}**.`,
+            `- Browser suite (GitHub step \`Run rendered-site smoke tests\`): **${outcome(process.env.SMOKE_OUTCOME)}**.`,
           ];
 
-          if (resultsAvailable) {
+          if (reportUnavailableReason) {
             lines.push(
-              `- Browser tests: ${passed} passed, ${failed} failed,`,
-              `  ${skipped} skipped, ${incomplete} not completed`,
-              `  (${suites.length} total).`,
-              ...suites.map((test) => `  - ${test.title}: **${test.status}**.`),
+              `- Smoke route checks: **not available** (${reportUnavailableReason})`,
+              `- Full-site axe results: **not available** (${reportUnavailableReason})`,
+              '- Route counts and Playwright duration are unavailable, not zero.',
             );
-            if (failed > 0 || incomplete > 0) {
-              lines.push('- Inspect the smoke-test step logs for diagnostics.');
-            }
           } else {
             lines.push(
-              '- Browser smoke results: **not available**;',
-              `  ${resultsError ?? 'no test results were produced'}`,
-              '- Inspect the smoke-test step logs.',
+              `- Smoke routes selected (from Playwright route test cases): **${routeTests.length}**; route checks **${routeCounts.passed}/${routeTests.length} passed, ${routeCounts.failed} failed, ${routeCounts.skipped} skipped, ${routeCounts.incomplete} not completed** (reflection dates use Jekyll-rendered \`<time datetime>\`).`,
+              `- Full-site axe accessibility (generated HTML route test cases from \`_site\`): **${scansCompleted}/${axeTests.length} scans completed; ${axeCounts.passed} passed, ${axeCounts.failed} failed, ${axeCounts.skipped} skipped, ${axeCounts.incomplete} not completed${noAxeViolations ? '; no violations detected' : ''}**.`,
+              `- Browser tests overall: **${allBrowserCounts.passed} passed, ${allBrowserCounts.failed} failed, ${allBrowserCounts.skipped} skipped, ${allBrowserCounts.incomplete} not completed** (${tests.length} total).`,
+              `- Playwright duration (from JSON report): **${Number.isFinite(playwrightDuration) ? `${(playwrightDuration / 1000).toFixed(1)}s` : 'not available in report'}**.`,
+              '- Sources: route cases come from generated `_site` HTML discovery; counts, statuses, scan markers, and duration come from Playwright JSON; build and diagnostic outcomes come from GitHub steps.',
+            );
+          }
+
+          if (!reportUnavailableReason &&
+            (routeTests.length === 0 || axeTests.length === 0 || scansCompleted !== axeTests.length)) {
+            lines.push(
+              '- Coverage verification: **failed**; the report must contain smoke route checks and every generated HTML route case must record a completed axe scan.',
+            );
+            process.exitCode = 1;
+          }
+
+          if (reportUnavailableReason && process.env.SMOKE_OUTCOME === 'success') {
+            lines.push(
+              '- Coverage results: **failed verification**; the browser step succeeded but its Playwright report has no usable test cases.',
+            );
+            process.exitCode = 1;
+          }
+
+          const failedTests = tests.filter((test) => test.status !== 'passed');
+          if (failedTests.length > 0) {
+            lines.push('', '### Non-passing browser tests');
+            for (const test of failedTests) {
+              lines.push(`- **${test.status}:** \`${test.title}\`.`);
+              if (test.diagnostic) {
+                lines.push(
+                  ...test.diagnostic.split('\n').map((line) => `  ${line}`),
+                );
+              }
+            }
+            lines.push(
+              '- See the exact GitHub step **Run rendered-site smoke tests** for full Playwright/axe diagnostics and stack traces.',
+            );
+          } else if (reportUnavailableReason) {
+            lines.push(
+              '- Inspect the exact GitHub step **Run rendered-site smoke tests** for Playwright output and report-generation errors.',
             );
           }
 
           if (process.env.NEGATIVE_OUTCOME === 'success') {
             lines.push(
-              '- Expected missing-route diagnostic: **passed**;',
-              '  the deliberately missing route',
-              '  produced an HTTP 200 expectation with HTTP 404.',
-              '- Its HTTP 404 is expected, not a regression.',
+              '- Missing-route diagnostic (GitHub step `Verify missing-route diagnostic`): **passed**; the deliberate HTTP 404 is expected, not a site regression.',
             );
           } else if (process.env.NEGATIVE_OUTCOME === 'failure') {
             lines.push(
-              '- Expected missing-route diagnostic: **failed**; see its logs.',
-              '- The deliberate HTTP 404 case is expected, not a regression.',
+              '- Missing-route diagnostic (GitHub step `Verify missing-route diagnostic`): **failed**; inspect that step logs. This deliberate HTTP 404 is not itself a site regression.',
             );
           } else {
             lines.push(
-              '- Expected missing-route diagnostic: **not completed**; inspect',
-              '  earlier step logs.',
-              '- The deliberate HTTP 404 case is expected, not a regression.',
+              '- Missing-route diagnostic (GitHub step `Verify missing-route diagnostic`): **not completed**; inspect earlier step logs. Its deliberate HTTP 404 is expected.',
             );
           }
 
           if (process.env.ACCESSIBILITY_NEGATIVE_OUTCOME === 'success') {
             lines.push(
-              '- Controlled accessibility diagnostic: **passed**;',
-              '  the in-memory missing-alt fixture produced the expected',
-              '  page, element, rule, and next-step details.',
+              '- In-memory axe diagnostic (GitHub step `Verify accessibility diagnostic`): **passed**; the deliberate `image-alt` failure produced actionable details and is not a site-page finding.',
             );
           } else if (process.env.ACCESSIBILITY_NEGATIVE_OUTCOME === 'failure') {
             lines.push(
-              '- Controlled accessibility diagnostic: **failed**; see its logs.',
-              '  The fixture exists only in memory and is not part of the site.',
+              '- In-memory axe diagnostic (GitHub step `Verify accessibility diagnostic`): **failed**; inspect that step logs. The deliberate fixture is not a site page.',
             );
           } else {
             lines.push(
-              '- Controlled accessibility diagnostic: **not completed**;',
-              '  inspect earlier step logs. The fixture exists only in memory.',
+              '- In-memory axe diagnostic (GitHub step `Verify accessibility diagnostic`): **not completed**; inspect earlier step logs. The fixture exists only in memory.',
             );
           }
 
