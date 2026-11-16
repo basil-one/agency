@@ -20,6 +20,7 @@ const metrics = [
   ['total-blocking-time', formatMilliseconds],
   ['cumulative-layout-shift', (value) => value.toFixed(3)]
 ];
+
 function formatMilliseconds(value) {
   return value >= 1_000 ? `${(value / 1_000).toFixed(2)} s` : `${Math.round(value)} ms`;
 }
@@ -61,6 +62,25 @@ function collectExternalScripts(origin) {
   return [...scriptSources].sort();
 }
 
+function recordExternalScriptObservations(report, origin, observations) {
+  const requests = report.audits['network-requests']?.details?.items;
+  for (const request of requests ?? []) {
+    if (request.resourceType !== 'Script') continue;
+    const url = new URL(request.url);
+    if (url.origin === origin) continue;
+    const key = `${url.origin}${url.pathname}`;
+    const observation = observations.get(key) ?? { samples: 0, successful: 0, transferSizes: [] };
+    observation.samples += 1;
+    if (request.statusCode >= 200 && request.statusCode < 400) {
+      observation.successful += 1;
+      if (Number.isFinite(request.transferSize)) {
+        observation.transferSizes.push(request.transferSize);
+      }
+    }
+    observations.set(key, observation);
+  }
+}
+
 function median(values) {
   const ordered = [...values].sort((left, right) => left - right);
   return ordered[Math.floor(ordered.length / 2)];
@@ -72,6 +92,15 @@ function formatMetric(name, value) {
     throw new Error(`Lighthouse report is missing a finite ${name} measurement.`);
   }
   return definition[1](value);
+}
+
+function describeExternalScript(source, observations) {
+  const observation = observations.get(source);
+  if (!observation) return `\`${source}\` (not requested in Lighthouse samples)`;
+  const transferSize = observation.transferSizes.length
+    ? `; median transfer ${(median(observation.transferSizes) / 1024).toFixed(1)} KiB`
+    : '; no successful transfer';
+  return `\`${source}\` (${observation.successful}/${observation.samples} responses succeeded${transferSize})`;
 }
 
 function runCommand(command, args, env = process.env) {
@@ -160,6 +189,7 @@ function renderSummary(
   results,
   assetInventory,
   externalScripts,
+  externalScriptObservations,
   lighthouseVersion,
   chromeVersion,
   rubyVersion,
@@ -189,7 +219,7 @@ function renderSummary(
   lines.push(
     '',
     `- **First-party assets loaded across measured pages:** ${assetInventory.length} distinct \`/assets/\` files, ${(totalAssetBytes / 1024).toFixed(1)} KiB resource size; largest files: ${assetInventory.slice(0, 5).map((asset) => `\`${asset.path}\` (${(asset.bytes / 1024).toFixed(1)} KiB)`).join(', ') || 'none found'}.`,
-    `- **External script URLs in rendered HTML** (query strings omitted): ${externalScripts.map((source) => `\`${source}\``).join(', ') || 'none found'}.`
+    `- **External scripts in rendered HTML** (query strings omitted; network requests are observed, not gated): ${externalScripts.map((source) => describeExternalScript(source, externalScriptObservations)).join(', ') || 'none found'}.`
   );
   if (process.env.GITHUB_STEP_SUMMARY) {
     writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`, { flag: 'a' });
@@ -246,6 +276,7 @@ async function main() {
 
     const results = [];
     const loadedAssets = new Map();
+    const externalScriptObservations = new Map();
     for (const route of routes) {
       for (const formFactor of ['mobile', 'desktop']) {
         const reports = [];
@@ -266,7 +297,10 @@ async function main() {
           if (report.lighthouseVersion === undefined) {
             throw new Error(`Lighthouse report for ${route} did not include its version.`);
           }
-          if (run === 1) recordLoadedAssets(report, origin, loadedAssets);
+          if (run === 1) {
+            recordLoadedAssets(report, origin, loadedAssets);
+            recordExternalScriptObservations(report, origin, externalScriptObservations);
+          }
           reports.push(report);
         }
         const values = {};
@@ -282,6 +316,7 @@ async function main() {
       results,
       [...loadedAssets.values()].sort((left, right) => right.bytes - left.bytes || left.path.localeCompare(right.path)),
       collectExternalScripts(origin),
+      externalScriptObservations,
       lighthouseVersion,
       chromeVersion,
       rubyVersion,
