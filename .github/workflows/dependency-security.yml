@@ -70,6 +70,16 @@ jobs:
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ github.token }}
+          DEPENDENCY_POSTURE_FILE: ${{ runner.temp }}/dependency-posture.json
+      - name: Upload dependency posture result
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: dependency-posture
+          path: ${{ runner.temp }}/dependency-posture.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Summarize dependency posture
         if: always()
         env:

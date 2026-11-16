@@ -208,11 +208,13 @@ function describePerformanceComparison(comparison) {
   return `fixed reference: ${fixedState}; rolling baseline: ${rollingState}`;
 }
 
-async function fetchPerformanceComparison({
+async function fetchArtifactJson({
   apiUrl,
   repository,
   token,
   runId,
+  artifactName,
+  fileName,
   fetchImpl
 }) {
   const headers = {
@@ -224,16 +226,17 @@ async function fetchPerformanceComparison({
     `/repos/${repository}/actions/runs/${runId}/artifacts`,
     apiUrl
   );
-  artifactsUrl.search = new URLSearchParams({ name: 'performance-summary', per_page: '100' });
+  artifactsUrl.search = new URLSearchParams({ name: artifactName, per_page: '100' });
   const listResponse = await fetchImpl(artifactsUrl, {
     headers,
     signal: AbortSignal.timeout(15_000)
   });
   if (!listResponse.ok) throw new Error(`Artifacts API returned HTTP ${listResponse.status}`);
   const artifact = (await listResponse.json()).artifacts?.find(
-    (item) => item.name === 'performance-summary' && !item.expired
+    (item) => item.name === artifactName && !item.expired
   );
-  if (!artifact) throw new Error('90-day performance summary artifact is missing or expired');
+  if (!artifact) throw new Error(`${artifactName} artifact is missing or expired`);
+  if (!Number.isInteger(artifact.id)) throw new Error(`${artifactName} artifact ID is invalid`);
   const downloadUrl = new URL(
     `/repos/${repository}/actions/artifacts/${artifact.id}/zip`,
     apiUrl
@@ -243,25 +246,51 @@ async function fetchPerformanceComparison({
     signal: AbortSignal.timeout(30_000)
   });
   if (!downloadResponse.ok) {
-    throw new Error(`Performance summary artifact download returned HTTP ${downloadResponse.status}`);
+    throw new Error(`${artifactName} artifact download returned HTTP ${downloadResponse.status}`);
   }
   const archive = Buffer.from(await downloadResponse.arrayBuffer());
   if (archive.length > 10 * 1024 * 1024) {
-    throw new Error('Performance summary artifact exceeded the 10 MB safety limit');
+    throw new Error(`${artifactName} artifact exceeded the 10 MB safety limit`);
   }
   const directory = mkdtempSync(join(tmpdir(), 'agency-quality-pulse-'));
-  const archivePath = join(directory, 'performance-summary.zip');
+  const archivePath = join(directory, `${artifactName}.zip`);
   try {
     writeFileSync(archivePath, archive);
     const json = execFileSync(
       'unzip',
-      ['-p', archivePath, 'performance-comparison.json'],
+      ['-p', archivePath, fileName],
       { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
     );
     return JSON.parse(json);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+}
+
+function applyDependencyPosture(result, posture) {
+  if (posture.status === 'unknown') {
+    return {
+      ...result,
+      state: 'unknown',
+      label: 'Unknown / API inaccessible',
+      detail: `${posture.detail ?? 'Dependency posture could not be read'}; no result is inferred.`
+    };
+  }
+  if (posture.status === 'review') {
+    return {
+      ...result,
+      state: 'failed',
+      label: 'Fresh — review required',
+      detail: `${posture.detail}; open the linked run for alert findings.`
+    };
+  }
+  if (posture.status === 'passed' && result.state === 'fresh') {
+    return {
+      ...result,
+      detail: 'Open Dependabot alerts were checked across enabled ecosystems; none met the review threshold.'
+    };
+  }
+  return result;
 }
 
 function renderPulse({ date, generatedAt, results, cutoff = cutoffTime }) {
@@ -366,16 +395,44 @@ async function buildPulse({
     ['success', 'failure'].includes(performance.result.run.conclusion)
   ) {
     try {
-      const comparison = await fetchPerformanceComparison({
+      const comparison = await fetchArtifactJson({
         apiUrl,
         repository,
         token,
         runId: performance.result.run.id,
+        artifactName: 'performance-summary',
+        fileName: 'performance-comparison.json',
         fetchImpl
       });
       performance.result.baseline = describePerformanceComparison(comparison);
     } catch (error) {
       performance.result.baseline = `fixed reference: unknown; rolling baseline: unknown (${error.message})`;
+    }
+  }
+  const dependency = results.find((item) => item.name === 'Dependency Security');
+  if (
+    dependency?.result.run?.id &&
+    dependency.result.run.status === 'completed' &&
+    ['success', 'failure'].includes(dependency.result.run.conclusion)
+  ) {
+    try {
+      const posture = await fetchArtifactJson({
+        apiUrl,
+        repository,
+        token,
+        runId: dependency.result.run.id,
+        artifactName: 'dependency-posture',
+        fileName: 'dependency-posture.json',
+        fetchImpl
+      });
+      dependency.result = applyDependencyPosture(dependency.result, posture);
+    } catch (error) {
+      dependency.result = {
+        ...dependency.result,
+        state: 'unknown',
+        label: 'Unknown / posture artifact unavailable',
+        detail: `${error.message}; no clean dependency result is inferred.`
+      };
     }
   }
   return renderPulse({ date, generatedAt, results });
@@ -400,4 +457,10 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
   await main();
 }
 
-export { buildPulse, describePerformanceComparison, evaluateRuns, renderPulse };
+export {
+  applyDependencyPosture,
+  buildPulse,
+  describePerformanceComparison,
+  evaluateRuns,
+  renderPulse
+};

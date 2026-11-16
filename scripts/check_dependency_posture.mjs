@@ -13,7 +13,12 @@ async function checkDependencyPosture({
   const lines = ['# Dependency Security', '', '## Outcome', ''];
   if (!token || !/^[^/]+\/[^/]+$/.test(repository ?? '')) {
     lines.push('**Unknown — GitHub API credentials or repository are unavailable.**');
-    return { status: 'unknown', alerts: [], markdown: lines.join('\n') };
+    return {
+      status: 'unknown',
+      alerts: [],
+      detail: 'GitHub API credentials or repository are unavailable',
+      markdown: lines.join('\n')
+    };
   }
 
   const alerts = [];
@@ -38,24 +43,44 @@ async function checkDependencyPosture({
       });
       if (!response.ok) {
         lines.push(`**Unknown — GitHub Dependabot alerts API returned HTTP ${response.status}.**`);
-        return { status: 'unknown', alerts: [], markdown: lines.join('\n') };
+        return {
+          status: 'unknown',
+          alerts: [],
+          detail: `GitHub Dependabot alerts API returned HTTP ${response.status}`,
+          markdown: lines.join('\n')
+        };
       }
       const pageAlerts = await response.json();
       if (!Array.isArray(pageAlerts)) {
         lines.push('**Unknown — GitHub returned an unreadable Dependabot alert response.**');
-        return { status: 'unknown', alerts: [], markdown: lines.join('\n') };
+        return {
+          status: 'unknown',
+          alerts: [],
+          detail: 'GitHub returned an unreadable Dependabot alert response',
+          markdown: lines.join('\n')
+        };
       }
       alerts.push(...pageAlerts);
       if (pageAlerts.length < 100) break;
       if (page === 100) {
         lines.push('**Unknown — alert pagination exceeded the 100-page safety limit.**');
-        return { status: 'unknown', alerts: [], markdown: lines.join('\n') };
+        return {
+          status: 'unknown',
+          alerts: [],
+          detail: 'Alert pagination exceeded the 100-page safety limit',
+          markdown: lines.join('\n')
+        };
       }
     }
   } catch (error) {
     const reason = error?.name === 'TimeoutError' ? 'timed out' : 'could not be reached';
     lines.push(`**Unknown — GitHub Dependabot alerts API ${reason}.**`);
-    return { status: 'unknown', alerts: [], markdown: lines.join('\n') };
+    return {
+      status: 'unknown',
+      alerts: [],
+      detail: `GitHub Dependabot alerts API ${reason}`,
+      markdown: lines.join('\n')
+    };
   }
 
   const reviewAlerts = alerts.filter((alert) => {
@@ -66,6 +91,9 @@ async function checkDependencyPosture({
     (alert) => alert.security_advisory?.severity === 'low'
   );
   const status = reviewAlerts.length ? 'review' : 'passed';
+  const detail = status === 'passed'
+    ? 'No open medium-or-higher Dependabot alerts'
+    : `${reviewAlerts.length} open alert(s) are medium-or-higher or have unknown severity`;
   lines.push(
     status === 'passed'
       ? '**Posture checked — no open medium-or-higher Dependabot alerts.**'
@@ -90,7 +118,14 @@ async function checkDependencyPosture({
     '',
     'This daily repository posture uses open Dependabot alerts across enabled ecosystems; the PR check separately reviews only the proposed dependency diff.'
   );
-  return { status, alerts, markdown: lines.join('\n') };
+  return {
+    status,
+    alerts,
+    reviewAlerts: reviewAlerts.length,
+    lowAlerts: lowAlerts.length,
+    detail,
+    markdown: lines.join('\n')
+  };
 }
 
 async function main() {
@@ -103,6 +138,19 @@ async function main() {
   if (process.env.GITHUB_STEP_SUMMARY) {
     const { appendFileSync } = await import('node:fs');
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${result.markdown}\n`);
+  }
+  if (process.env.DEPENDENCY_POSTURE_FILE) {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(
+      process.env.DEPENDENCY_POSTURE_FILE,
+      `${JSON.stringify({
+        status: result.status,
+        detail: result.detail,
+        openAlerts: result.alerts.length,
+        reviewAlerts: result.reviewAlerts ?? 0,
+        lowAlerts: result.lowAlerts ?? 0
+      }, null, 2)}\n`
+    );
   }
   if (result.status !== 'passed') process.exitCode = 1;
 }

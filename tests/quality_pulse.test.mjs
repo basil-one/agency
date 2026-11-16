@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  applyDependencyPosture,
   buildPulse,
   describePerformanceComparison,
   evaluateRuns,
@@ -102,6 +103,28 @@ test('permission-denied Actions API is reported as unknown, not passed', async (
   assert.match(markdown, /Unknown \/ API inaccessible/);
   assert.match(markdown, /HTTP 403/);
   assert.match(markdown, /Review required/);
+});
+
+test('dependency posture artifacts keep API denial, findings, and clean checks distinct', () => {
+  const run = evaluateRuns([passingRun], date);
+  const unknown = applyDependencyPosture(run, {
+    status: 'unknown',
+    detail: 'Dependabot alerts API returned HTTP 403'
+  });
+  assert.equal(unknown.state, 'unknown');
+  assert.match(unknown.label, /API inaccessible/);
+  assert.match(unknown.detail, /no result is inferred/);
+
+  const review = applyDependencyPosture(run, {
+    status: 'review',
+    detail: '3 open alerts need review'
+  });
+  assert.equal(review.state, 'failed');
+  assert.match(review.label, /review required/);
+
+  const passed = applyDependencyPosture(run, { status: 'passed' });
+  assert.equal(passed.state, 'fresh');
+  assert.match(passed.detail, /none met the review threshold/);
 });
 
 test('performance baseline details distinguish pending and available comparisons', () => {
