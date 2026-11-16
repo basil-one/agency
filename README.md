@@ -21,7 +21,7 @@ bundle exec jekyll serve
 
 The local site is available at http://localhost:4000.
 
-Pull requests to `main` run a production Jekyll build, link-integrity checks, and source linting. Results and diagnostics appear in the pull request's **Checks** tab. A weekly workflow also audits external links.
+PR checks report their results in the pull request's **Checks** tab. The [quality practice](.github/QUALITY.md) describes which safeguards run on PRs and over time.
 
 The separate rendered-site browser workflow builds the production site and runs Chromium smoke tests against generated pages at `http://127.0.0.1:4173`. To run them locally:
 
