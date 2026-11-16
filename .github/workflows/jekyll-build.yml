@@ -1,4 +1,4 @@
-name: Jekyll build
+name: Build and link integrity
 
 on:
   pull_request:
