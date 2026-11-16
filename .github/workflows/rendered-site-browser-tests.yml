@@ -1,0 +1,58 @@
+name: Rendered-site browser tests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rendered-site-browser-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-smoke:
+    name: Browser smoke tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+        env:
+          BUNDLE_FROZEN: 'true'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Build site
+        run: bundle exec jekyll build --trace
+        env:
+          JEKYLL_ENV: production
+      - name: Install browser test dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps --only-shell chromium
+      - name: Run rendered-site smoke tests
+        run: npm run test:browser
+        env:
+          CI: 'true'
+      - name: Verify missing-route diagnostic
+        run: |
+          output="$RUNNER_TEMP/browser-negative.log"
+          if npm run test:browser:negative >"$output" 2>&1; then
+            cat "$output"
+            echo "Expected the deliberately missing route test to fail."
+            exit 1
+          fi
+          cat "$output"
+          grep -F 'Expected /__browser-test-missing-route__/ to return HTTP 200' "$output"
+          echo "The missing-route check failed with an actionable diagnostic as expected." >> "$GITHUB_STEP_SUMMARY"
+        env:
+          CI: 'true'
