@@ -15,7 +15,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 **On change:** Pull requests must pass checks for the production build and internal links, source quality, and newly introduced known dependency vulnerabilities before merging. Failures should be clear and actionable.
 
-**Over time:** External references are checked periodically. GitHub's built-in dependency services identify known vulnerabilities and propose security fixes for human review. Routine successful checks require no attention.
+**Over time:** Risks that can change without a code change are revisited. Meaningful findings or proposed remedies come to human judgment; healthy checks stay quiet.
 
 **With judgment:** Human judgment governs intent, editorial decisions, priorities, approval, and merge. Automation supports those decisions with evidence and reviewable proposals; it does not replace them. Privileged automation remains narrowly scoped.
 
