@@ -83,6 +83,24 @@ jobs:
           echo "Confirmed actionable diagnostics for the in-memory accessibility fixture."
         env:
           CI: 'true'
+      - name: Verify responsive diagnostic
+        id: responsive_negative
+        if: always() && steps.build.outcome == 'success'
+        run: |
+          output="$RUNNER_TEMP/browser-responsive-negative.log"
+          if npm run \
+            test:browser:responsive-negative >"$output" 2>&1; then
+            cat "$output"
+            echo "Expected the controlled responsive fixture to fail."
+            exit 1
+          fi
+          cat "$output"
+          grep -F 'Responsive usability failure on in-memory responsive failure fixture at 320px: whole-page horizontal overflow' "$output"
+          grep -F 'Affected elements: div (' "$output"
+          grep -F 'Next step: inspect the reported route at this viewport' "$output"
+          echo "Confirmed actionable diagnostics for the in-memory responsive fixture."
+        env:
+          CI: 'true'
       - name: Summarize rendered-site checks
         if: always()
         env:
@@ -90,6 +108,7 @@ jobs:
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
           NEGATIVE_OUTCOME: ${{ steps.negative.outcome }}
           ACCESSIBILITY_NEGATIVE_OUTCOME: ${{ steps.accessibility_negative.outcome }}
+          RESPONSIVE_NEGATIVE_OUTCOME: ${{ steps.responsive_negative.outcome }}
           RESULTS_FILE: ${{ runner.temp }}/browser-results.json
         run: |
           node <<'NODE'
@@ -101,15 +120,16 @@ jobs:
             return 'not completed';
           };
           const tests = [];
-          let reportUnavailableReason = 'Playwright JSON report was not produced; the build or browser test step may not have completed.';
+          let reportUnavailableReason = 'Playwright JSON report was not produced; the build or browser test step may not have completed';
           let playwrightDuration;
 
           if (fs.existsSync(process.env.RESULTS_FILE)) {
             try {
               const report = JSON.parse(fs.readFileSync(process.env.RESULTS_FILE, 'utf8'));
               if (!Array.isArray(report.suites)) {
-                throw new Error('Playwright JSON report has no suite list.');
+                throw new Error('Playwright JSON report has no suite list');
               }
+
               playwrightDuration = report.stats?.duration ?? report.duration;
               const collect = (suite) => {
                 for (const spec of suite.specs ?? []) {
@@ -118,6 +138,8 @@ jobs:
                     tests.push({
                       title: spec.title,
                       status: result?.status ?? 'not completed',
+                      duration: result?.duration,
+                      annotations: test.annotations ?? [],
                       axeScanned: test.annotations?.some(
                         (annotation) => annotation.type === 'axe-scan-complete',
                       ) ?? false,
@@ -132,12 +154,12 @@ jobs:
               };
               for (const suite of report.suites ?? []) collect(suite);
               if (tests.length === 0) {
-                reportUnavailableReason = 'Playwright JSON report contained no test cases.';
+                reportUnavailableReason = 'Playwright JSON report contained no test cases';
               } else {
                 reportUnavailableReason = undefined;
               }
             } catch {
-              reportUnavailableReason = 'Playwright JSON report was unreadable or malformed.';
+              reportUnavailableReason = 'Playwright JSON report was unreadable or malformed';
             }
           }
 
@@ -153,10 +175,39 @@ jobs:
           const axeTests = tests.filter(
             (test) => test.title.endsWith('has no detectable accessibility violations'),
           );
+          const responsiveTests = tests.filter(
+            (test) => test.title.startsWith('Responsive usability: '),
+          );
+          const responsiveCases = responsiveTests.map((test) =>
+            test.title.match(/^Responsive usability: (.+) at (\d+)px$/),
+          ).filter(Boolean);
+          const responsiveRoutes = [...new Set(responsiveCases.map((match) => match[1]))].sort();
+          const responsiveViewports = [...new Set(responsiveCases.map((match) => Number(match[2])))].sort((a, b) => a - b);
           const routeCounts = statusCounts(routeTests);
           const axeCounts = statusCounts(axeTests);
+          const responsiveCounts = statusCounts(responsiveTests);
           const allBrowserCounts = statusCounts(tests);
           const scansCompleted = axeTests.filter((test) => test.axeScanned).length;
+          const responsiveDuration = responsiveTests.reduce((total, test) => total + (test.duration ?? 0), 0);
+          const responsiveDurationCount = responsiveTests.filter((test) => Number.isFinite(test.duration)).length;
+          const hitAreas = responsiveTests.flatMap((test) =>
+            test.annotations
+              .filter((annotation) => annotation.type === 'responsive-hit-area')
+              .map((annotation) => annotation.description),
+          );
+          const smallestHitArea = (region) => {
+            const areas = hitAreas
+              .filter((area) => area.startsWith(`${region}:`))
+              .map((area) => {
+                const match = area.match(/^([^:]+):(.+):([\d.]+)x([\d.]+)$/);
+                return match ? { label: match[2], width: Number(match[3]), height: Number(match[4]) } : undefined;
+              })
+              .filter(Boolean)
+              .sort((left, right) => left.width * left.height - right.width * right.height);
+            return areas[0];
+          };
+          const smallestNavigationTarget = smallestHitArea('navigation');
+          const smallestFooterTarget = smallestHitArea('footer');
           const noAxeViolations =
             axeTests.length > 0 &&
             scansCompleted === axeTests.length &&
@@ -171,23 +222,30 @@ jobs:
           if (reportUnavailableReason) {
             lines.push(
               `- Smoke route checks: **not available** (${reportUnavailableReason})`,
+              `- Responsive usability: **not available** (${reportUnavailableReason}); route counts, viewport counts, and duration are unavailable, not zero.`,
               `- Full-site axe results: **not available** (${reportUnavailableReason})`,
               '- Route counts and Playwright duration are unavailable, not zero.',
             );
           } else {
+            const responsiveSummary = responsiveTests.length === 0
+              ? '- Responsive usability: **not available** (Playwright report contains no responsive cases; the browser step may not have reached that test file); route counts, viewport counts, and duration are unavailable, not zero.'
+              : `- Responsive usability: **${responsiveCounts.passed}/${responsiveTests.length} passed, ${responsiveCounts.failed} failed, ${responsiveCounts.skipped} skipped, ${responsiveCounts.incomplete} not completed** across ${responsiveRoutes.length ? responsiveRoutes.map((route) => `\`${route}\``).join(', ') : 'unavailable routes'} at ${responsiveViewports.length ? responsiveViewports.map((width) => `${width}px`).join(', ') : 'unavailable viewports'}; checked document/main overflow, control visibility/bounds, and navigation/footer operability; sum of individual test durations: **${responsiveDurationCount ? `${(responsiveDuration / 1000).toFixed(1)}s` : 'unavailable'}**.`;
             lines.push(
               `- Smoke routes selected (from Playwright route test cases): **${routeTests.length}**; route checks **${routeCounts.passed}/${routeTests.length} passed, ${routeCounts.failed} failed, ${routeCounts.skipped} skipped, ${routeCounts.incomplete} not completed** (reflection dates use Jekyll-rendered \`<time datetime>\`).`,
+              responsiveSummary,
+              `- Smallest measured link targets (Playwright touch emulation, CSS pixels; measurement only, not a pass/fail threshold): navigation **${smallestNavigationTarget ? `${smallestNavigationTarget.width}×${smallestNavigationTarget.height}px (${smallestNavigationTarget.label})` : 'unavailable'}**; footer **${smallestFooterTarget ? `${smallestFooterTarget.width}×${smallestFooterTarget.height}px (${smallestFooterTarget.label})` : 'unavailable'}**.`,
               `- Full-site axe accessibility (generated HTML route test cases from \`_site\`): **${scansCompleted}/${axeTests.length} scans completed; ${axeCounts.passed} passed, ${axeCounts.failed} failed, ${axeCounts.skipped} skipped, ${axeCounts.incomplete} not completed${noAxeViolations ? '; no violations detected' : ''}**.`,
               `- Browser tests overall: **${allBrowserCounts.passed} passed, ${allBrowserCounts.failed} failed, ${allBrowserCounts.skipped} skipped, ${allBrowserCounts.incomplete} not completed** (${tests.length} total).`,
               `- Playwright duration (from JSON report): **${Number.isFinite(playwrightDuration) ? `${(playwrightDuration / 1000).toFixed(1)}s` : 'not available in report'}**.`,
-              '- Sources: route cases come from generated `_site` HTML discovery; counts, statuses, scan markers, and duration come from Playwright JSON; build and diagnostic outcomes come from GitHub steps.',
+              '- Sources: smoke and axe route cases come from generated `_site` HTML discovery; responsive routes/viewports come from the test matrix and latest reflection discovery; counts, statuses, target measurements, and durations come from Playwright JSON; build and diagnostic outcomes come from GitHub steps.',
             );
           }
 
           if (!reportUnavailableReason &&
-            (routeTests.length === 0 || axeTests.length === 0 || scansCompleted !== axeTests.length)) {
+            (routeTests.length === 0 || axeTests.length === 0 || scansCompleted !== axeTests.length ||
+              responsiveTests.length === 0 || responsiveCases.length !== responsiveTests.length)) {
             lines.push(
-              '- Coverage verification: **failed**; the report must contain smoke route checks and every generated HTML route case must record a completed axe scan.',
+              '- Coverage verification: **failed**; the report must contain smoke and responsive cases, every responsive case must identify its route and viewport, and every generated HTML route case must record a completed axe scan.',
             );
             process.exitCode = 1;
           }
@@ -244,6 +302,20 @@ jobs:
           } else {
             lines.push(
               '- In-memory axe diagnostic (GitHub step `Verify accessibility diagnostic`): **not completed**; inspect earlier step logs. The fixture exists only in memory.',
+            );
+          }
+
+          if (process.env.RESPONSIVE_NEGATIVE_OUTCOME === 'success') {
+            lines.push(
+              '- In-memory responsive diagnostic (GitHub step `Verify responsive diagnostic`): **passed**; the deliberate 320px page-overflow fixture produced actionable details and is not a site-page finding.',
+            );
+          } else if (process.env.RESPONSIVE_NEGATIVE_OUTCOME === 'failure') {
+            lines.push(
+              '- In-memory responsive diagnostic (GitHub step `Verify responsive diagnostic`): **failed**; inspect that step logs. The deliberate fixture is not a site-page finding.',
+            );
+          } else {
+            lines.push(
+              '- In-memory responsive diagnostic (GitHub step `Verify responsive diagnostic`): **not completed**; inspect earlier step logs. The fixture exists only in memory.',
             );
           }
 
