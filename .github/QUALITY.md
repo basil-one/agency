@@ -27,11 +27,11 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 | --- | --- | --- |
 | Build integrity | Production Jekyll build | No separate scheduled check |
 | Link integrity | Generated-site internal links, fragments, assets, and external destinations | Weekly/manual external-link audit; uncertain responses reported separately |
-| SEO integrity | Generated HTML titles, canonicals, and indexing directives | Weekly generated-site audit |
+| SEO integrity | Generated page titles, canonical URLs, and indexing directives | No separate scheduled/deployed-site check |
 | Source quality | Super-Linter and Ruby syntax validation | Conventions enforced on subsequent PRs |
 | Dependency security | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
 
-See [build integrity](workflows/build-integrity.yml), [link integrity](workflows/link-integrity.yml), [source quality](workflows/source-quality.yml), and [dependency security](workflows/dependency-security.yml) for the checks and their diagnostics.
+See [build integrity](workflows/build-integrity.yml), [link integrity](workflows/link-integrity.yml), [SEO integrity](workflows/seo-integrity.yml), [source quality](workflows/source-quality.yml), and [dependency security](workflows/dependency-security.yml) for the checks and their diagnostics.
 
 ## Commitments being established
 
