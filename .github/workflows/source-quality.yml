@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   lint:
-    name: Lint source and configuration
+    name: Source quality
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

@@ -1,4 +1,4 @@
-name: Build and link integrity
+name: Link integrity
 
 on:
   pull_request:
@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build Jekyll site
+  links:
+    name: Link integrity
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
