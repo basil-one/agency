@@ -125,6 +125,51 @@ class CheckLinksTests(unittest.TestCase):
         self.assertIn("## Coaching and contact destinations", report)
         self.assertIn("source pages: /", report)
 
+    def test_action_destination_lists_sorted_source_pages(self):
+        destination = "https://connect.example/path"
+        self.write("index.html", f'<a href="{destination}">Connect</a>')
+        self.write("about/index.html", f'<a href="{destination}">Connect</a>')
+        config = self.root / "_config.yml"
+        config.write_text(
+            'url: "https://agency.example"\n'
+            'baseurl: ""\naction_links:\n'
+            f'  connect: "{destination}"\n'
+        )
+
+        with patch("scripts.check_links.check_external", return_value=("healthy", "HTTP 200")):
+            report, errors, likely_broken = report_for_site(self.site, config)
+
+        self.assertEqual((errors, likely_broken), (0, 0))
+        self.assertIn(
+            f"- **connect**: `{destination}` — healthy: HTTP 200 — source pages: /, /about/",
+            report,
+        )
+
+    def test_external_destinations_are_checked_in_order_with_delay(self):
+        self.write(
+            "index.html",
+            '<a href="https://z.example/path">Z</a><a href="https://a.example/path">A</a>',
+        )
+        config = self.root / "_config.yml"
+        config.write_text('url: "https://agency.example"\nbaseurl: ""\n')
+
+        with (
+            patch(
+                "scripts.check_links.check_external", return_value=("healthy", "HTTP 200")
+            ) as check,
+            patch("scripts.check_links.time.sleep") as sleep,
+        ):
+            report_for_site(self.site, config, external_delay=0.4)
+
+        self.assertEqual(
+            check.call_args_list,
+            [
+                unittest.mock.call("https://a.example/path"),
+                unittest.mock.call("https://z.example/path"),
+            ],
+        )
+        sleep.assert_called_once_with(0.4)
+
     def test_likely_broken_external_link_fails_scheduled_audit(self):
         self.write("index.html", '<a href="https://broken.example/path">Broken</a>')
         config = self.root / "_config.yml"
@@ -157,7 +202,11 @@ class CheckLinksTests(unittest.TestCase):
     def test_skip_external_does_not_make_requests(self):
         self.write("index.html", '<a href="https://external.example/path">External</a>')
         config = self.root / "_config.yml"
-        config.write_text('url: "https://agency.example"\nbaseurl: ""\n')
+        config.write_text(
+            'url: "https://agency.example"\n'
+            'baseurl: ""\naction_links:\n'
+            '  connect: "https://external.example/path"\n'
+        )
         report_path = self.root / "report.md"
 
         with patch("scripts.check_links.check_external") as check_external_mock:
@@ -176,7 +225,12 @@ class CheckLinksTests(unittest.TestCase):
             ):
                 self.assertEqual(main(), 0)
         check_external_mock.assert_not_called()
-        self.assertIn("External destinations checked: 0", report_path.read_text(encoding="utf-8"))
+        report = report_path.read_text(encoding="utf-8")
+        self.assertIn("External destinations checked: 0", report)
+        self.assertIn(
+            "- **connect**: `https://external.example/path` — not checked",
+            report,
+        )
 
     def test_command_fails_for_broken_internal_target(self):
         self.write(

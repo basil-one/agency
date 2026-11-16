@@ -294,21 +294,7 @@ def check_external(url: str, timeout: float = 8.0, retries: int = 1) -> tuple[st
     return "uncertain", "request failed after retries"
 
 
-def report_for_site(  # noqa: C901 - legacy hotspot (21); refactor deferred
-    root: Path,
-    config_path: Path,
-    check_externals: bool = True,
-    external_delay: float = 0.25,
-) -> tuple[str, int, int]:
-    site_url, baseurl, action_links = parse_config(config_path)
-    if not site_url:
-        raise ValueError(f"{config_path} must define the site's url")
-
-    pages = load_pages(root, baseurl)
-    if not pages:
-        raise ValueError(f"No generated HTML pages found in {root}")
-
-    internal, internal_count = broken_internal_links(root, pages, site_url, baseurl)
+def _collect_external_sources(pages: list[Page], site_url: str) -> dict[str, set[str]]:
     external_sources: dict[str, set[str]] = {}
     for page in pages:
         origin = urlsplit(site_url)
@@ -324,25 +310,97 @@ def report_for_site(  # noqa: C901 - legacy hotspot (21); refactor deferred
                 continue
             if parts.scheme in {"http", "https"} and not same_site(absolute, site_url):
                 external_sources.setdefault(urldefrag(absolute).url, set()).add(page.url)
+    return external_sources
 
+
+def _check_external_destinations(
+    external_sources: dict[str, set[str]], check_externals: bool, external_delay: float
+) -> dict[str, tuple[str, str]]:
     external_results: dict[str, tuple[str, str]] = {}
     if check_externals:
         for index, url in enumerate(sorted(external_sources)):
             if index:
                 time.sleep(external_delay)
             external_results[url] = check_external(url)
+    return external_results
 
+
+def _external_findings(
+    external_sources: dict[str, set[str]],
+    external_results: dict[str, tuple[str, str]],
+    action_links: dict[str, tuple[str, str]],
+) -> dict[str, list[str]]:
     findings: dict[str, list[str]] = {"likely broken": [], "uncertain": []}
-    if check_externals:
-        for url, (category, detail) in external_results.items():
-            if category == "healthy":
-                continue
-            action = action_links.get(normalize_url(url))
-            label = f" **ACTION: `{action[0]}`**" if action else ""
-            for source in sorted(external_sources[url]):
-                findings[category].append(
-                    f"- **Source:** `{source}` → **Destination:** `{url}` — {detail}{label}"
-                )
+    for url, (category, detail) in external_results.items():
+        if category == "healthy":
+            continue
+        action = action_links.get(normalize_url(url))
+        label = f" **ACTION: `{action[0]}`**" if action else ""
+        for source in sorted(external_sources[url]):
+            findings[category].append(
+                f"- **Source:** `{source}` → **Destination:** `{url}` — {detail}{label}"
+            )
+    return findings
+
+
+def _append_action_destinations(
+    lines: list[str],
+    action_links: dict[str, tuple[str, str]],
+    external_sources: dict[str, set[str]],
+    external_results: dict[str, tuple[str, str]],
+    check_externals: bool,
+) -> None:
+    if not action_links:
+        lines.append("None configured.")
+    for action_url, (action, configured_url) in sorted(
+        action_links.items(), key=lambda item: item[1][0]
+    ):
+        destination = next(
+            (url for url in external_sources if normalize_url(url) == action_url),
+            None,
+        )
+        if destination is None:
+            status = "not found in generated HTML"
+            sources = ""
+        elif not check_externals:
+            status = "not checked"
+            sources = ""
+        else:
+            category, detail = external_results[destination]
+            status = f"{category}: {detail}"
+            sources = f" — source pages: {', '.join(sorted(external_sources[destination]))}"
+        lines.append(f"- **{action}**: `{configured_url}` — {status}{sources}")
+
+
+def _append_external_findings(lines: list[str], findings: dict[str, list[str]]) -> None:
+    for category, title in (
+        ("likely broken", "Likely broken external links"),
+        ("uncertain", "Uncertain external responses"),
+    ):
+        lines.extend(("", f"## {title}", ""))
+        lines.extend(findings[category] or ["None."])
+
+
+def report_for_site(
+    root: Path,
+    config_path: Path,
+    check_externals: bool = True,
+    external_delay: float = 0.25,
+) -> tuple[str, int, int]:
+    site_url, baseurl, action_links = parse_config(config_path)
+    if not site_url:
+        raise ValueError(f"{config_path} must define the site's url")
+
+    pages = load_pages(root, baseurl)
+    if not pages:
+        raise ValueError(f"No generated HTML pages found in {root}")
+
+    internal, internal_count = broken_internal_links(root, pages, site_url, baseurl)
+    external_sources = _collect_external_sources(pages, site_url)
+    external_results = _check_external_destinations(
+        external_sources, check_externals, external_delay
+    )
+    findings = _external_findings(external_sources, external_results, action_links)
 
     lines = [
         "# Generated-site link audit",
@@ -368,33 +426,10 @@ def report_for_site(  # noqa: C901 - legacy hotspot (21); refactor deferred
         lines.append("None.")
 
     lines.extend(("", "## Coaching and contact destinations", ""))
-    if not action_links:
-        lines.append("None configured.")
-    for action_url, (action, configured_url) in sorted(
-        action_links.items(), key=lambda item: item[1][0]
-    ):
-        destination = next(
-            (url for url in external_sources if normalize_url(url) == action_url),
-            None,
-        )
-        if destination is None:
-            status = "not found in generated HTML"
-            sources = ""
-        elif not check_externals:
-            status = "not checked"
-            sources = ""
-        else:
-            category, detail = external_results[destination]
-            status = f"{category}: {detail}"
-            sources = f" — source pages: {', '.join(sorted(external_sources[destination]))}"
-        lines.append(f"- **{action}**: `{configured_url}` — {status}{sources}")
-
-    for category, title in (
-        ("likely broken", "Likely broken external links"),
-        ("uncertain", "Uncertain external responses"),
-    ):
-        lines.extend(("", f"## {title}", ""))
-        lines.extend(findings[category] or ["None."])
+    _append_action_destinations(
+        lines, action_links, external_sources, external_results, check_externals
+    )
+    _append_external_findings(lines, findings)
 
     likely_broken_count = sum(
         category == "likely broken" for category, _ in external_results.values()
