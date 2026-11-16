@@ -13,7 +13,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 ## How we operate
 
-**On change:** Pull requests must pass checks for the production build and internal links, source quality, and newly introduced known dependency vulnerabilities before merging. Failures should be clear and actionable.
+**On change:** Pull requests are checked for build integrity, internal and external links, source quality, and dependency security. Failures require correction or an explicit authorized human decision.
 
 **Over time:** Risks that can change without a code change are revisited. Meaningful findings or proposed remedies come to human judgment; healthy checks stay quiet.
 
@@ -26,7 +26,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 | Dimension | On pull requests | Over time |
 | --- | --- | --- |
 | Build integrity | Production Jekyll build | No separate scheduled check |
-| Link integrity | Generated-site internal links, fragments, and assets | Weekly/manual external-link audit; uncertain responses reported separately |
+| Link integrity | Generated-site internal links, fragments, assets, and external destinations | Weekly/manual external-link audit; uncertain responses reported separately |
 | Source quality | Super-Linter and Ruby syntax validation | Conventions enforced on subsequent PRs |
 | Dependency security | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
 

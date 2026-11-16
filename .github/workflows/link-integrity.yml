@@ -31,13 +31,11 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Audit generated site links
         run: |
-          args=(--site-dir _site --config _config.yml --report "$RUNNER_TEMP/link-audit-report.md")
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            args+=(--skip-external)
-          else
-            args+=(--fail-on-likely-external)
-          fi
-          python3 scripts/check_links.py "${args[@]}"
+          python3 scripts/check_links.py \
+            --site-dir _site \
+            --config _config.yml \
+            --report "$RUNNER_TEMP/link-audit-report.md" \
+            --fail-on-likely-external
       - name: Add link audit report to job summary
         if: always()
         run: |
