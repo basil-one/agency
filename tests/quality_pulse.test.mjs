@@ -80,6 +80,8 @@ test('partial pulse highlights missing coverage and exact run evidence', () => {
     generatedAt: `${date}T10:17:00Z`,
     results
   });
+  assert.match(summary, /^# Quality Pulse\n/);
+  assert.doesNotMatch(summary, /Agency Quality Pulse/);
   assert.match(summary, /Review required — 2 of 3 dimensions/);
   assert.match(summary, /Missing/);
   assert.match(summary, /Unknown \/ API inaccessible/);

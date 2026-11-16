@@ -1,4 +1,4 @@
-name: Agency Quality Pulse
+name: Quality Pulse
 
 on:
   schedule:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   pulse:
-    name: Agency Quality Pulse
+    name: Quality Pulse
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

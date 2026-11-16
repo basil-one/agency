@@ -299,7 +299,7 @@ function renderPulse({ date, generatedAt, results, cutoff = cutoffTime }) {
     ? `Review required — ${needsReview.length} of ${results.length} dimensions are not freshly successful.`
     : `All ${results.length} dimensions have fresh successful scheduled checks.`;
   const lines = [
-    '# Agency Quality Pulse',
+    '# Quality Pulse',
     '',
     `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}  ·  **Cutoff:** ${date} ${cutoff}`,
     '',
