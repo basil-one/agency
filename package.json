@@ -6,10 +6,12 @@
     "test:browser": "playwright test tests/browser/smoke.spec.js tests/browser/responsive.spec.js",
     "test:browser:negative": "playwright test tests/browser/negative.spec.js",
     "test:browser:accessibility-negative": "playwright test tests/browser/accessibility-negative.spec.js",
-    "test:browser:responsive-negative": "playwright test tests/browser/responsive-negative.spec.js"
+    "test:browser:responsive-negative": "playwright test tests/browser/responsive-negative.spec.js",
+    "measure:performance": "node scripts/measure_performance.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
-    "@playwright/test": "1.65.1"
+    "@playwright/test": "1.65.1",
+    "lighthouse": "13.6.0"
   }
 }

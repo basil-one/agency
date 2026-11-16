@@ -31,6 +31,9 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 | [Source quality](workflows/source-quality.yml) | Super-Linter (including Ruff C901 complexity) and Ruby syntax validation | Conventions enforced on subsequent PRs |
 | [Dependency security](workflows/dependency-security.yml) | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
 | [Rendered-site integrity](workflows/rendered-site-integrity.yml) | Production-generated pages load in Chromium; main navigation and visitor actions work; generated pages are scanned for detectable accessibility violations; representative pages exercise responsive layouts and visitor pathways at 320px, 768px, and 1280px CSS widths | No separate scheduled check |
+| [Performance integrity](workflows/performance-integrity.yml) | Informational Lighthouse mobile/desktop measurements and loaded asset/external script inventory; no calibrated regression threshold yet | No separate scheduled check |
+
+To run the same measurement locally, build with `JEKYLL_ENV=production bundle exec jekyll build --trace`, run `npm ci`, install Chromium with `npx playwright install --with-deps --no-shell chromium`, then run `npm run measure:performance`. Raw Lighthouse reports are written to the ignored `performance-reports/` directory.
 
 ## Commitments Being Established
 
@@ -38,8 +41,10 @@ The next quality capabilities extend the same stance:
 
 | Dimension | Intended practice |
 | --- | --- |
-| Performance (CI-07) | Establish a measured baseline and detect meaningful regressions without chasing perfect scores |
+| Accessibility (CI-04) | Validate rendered accessibility on changes; revisit the live experience where useful |
+| Responsive usability (CI-05) | Exercise representative viewports and visitor pathways |
 
-These are commitments under development, **not existing checks**. Each becomes an operating safeguard only after its behavior, reporting, and action path are verified. Checks run on PRs or a schedule according to the risk they address—not because every dimension needs the same frequency.
+These are commitments under development, **not existing checks**. Each becomes an operating safeguard only after its behavior, reporting, and action path are verified.
+Performance measurements are lab observations of the locally generated site, not field data or a claim about real-user Core Web Vitals. Regression thresholds remain deferred until repeated runs demonstrate a stable, visitor-relevant signal. Checks run on PRs or a schedule according to the risk they address—not because every dimension needs the same frequency.
 
 The outcome is a quiet, trustworthy system that brings forward a problem **and a practical path to resolution** when attention is needed.

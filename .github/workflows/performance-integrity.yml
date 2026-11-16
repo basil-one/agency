@@ -1,0 +1,65 @@
+name: Performance integrity
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: performance-integrity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: Performance integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+        env:
+          BUNDLE_FROZEN: 'true'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Build site
+        run: bundle exec jekyll build --trace
+        env:
+          JEKYLL_ENV: production
+      - name: Install browser test dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps --no-shell chromium
+      - name: Measure rendered pages
+        run: npm run measure:performance
+        env:
+          PERFORMANCE_RUNNER: ubuntu-24.04
+          PERFORMANCE_REPORT_DIR: ${{ runner.temp }}/performance-reports
+      - name: Verify missing-route diagnostic
+        run: |
+          output="$RUNNER_TEMP/performance-negative.log"
+          if npm run measure:performance -- --negative-test >"$output" 2>&1; then
+            cat "$output"
+            echo "Expected the deliberately missing route check to fail."
+            exit 1
+          fi
+          cat "$output"
+          grep -F 'Expected generated output for performance route /__performance-test-missing-route__/' "$output"
+          echo "Confirmed the expected missing-route diagnostic."
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-reports
+          path: ${{ runner.temp }}/performance-reports/
+          if-no-files-found: warn
+          retention-days: 30
