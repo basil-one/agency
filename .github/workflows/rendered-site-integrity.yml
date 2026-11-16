@@ -103,11 +103,13 @@ jobs:
           const suites = [];
           let resultsAvailable = false;
           let resultsError;
+          let playwrightDuration;
 
           if (fs.existsSync(process.env.RESULTS_FILE)) {
             try {
               const content = fs.readFileSync(process.env.RESULTS_FILE, 'utf8');
               const report = JSON.parse(content);
+              playwrightDuration = report.stats?.duration ?? report.duration;
               const collect = (suite) => {
                 for (const spec of suite.specs ?? []) {
                   for (const test of spec.tests ?? []) {
@@ -115,6 +117,9 @@ jobs:
                     suites.push({
                       title: spec.title,
                       status: result?.status ?? 'not completed',
+                      axeScanned: test.annotations?.some(
+                        (annotation) => annotation.type === 'axe-scan-complete',
+                      ) ?? false,
                     });
                   }
                 }
@@ -137,11 +142,23 @@ jobs:
             (test) => test.status === 'not completed',
           ).length;
           const failed = suites.length - passed - skipped - incomplete;
+          const selectedSmokeRoutes = suites.filter(
+            (test) => test.title.endsWith('is present in generated output and loads'),
+          ).length;
+          const axeTests = suites.filter(
+            (test) => test.title.endsWith('has no detectable accessibility violations'),
+          );
+          const discoveredHtmlPages = axeTests.length;
+          const axeScannedRoutes = axeTests.filter((test) => test.axeScanned).length;
           const lines = [
             '# Rendered-site integrity',
             '',
             `- Production Jekyll: **${outcome(process.env.BUILD_OUTCOME)}**.`,
             `- Browser test step: **${outcome(process.env.SMOKE_OUTCOME)}**.`,
+            `- Generated HTML pages discovered: **${discoveredHtmlPages}**.`,
+            `- Generated HTML pages axe-scanned: **${axeScannedRoutes}**.`,
+            `- Smoke routes selected: **${selectedSmokeRoutes}**.`,
+            `- Playwright duration: **${Number.isFinite(playwrightDuration) ? `${(playwrightDuration / 1000).toFixed(1)}s` : 'not available'}**.`,
           ];
 
           if (resultsAvailable) {

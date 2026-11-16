@@ -1,7 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 
-export async function assertNoAccessibilityViolations(page, pageLabel) {
+export async function assertNoAccessibilityViolations(page, pageLabel, testInfo) {
   const { violations } = await new AxeBuilder({ page }).analyze();
+  testInfo?.annotations.push({ type: 'axe-scan-complete' });
 
   if (violations.length === 0) return;
 
