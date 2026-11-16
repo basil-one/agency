@@ -203,7 +203,7 @@ function renderSummary(
     `- **Tools:** Lighthouse ${lighthouseVersion}; ${chromeVersion}; ${rubyVersion}; ${jekyllVersion}; Node ${process.version}.`,
     `- **Conditions:** ${process.env.PERFORMANCE_RUNNER ?? `local ${process.platform}/${process.arch}`}; Jekyll production build served locally; Lighthouse default mobile configuration and desktop preset; ${runCount} fresh-browser runs per route and form factor; medians shown; external scripts are allowed but Google Analytics collection requests are blocked to avoid synthetic visits. These are lab measurements, not field data or real-user Core Web Vitals.`,
     `- **Coverage:** ${results.length / 2} generated routes × 2 form factors × ${runCount} runs.`,
-    `- **Workflow runtime:** ${elapsedSeconds.toFixed(1)} seconds for measurements; build and browser installation are reported by their own steps.`,
+    `- **Measurement runtime:** ${elapsedSeconds.toFixed(1)} seconds, excluding workflow setup, build, dependency/browser installation, missing-route verification, and artifact upload; total Actions job duration is shown in the run overview.`,
     '',
     '| Generated route | Form factor | Lab FCP | Lab LCP | Lab Speed Index | Lab TBT | Lab CLS |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: |'
@@ -219,7 +219,8 @@ function renderSummary(
   lines.push(
     '',
     `- **First-party assets loaded across measured pages:** ${assetInventory.length} distinct \`/assets/\` files, ${(totalAssetBytes / 1024).toFixed(1)} KiB resource size; largest files: ${assetInventory.slice(0, 5).map((asset) => `\`${asset.path}\` (${(asset.bytes / 1024).toFixed(1)} KiB)`).join(', ') || 'none found'}.`,
-    `- **External scripts in rendered HTML** (query strings omitted; network requests are observed, not gated): ${externalScripts.map((source) => describeExternalScript(source, externalScriptObservations)).join(', ') || 'none found'}.`
+    `- **External scripts in rendered HTML** (query strings omitted; network requests are observed, not gated): ${externalScripts.map((source) => describeExternalScript(source, externalScriptObservations)).join(', ') || 'none found'}.`,
+    '- **Evidence sources:** route pages and external-script references come from generated `_site`; metrics, tool versions, loaded assets, and external-script requests come from the raw Lighthouse JSON reports. The workflow records measurement/diagnostic outcomes separately; results are not a pass/fail performance judgment.'
   );
   if (process.env.GITHUB_STEP_SUMMARY) {
     writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`, { flag: 'a' });

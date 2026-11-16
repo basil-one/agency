@@ -31,9 +31,6 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 | [Source quality](workflows/source-quality.yml) | Super-Linter (including Ruff C901 complexity) and Ruby syntax validation | Conventions enforced on subsequent PRs |
 | [Dependency security](workflows/dependency-security.yml) | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
 | [Rendered-site integrity](workflows/rendered-site-integrity.yml) | Production-generated pages load in Chromium; main navigation and visitor actions work; generated pages are scanned for detectable accessibility violations; representative pages exercise responsive layouts and visitor pathways at 320px, 768px, and 1280px CSS widths | No separate scheduled check |
-| [Performance integrity](workflows/performance-integrity.yml) | Informational Lighthouse mobile/desktop measurements and loaded asset/external script inventory; no calibrated regression threshold yet | No separate scheduled check |
-
-To run the same measurement locally, build with `JEKYLL_ENV=production bundle exec jekyll build --trace`, run `npm ci`, install Chromium with `npx playwright install --with-deps --no-shell chromium`, then run `npm run measure:performance`. Raw Lighthouse reports are written to the ignored `performance-reports/` directory.
 
 ## Commitments Being Established
 
@@ -41,11 +38,12 @@ The next quality capabilities extend the same stance:
 
 | Dimension | Intended practice |
 | --- | --- |
-| Accessibility (CI-04) | Validate rendered accessibility on changes; revisit the live experience where useful |
-| Responsive usability (CI-05) | Exercise representative viewports and visitor pathways |
+| Performance (CI-07) | Measure generated pages on demand while establishing a stable, visitor-relevant basis for any future regression check |
 
 These are commitments under development, **not existing checks**. Each becomes an operating safeguard only after its behavior, reporting, and action path are verified.
 
-Performance measurements are lab observations of the locally generated site, not field data or a claim about real-user Core Web Vitals. Regression thresholds remain deferred until repeated runs demonstrate a stable, visitor-relevant signal. Checks run on PRs or a schedule according to the risk they address—not because every dimension needs the same frequency.
+The on-demand Lighthouse workflow runs four generated routes on mobile and desktop with three measurements per route/profile. Its results are informational lab observations, not field data or a claim about real-user Core Web Vitals; no performance gate, threshold, PR check, or schedule is added. A workflow using only `workflow_dispatch` can be manually run only after its file is on the default branch, so the first full baseline run must follow a human merge. Lighthouse is pinned as a development dependency to audit the generated pages in Chromium and retain raw reports; it is not included in production site assets.
+
+To run the same measurement locally, build with `JEKYLL_ENV=production bundle exec jekyll build --trace`, run `npm ci`, install Chromium with `npx playwright install --with-deps --no-shell chromium`, then run `npm run measure:performance`. Raw Lighthouse reports are written to the ignored `performance-reports/` directory. Checks run on PRs or a schedule according to the risk they address—not because every dimension needs the same frequency.
 
 The outcome is a quiet, trustworthy system that brings forward a problem **and a practical path to resolution** when attention is needed.

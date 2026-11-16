@@ -1,8 +1,6 @@
 name: Performance integrity
 
 on:
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -40,11 +38,13 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps --no-shell chromium
       - name: Measure rendered pages
+        id: measure
         run: npm run measure:performance
         env:
           PERFORMANCE_RUNNER: ubuntu-24.04
           PERFORMANCE_REPORT_DIR: ${{ runner.temp }}/performance-reports
       - name: Verify missing-route diagnostic
+        id: negative
         run: |
           output="$RUNNER_TEMP/performance-negative.log"
           if npm run measure:performance -- --negative-test >"$output" 2>&1; then
@@ -56,6 +56,7 @@ jobs:
           grep -F 'Expected generated output for performance route /__performance-test-missing-route__/' "$output"
           echo "Confirmed the expected missing-route diagnostic."
       - name: Upload Lighthouse reports
+        id: upload
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -63,3 +64,43 @@ jobs:
           path: ${{ runner.temp }}/performance-reports/
           if-no-files-found: warn
           retention-days: 30
+      - name: Summarize baseline execution
+        if: always()
+        env:
+          MEASURE_OUTCOME: ${{ steps.measure.outcome }}
+          NEGATIVE_OUTCOME: ${{ steps.negative.outcome }}
+          ARTIFACT_OUTCOME: ${{ steps.upload.outcome }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          {
+            echo '# Performance baseline execution'
+            case "$MEASURE_OUTCOME" in
+              success)
+                echo '- Measurement execution: **completed**. Results are informational lab observations, not a performance-quality judgment or threshold check.'
+                ;;
+              failure)
+                echo '- Measurement execution: **failed**. No complete baseline is reported; inspect the **Measure rendered pages** step for the failed route, profile, or measurement.'
+                ;;
+              *)
+                echo '- Measurement execution: **not completed**. Results are unavailable, not zero; inspect earlier Actions steps.'
+                ;;
+            esac
+            case "$NEGATIVE_OUTCOME" in
+              success)
+                echo '- Controlled missing-route diagnostic: **passed**; the expected missing generated route produced an actionable failure.'
+                ;;
+              failure)
+                echo '- Controlled missing-route diagnostic: **failed**; inspect the **Verify missing-route diagnostic** step.'
+                ;;
+              *)
+                echo '- Controlled missing-route diagnostic: **not completed**; inspect earlier Actions steps.'
+                ;;
+            esac
+            if [ "$ARTIFACT_OUTCOME" = success ] && [ -n "$ARTIFACT_URL" ]; then
+              echo "- Raw Lighthouse JSON: [download the \`performance-reports\` artifact]($ARTIFACT_URL) (30-day retention)."
+            else
+              echo '- Raw Lighthouse JSON artifact: unavailable; inspect the **Upload Lighthouse reports** step.'
+            fi
+            echo '- Sources: Lighthouse JSON reports supply route/profile measurements, tool versions, and network observations; generated `_site` supplies the pages and external-script inventory; Actions step outcomes supply execution and diagnostic status.'
+            echo '- Runtime: measurement runtime is reported separately from the total Actions job duration, which includes setup, build, dependency/browser installation, diagnostic verification, and artifact upload and is shown in the run overview.'
+          } >> "$GITHUB_STEP_SUMMARY"
