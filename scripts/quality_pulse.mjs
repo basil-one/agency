@@ -186,7 +186,7 @@ function performanceDetail(result) {
   if (result.state === 'skipped') {
     return 'Measurement was skipped; no current samples or comparison are claimed.';
   }
-  return `${result.detail} Fixed-reference and rolling-baseline state is available only in the linked run summary.`;
+  return `${result.detail} ${result.baseline ? `Baseline: ${result.baseline}.` : 'Fixed-reference and rolling-baseline state is available only in the linked run summary.'}`;
 }
 
 function describePerformanceComparison(comparison) {
@@ -362,7 +362,8 @@ async function buildPulse({
   const performance = results.find((item) => item.name === 'Performance Integrity');
   if (
     performance?.result.run?.id &&
-    ['fresh', 'failed'].includes(performance.result.state)
+    performance.result.run.status === 'completed' &&
+    ['success', 'failure'].includes(performance.result.run.conclusion)
   ) {
     try {
       const comparison = await fetchPerformanceComparison({

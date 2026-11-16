@@ -120,3 +120,21 @@ test('performance baseline details distinguish pending and available comparisons
     'fixed reference: available; rolling baseline: available (28/28)'
   );
 });
+
+test('prior performance evidence can show its fixed and rolling state without claiming a fresh measurement', () => {
+  const run = {
+    ...passingRun,
+    created_at: '2026-11-15T06:24:00Z',
+    completed_at: '2026-11-15T06:26:00Z'
+  };
+  const result = evaluateRuns([run], date);
+  result.baseline = 'fixed reference: pending reviewed main anchor; rolling baseline: collecting (4/28)';
+  const summary = renderPulse({
+    date,
+    generatedAt: `${date}T18:17:00Z`,
+    results: [{ name: 'Performance Integrity', result }]
+  });
+  assert.match(summary, /Prior verification/);
+  assert.match(summary, /fixed reference: pending reviewed main anchor/);
+  assert.match(summary, /do not treat it as today's check/);
+});
