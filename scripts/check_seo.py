@@ -109,8 +109,7 @@ def format_summary(page_count: int, findings: list[str]) -> str:
     noun = "finding" if finding_count == 1 else "findings"
     lines = [
         f"- Generated HTML pages audited: {page_count}",
-        f"- Page titles, canonical URLs, and indexability: **{result}** "
-        f"({finding_count} {noun}).",
+        f"- Page titles, canonical URLs, and indexability: **{result}** ({finding_count} {noun}).",
     ]
     if findings:
         lines.extend(("", "## SEO findings", "", *(f"- {finding}" for finding in findings)))
