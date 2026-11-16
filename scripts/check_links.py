@@ -17,11 +17,6 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 LINK_ATTRIBUTES = ("href", "src", "poster", "data")
 UNCERTAIN_STATUSES = {401, 403, 407, 408, 425, 429}
-ACTION_LINK_NAMES = {
-    "connect",
-    "know_your_patterns_reservation",
-    "integration_session",
-}
 
 
 class UnsafeRedirect(Exception):
@@ -117,8 +112,7 @@ def parse_config(config_path: Path) -> tuple[str, str, dict[str, tuple[str, str]
             re.MULTILINE,
         ):
             key, value = match.groups()
-            if key in ACTION_LINK_NAMES:
-                action_links[normalize_url(value)] = (key, value)
+            action_links[normalize_url(value)] = (key, value)
     return site_url, baseurl, action_links
 
 
@@ -425,7 +419,7 @@ def report_for_site(
     else:
         lines.append("None.")
 
-    lines.extend(("", "## Coaching and contact destinations", ""))
+    lines.extend(("", "## Key visitor destinations", ""))
     _append_action_destinations(
         lines, action_links, external_sources, external_results, check_externals
     )

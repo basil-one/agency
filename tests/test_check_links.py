@@ -122,8 +122,34 @@ class CheckLinksTests(unittest.TestCase):
         self.assertIn("Uncertain external responses", report)
         self.assertIn("HTTP 403", report)
         self.assertIn("ACTION: `connect`", report)
-        self.assertIn("## Coaching and contact destinations", report)
+        self.assertIn("## Key visitor destinations", report)
         self.assertIn("source pages: /", report)
+
+    def test_reports_arbitrary_http_action_but_excludes_mailto(self):
+        destination = "https://news.example/subscribe"
+        email = "mailto:hello@agency.example"
+        self.write(
+            "index.html",
+            f'<a href="{destination}">Newsletter</a><a href="{email}">Email</a>',
+        )
+        config = self.root / "_config.yml"
+        config.write_text(
+            'url: "https://agency.example"\n'
+            'baseurl: ""\naction_links:\n'
+            f'  newsletter: "{destination}"\n'
+            f'  email: "{email}"\n'
+        )
+
+        with patch(
+            "scripts.check_links.check_external", return_value=("healthy", "HTTP 200")
+        ) as check_external_mock:
+            report, errors, likely_broken = report_for_site(self.site, config)
+
+        self.assertEqual((errors, likely_broken), (0, 0))
+        check_external_mock.assert_called_once_with(destination)
+        self.assertIn("## Key visitor destinations", report)
+        self.assertIn(f"- **newsletter**: `{destination}` — healthy: HTTP 200", report)
+        self.assertNotIn("**email**", report)
 
     def test_action_destination_lists_sorted_source_pages(self):
         destination = "https://connect.example/path"
