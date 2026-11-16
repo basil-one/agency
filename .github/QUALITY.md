@@ -13,9 +13,9 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 ## How we operate
 
-**On change:** Pull requests run applicable checks and make failures inspectable. A failing check identifies the affected area and provides enough context to reproduce or investigate the problem.
+**On change:** Pull requests must pass checks for the production build and internal links, source quality, and newly introduced known dependency vulnerabilities before merging. Failures should be clear and actionable.
 
-**Over time:** Scheduled checks watch risks that change independently of commits, such as external references and dependencies. Automation proposes fixes where safe and feasible; otherwise an actionable issue replaces an open-ended report. Routine successful runs require no attention.
+**Over time:** Risks that can change without a code change are revisited. Meaningful findings or proposed remedies come to human judgment; healthy checks stay quiet.
 
 **With judgment:** Human judgment governs intent, editorial decisions, priorities, approval, and merge. Automation supports those decisions with evidence and reviewable proposals; it does not replace them. Privileged automation remains narrowly scoped.
 
@@ -25,11 +25,12 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 | Dimension | On pull requests | Over time |
 | --- | --- | --- |
-| Build integrity | Production Jekyll build and tests | Weekly build as part of the link-audit workflow |
+| Build integrity | Production Jekyll build | No separate scheduled check |
 | Link integrity | Generated-site internal links, fragments, and assets | Weekly/manual external-link audit; uncertain responses reported separately |
 | Source quality | Super-Linter and Ruby syntax validation | Conventions enforced on subsequent PRs |
+| Dependency security | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
 
-See [Jekyll build and link audit](workflows/jekyll-build.yml) and [code quality](workflows/code-quality.yml) for the actual configuration, run details, and diagnostics.
+See [build integrity](workflows/build-integrity.yml), [link integrity](workflows/link-integrity.yml), [source quality](workflows/source-quality.yml), and [dependency security](workflows/dependency-security.yml) for the checks and their diagnostics.
 
 ## Commitments being established
 
@@ -41,7 +42,6 @@ The next quality capabilities extend the same stance:
 | Responsive usability (CI-05) | Exercise representative viewports and visitor pathways |
 | SEO integrity (CI-06) | Validate generated metadata and discoverability signals; monitor live endpoints where they can drift |
 | Performance (CI-07) | Establish a measured baseline and detect meaningful regressions without chasing perfect scores |
-| Security and maintenance (CI-08) | Use dependency advisories and automated update PRs, with human review of security and compatibility |
 | Maintainability and changeability (CI-09) | Keep the code understandable, cohesive, and economical to change; detect meaningful structural deterioration and favor simpler alternatives when they improve the system |
 
 These are commitments under development, **not existing checks**. Each becomes an operating safeguard only after its behavior, reporting, and action path are verified. Checks run on PRs or a schedule according to the risk they address—not because every dimension needs the same frequency.
