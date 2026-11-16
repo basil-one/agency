@@ -199,6 +199,37 @@ class CheckLinksTests(unittest.TestCase):
         self.assertIn("Source:** `/`", report)
         self.assertIn("Destination:** `https://broken.example/path`", report)
 
+    def test_external_404_fails_and_corrected_200_passes_full_audit(self):
+        config = self.root / "_config.yml"
+        config.write_text('url: "https://agency.example"\nbaseurl: ""\n')
+        report_path = self.root / "report.md"
+
+        with patch("scripts.check_links.public_destination", return_value=(True, "")):
+            for path, expected_status in (("/missing", 1), ("/ok", 0)):
+                self.write("index.html", f'<a href="{self.external_origin}{path}">External</a>')
+                with patch(
+                    "sys.argv",
+                    [
+                        "check_links.py",
+                        "--site-dir",
+                        str(self.site),
+                        "--config",
+                        str(config),
+                        "--report",
+                        str(report_path),
+                        "--fail-on-likely-external",
+                    ],
+                ):
+                    self.assertEqual(main(), expected_status)
+
+                report = report_path.read_text(encoding="utf-8")
+                if path == "/missing":
+                    self.assertIn("HTTP 404", report)
+                    self.assertIn("Likely broken external links", report)
+                else:
+                    self.assertIn("External destinations checked: 1", report)
+                    self.assertIn("Likely broken external links\n\nNone.", report)
+
     def test_skip_external_does_not_make_requests(self):
         self.write("index.html", '<a href="https://external.example/path">External</a>')
         config = self.root / "_config.yml"
