@@ -1,8 +1,11 @@
-name: Build integrity
+name: Build Integrity
 
 on:
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -30,6 +33,8 @@ jobs:
         env:
           BUILD_OUTCOME: ${{ steps.build.outcome }}
         run: |
+          echo "# Build Integrity" >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
           case "$BUILD_OUTCOME" in
             success)
               echo "- Production Jekyll: **passed**." >> "$GITHUB_STEP_SUMMARY"

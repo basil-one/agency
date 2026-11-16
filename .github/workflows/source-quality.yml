@@ -1,4 +1,4 @@
-name: Source quality
+name: Source Quality
 
 on:
   pull_request:
@@ -40,7 +40,7 @@ jobs:
             esac
           }
           {
-            echo "# Source quality"
+            echo "# Source Quality"
             echo
             summary_outcome "$RUBY_OUTCOME" "Ruby Gemfile syntax"
             summary_outcome "$LINTER_OUTCOME" "Super-Linter + Ruff C901"

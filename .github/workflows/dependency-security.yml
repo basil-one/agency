@@ -1,8 +1,11 @@
-name: Dependency security
+name: Dependency Security
 
 on:
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '47 6 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -10,6 +13,7 @@ permissions:
 jobs:
   dependency-review:
     name: Dependency security
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -24,6 +28,8 @@ jobs:
         env:
           REVIEW_OUTCOME: ${{ steps.dependency_review.outcome }}
         run: |
+          echo "# Dependency Security" >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
           case "$REVIEW_OUTCOME" in
             success)
               printf '%s\n' \
@@ -43,4 +49,40 @@ jobs:
                 "  Threshold: moderate+; scopes: runtime/development/unknown." \
                 >> "$GITHUB_STEP_SUMMARY"
               ;;
+          esac
+
+  dependency-posture:
+    name: Dependency posture
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Review open Dependabot alerts
+        id: posture
+        run: node scripts/check_dependency_posture.mjs
+        env:
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Summarize dependency posture
+        if: always()
+        env:
+          POSTURE_OUTCOME: ${{ steps.posture.outcome }}
+        run: |
+          case "$POSTURE_OUTCOME" in
+            success)
+                echo "Daily Dependabot alert posture completed; see the report above." >> "$GITHUB_STEP_SUMMARY"
+                ;;
+            failure)
+                echo "Daily dependency posture needs review or could not be measured; see the report and step logs." >> "$GITHUB_STEP_SUMMARY"
+                ;;
+            *)
+                echo "Daily dependency posture was not completed; see step logs." >> "$GITHUB_STEP_SUMMARY"
+                ;;
           esac

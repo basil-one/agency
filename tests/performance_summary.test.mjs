@@ -102,7 +102,10 @@ test('puts completed informational outcome first and summarizes representative L
   const report = renderPerformanceSummary(makeInputs());
 
   assert.match(report, /^# Performance Integrity\n\n\*\*Measurement completed — 24\/24 Lighthouse samples\*\*/);
-  assert.match(report, /informational lab verification/i);
+  assert.match(
+    report,
+    /Measurements were collected using controlled Lighthouse tests, not actual visitors\. Comparisons are informational; no automatic regression thresholds are enforced\./
+  );
   assert.match(report, /\| Home \| 1\.23 s \| 567 ms \| 89 ms \|/);
   assert.match(report, /\| Know Your Patterns \|/);
   assert.match(report, /\| Reflections \|/);
@@ -166,6 +169,8 @@ test('does not report complete sample counts from partial measurement data', () 
   }));
 
   assert.match(report, /\*\*Measurement failed or incomplete/);
+  assert.match(report, /No complete measurement is reported/);
+  assert.doesNotMatch(report, /Measurements were collected/);
   assert.match(report, /Complete sample count: \*\*unavailable\*\*/);
   assert.doesNotMatch(report, /24\/24 Lighthouse samples|12\/24/);
   assert.match(report, /Partial measurement data only/);
@@ -225,6 +230,8 @@ test('reports measurement failure and incomplete setup without fabricated counts
   }));
 
   assert.match(report, /\*\*Measurement failed or incomplete/);
+  assert.match(report, /No complete measurement is reported/);
+  assert.doesNotMatch(report, /Measurements were collected/);
   assert.match(report, /Complete sample count: \*\*unavailable\*\*/);
   assert.match(report, /performance tests failed/);
   assert.doesNotMatch(report, /24\/24 Lighthouse samples/);

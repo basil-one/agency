@@ -1,4 +1,4 @@
-name: SEO integrity
+name: SEO Integrity
 
 on:
   pull_request:
@@ -53,7 +53,7 @@ jobs:
             esac
           }
           {
-            echo "# SEO integrity"
+            echo "# SEO Integrity"
             echo
             summary_outcome "$BUILD_OUTCOME" "Production Jekyll build"
             summary_outcome "$TEST_OUTCOME" "SEO-auditor unit tests"

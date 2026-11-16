@@ -1,4 +1,4 @@
-name: Performance integrity
+name: Performance Integrity
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   lighthouse:
-    name: Performance integrity
+    name: Performance Integrity
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

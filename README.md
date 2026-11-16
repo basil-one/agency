@@ -8,7 +8,7 @@ Source for [Agency](https://agency.basil.one), a Jekyll site for individual coac
 
 We keep Agency dependable, accessible, and easy to use so the site supports meaningful human encounters. Automation carries repetitive checks and brings evidence and practical remedies to human judgment. The practice creates capacity rather than maintenance overhead.
 
-Our [quality stance and practice](.github/QUALITY.md) describes the commitment, the safeguards in operation, and the capabilities being established.
+Our [quality stance and practice](.github/QUALITY.md) describes the safeguards in operation, the daily Agency Quality Pulse, and how people review its evidence.
 
 ## Development
 

@@ -1,8 +1,10 @@
-name: Rendered-site integrity
+name: Rendered Site Integrity
 
 on:
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '53 6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -213,7 +215,7 @@ jobs:
             scansCompleted === axeTests.length &&
             axeCounts.passed === axeTests.length;
           const lines = [
-            '# Rendered-site integrity',
+            '# Rendered Site Integrity',
             '',
             `- Production build (GitHub step \`Build site\`): **${outcome(process.env.BUILD_OUTCOME)}**.`,
             `- Browser suite (GitHub step \`Run rendered-site smoke tests\`): **${outcome(process.env.SMOKE_OUTCOME)}**.`,
