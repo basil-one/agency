@@ -10,8 +10,8 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const apiVersion = '2022-11-28';
-const historyLimit = 4;
-const runSearchLimit = 12;
+const historyLimit = 28;
+const runSearchLimit = 100;
 const metrics = [
   ['first-contentful-paint', 'FCP'],
   ['largest-contentful-paint', 'LCP'],
@@ -79,6 +79,13 @@ function referenceIsReady(reference) {
     Boolean(reference.source?.runUrl);
 }
 
+function sameMeasurementEnvironment(current, baseline) {
+  return ['runner', 'lighthouse', 'chrome', 'ruby', 'jekyll', 'node'].every((key) =>
+    current.environment?.[key] &&
+    current.environment[key] === baseline.environment?.[key]
+  );
+}
+
 async function githubRequest(path, token) {
   const response = await fetch(`${process.env.GITHUB_API_URL ?? 'https://api.github.com'}${path}`, {
     headers: {
@@ -94,7 +101,7 @@ async function githubRequest(path, token) {
   return response;
 }
 
-async function loadWeeklyHistory() {
+async function loadDailyHistory() {
   const token = process.env.GITHUB_TOKEN;
   const repository = process.env.GITHUB_REPOSITORY;
   if (!token || !repository) {
@@ -183,7 +190,7 @@ async function loadWeeklyHistory() {
       status: summaries.length === historyLimit ? 'available' : 'collecting_history',
       reason: summaries.length === historyLimit
         ? undefined
-        : `Only ${summaries.length} of ${historyLimit} recent complete weekly-main summaries are available.`,
+        : `Only ${summaries.length} of ${historyLimit} recent complete daily-main summaries are available.`,
       summaries,
       skipped,
       searchedRuns: runs.length
@@ -279,11 +286,34 @@ function getHistory() {
 }
 
 function buildComparison(current, reference, history) {
-  const rolling = summarizeRolling(history);
+  const compatibleHistory = history.summaries.filter((summary) =>
+    sameMeasurementEnvironment(current, summary)
+  );
+  const comparisonHistory = {
+    ...history,
+    status: history.status === 'unavailable'
+      ? 'unavailable'
+      : compatibleHistory.length === historyLimit
+        ? 'available'
+        : 'collecting_history',
+    reason: history.status === 'unavailable'
+      ? history.reason
+      : compatibleHistory.length === historyLimit
+        ? undefined
+        : `${compatibleHistory.length} of ${historyLimit} recent successful daily-main summaries match the current tool and runner versions.`
+  };
+  comparisonHistory.summaries = compatibleHistory;
+  const rolling = compatibleHistory.length === historyLimit
+    ? summarizeRolling(comparisonHistory)
+    : new Map();
   const currentResults = getResults(current);
-  const readyReference = referenceIsReady(reference) ? reference : undefined;
+  const referenceReady = referenceIsReady(reference) ? reference : undefined;
+  const readyReference = referenceReady &&
+    sameMeasurementEnvironment(current, referenceReady)
+    ? referenceReady
+    : undefined;
   const referenceResults = getResults(readyReference);
-  const historyProvenance = history.summaries.map((summary) => ({
+  const historyProvenance = compatibleHistory.map((summary) => ({
     runId: summary.source.runId,
     runUrl: summary.source.runUrl,
     capturedAt: summary.capturedAt,
@@ -294,26 +324,27 @@ function buildComparison(current, reference, history) {
     '## Baseline comparison',
     '',
     `- **Run:** ${current.source.eventName} on \`${current.source.branch ?? 'unknown'}\`; ${current.coverage.routeCount} routes × mobile/desktop × ${current.coverage.runCount} runs; tools: Lighthouse ${current.environment.lighthouse}, Chrome ${current.environment.chrome}, Node ${current.environment.node}.`,
-    `- **Fixed reference:** ${readyReference ? `[successful main run](${readyReference.source.runUrl})` : 'unavailable; reference awaits an actual successful main measurement and human versioning'}.`,
-    `- **Rolling weekly-main baseline:** ${history.status === 'unavailable'
-      ? `unavailable (${history.reason})`
-      : `${history.summaries.length}/${historyLimit} successful weekly-main runs; ${history.status === 'available' ? 'available' : 'collecting history'}`}.`,
+    `- **Fixed reference:** ${readyReference
+      ? `[successful main run](${readyReference.source.runUrl})`
+      : referenceReady
+        ? 'not comparable; tool or runner versions differ from the versioned reference'
+        : 'unavailable; reference awaits an actual successful main measurement and human versioning'}.`,
+    `- **Rolling daily-main baseline:** ${comparisonHistory.status === 'unavailable'
+      ? `unavailable (${comparisonHistory.reason})`
+      : `${compatibleHistory.length}/${historyLimit} successful daily-main runs with matching tool and runner versions; ${comparisonHistory.status === 'available' ? 'available' : 'collecting baseline'}`}.`,
     '- Deltas are descriptive only; they do not fail this workflow or establish a performance-quality verdict.',
     '- A dash means no matching route/profile baseline metric is available (for example, when the latest reflection route changes).'
   ];
   if (historyProvenance.length) {
+    const newest = historyProvenance[0];
+    const oldest = historyProvenance.at(-1);
     lines.push(
-      `- **Rolling sample sources:** ${historyProvenance.map((sample) =>
-        `[${sample.runId}](${sample.runUrl}) (${sample.capturedAt})`
-      ).join(', ')}.`
+      `- **Rolling sample sources:** ${historyProvenance.length} matching daily-main summaries, from [${newest.runId}](${newest.runUrl}) (${newest.capturedAt}) through [${oldest.runId}](${oldest.runUrl}) (${oldest.capturedAt}); full provenance is in the summary artifact.`
     );
   }
   if (history.skipped?.length) {
     lines.push(`- **History lookup details:** ${history.skipped.slice(0, 3).join('; ')}.`);
   }
-  const latest = history.summaries[0];
-  const previousSignals = new Set(latest?.reviewAssessment?.candidateSlots ?? []);
-  const reviewSignals = [];
   const rows = [];
 
   for (const [slot, result] of currentResults) {
@@ -329,28 +360,6 @@ function buildComparison(current, reference, history) {
       `| \`${result.route}\` | ${result.formFactor} | ${fixedDeltas.join(' · ')} | ${rollingDeltas.join(' · ')} |`
     );
 
-    if (history.summaries.length === historyLimit && rollingResult?.sampleCount === historyLimit) {
-      const weeklyValues = history.summaries
-        .map((summary) => getResults(summary).get(slot)?.values['largest-contentful-paint'])
-        .filter(Number.isFinite);
-      const center = median(weeklyValues);
-      const deviation = median(weeklyValues.map((value) => Math.abs(value - center)));
-      const threshold = Math.max(2 * deviation, 500);
-      const increase = result.values['largest-contentful-paint'] - center;
-      if (increase > threshold) {
-        const consecutive = current.source.eventName === 'schedule' && previousSignals.has(slot) ? 2 : 1;
-        reviewSignals.push({
-          slot,
-          route: result.route,
-          formFactor: result.formFactor,
-          currentLcp: result.values['largest-contentful-paint'],
-          rollingMedianLcp: center,
-          rollingMadLcp: deviation,
-          reviewDifferenceMs: increase,
-          consecutiveWeeklyRuns: consecutive
-        });
-      }
-    }
   }
 
   if (rows.length) {
@@ -364,7 +373,7 @@ function buildComparison(current, reference, history) {
     lines.push('', '- Metric deltas unavailable; no complete measurement summary was produced.');
   }
 
-  const comparisons = [readyReference, ...history.summaries].filter(Boolean);
+  const comparisons = [referenceReady, ...history.summaries].filter(Boolean);
   const differences = [...new Set(comparisons.flatMap((baseline) => conditionDifferences(current, baseline)))];
   if (differences.length) {
     lines.push(`- **Conditions to consider:** ${differences.join('; ')}.`);
@@ -374,41 +383,20 @@ function buildComparison(current, reference, history) {
     lines.push('- **Conditions:** no reference is available for environment or external-script comparison.');
   }
 
-  const signalsEnabled = history.summaries.length === historyLimit;
-  if (!signalsEnabled) {
-    lines.push('- **Review-signal proposal:** not evaluated until four weekly-main samples exist; no performance failure threshold is active.');
-  } else if (!reviewSignals.length) {
-    lines.push('- **Review-signal proposal:** no candidate observed using the provisional rolling-variability rule; this is not a pass/fail quality judgment.');
-  } else {
-    lines.push(
-      '- **Non-gating review signal candidates:**',
-      ...reviewSignals.map((signal) =>
-        `  - \`${signal.route}\` (${signal.formFactor}) LCP is +${Math.round(signal.reviewDifferenceMs)} ms over rolling median; provisional rule is > max(2× weekly MAD, 500 ms). ${signal.consecutiveWeeklyRuns >= 2 ? 'Observed in two consecutive weekly runs; human review suggested.' : 'Single-run candidate; wait for another weekly sample before treating it as sustained.'}`
-      ),
-      '- This provisional watch rule is for human review only and is not an enforced budget or performance verdict.'
-    );
-  }
-
   const comparison = {
     schemaVersion: 1,
     history: {
-      status: history.status,
-      availableWeeklySamples: history.summaries.length,
-      requiredWeeklySamples: historyLimit,
+      status: comparisonHistory.status,
+      availableDailySamples: compatibleHistory.length,
+      requiredDailySamples: historyLimit,
       searchedRuns: history.searchedRuns ?? null,
-      reason: history.reason,
+      reason: comparisonHistory.reason,
       skipped: history.skipped,
       provenance: historyProvenance
     },
     fixedReference: readyReference
       ? { available: true, runUrl: readyReference.source.runUrl }
       : { available: false, reason: 'No versioned successful main reference has been established.' },
-    reviewAssessment: {
-      rule: 'proposed; > max(2x rolling weekly LCP MAD, 500 ms), requiring 4 samples; non-gating',
-      evaluated: signalsEnabled,
-      candidateSlots: reviewSignals.map((signal) => signal.slot),
-      signals: reviewSignals
-    },
     comparisons: [...currentResults].map(([slot, result]) => {
       const fixedResult = referenceResults.get(slot);
       const rollingResult = rolling.get(slot);
@@ -440,19 +428,18 @@ function buildComparison(current, reference, history) {
       };
     })
   };
-  current.reviewAssessment = comparison.reviewAssessment;
   return { lines, comparison };
 }
 
 async function main() {
   if (process.argv.includes('--load-history')) {
-    const history = await loadWeeklyHistory();
+    const history = await loadDailyHistory();
     const historyPath = resolve(
       process.env.PERFORMANCE_HISTORY_PATH ?? join(tmpdir(), 'performance-history.json')
     );
     writeFileSync(historyPath, `${JSON.stringify(history, null, 2)}\n`);
     process.stdout.write(
-      `Weekly-main history: ${history.status}; ${history.summaries.length} complete summaries available.\n`
+      `Daily-main history: ${history.status}; ${history.summaries.length} complete summaries available.\n`
     );
     return;
   }
@@ -482,7 +469,7 @@ async function main() {
   }
   const history = getHistory() ?? {
     status: 'unavailable',
-    reason: 'Weekly-main history lookup did not produce a readable result.',
+    reason: 'Daily-main history lookup did not produce a readable result.',
     summaries: [],
     skipped: []
   };

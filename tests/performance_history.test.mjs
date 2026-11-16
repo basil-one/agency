@@ -72,7 +72,7 @@ function makeSummary({
 
 function makeHistory(summaries) {
   return {
-    status: summaries.length === 4 ? 'available' : 'collecting_history',
+    status: summaries.length === 28 ? 'available' : 'collecting_history',
     summaries,
     skipped: []
   };
@@ -96,18 +96,17 @@ test('reports unavailable fixed and rolling baselines without fabricating deltas
   const report = lines.join('\n');
 
   assert.match(report, /\*\*Fixed reference:\*\* unavailable/);
-  assert.match(report, /0\/4 successful weekly-main runs; collecting history/);
+  assert.match(report, /0\/28 successful daily-main runs with matching tool and runner versions; collecting baseline/);
   assert.match(report, /\| `\/` \| mobile \| — · — · — · — · — \| — · — · — · — · — \|/);
   assert.equal(comparison.fixedReference.available, false);
   assert.equal(comparison.comparisons[0].rollingBaseline, null);
 });
 
-test('compares medians and labels a provisional sustained slowdown for human review', () => {
-  const prior = [1_000, 1_010, 1_020, 1_030].map((lcp, index) =>
+test('compares against 28 matching daily-main summaries without applying a performance threshold', () => {
+  const prior = Array.from({ length: 28 }, (_, index) =>
     makeSummary({
-      lcp,
-      capturedAt: `2026-11-${String(12 + index).padStart(2, '0')}T00:00:00.000Z`,
-      reviewAssessment: { candidateSlots: ['/\u0000mobile'] }
+      lcp: 1_000 + index,
+      capturedAt: new Date(Date.UTC(2026, 9, index + 1)).toISOString()
     })
   );
   const current = makeSummary({ eventName: 'schedule', branch: 'main', lcp: 1_600 });
@@ -115,9 +114,29 @@ test('compares medians and labels a provisional sustained slowdown for human rev
   const { lines, comparison } = buildComparison(current, fixed, makeHistory(prior));
   const report = lines.join('\n');
 
-  assert.equal(comparison.history.provenance.length, 4);
-  assert.equal(comparison.reviewAssessment.signals[0].consecutiveWeeklyRuns, 2);
-  assert.match(report, /\+600 ms \(\+60\.0%\)/);
-  assert.match(report, /Observed in two consecutive weekly runs; human review suggested/);
+  assert.equal(comparison.history.provenance.length, 28);
+  assert.equal(comparison.history.requiredDailySamples, 28);
+  assert.match(report, /28\/28 successful daily-main runs with matching tool and runner versions; available/);
+  assert.match(report, /\+587 ms \(\+57\.9%\)/);
   assert.match(report, /do not fail this workflow/);
+  assert.doesNotMatch(report, /threshold|candidate|signal/i);
+});
+
+test('does not compare with history collected under different tools', () => {
+  const prior = Array.from({ length: 28 }, (_, index) => {
+    const summary = makeSummary({
+      capturedAt: new Date(Date.UTC(2026, 9, index + 1)).toISOString()
+    });
+    summary.environment.chrome = 'different-version';
+    return summary;
+  });
+  const { lines, comparison } = buildComparison(
+    makeSummary({ eventName: 'pull_request', branch: 'copilot/change', lcp: 1_200 }),
+    undefined,
+    makeHistory(prior)
+  );
+
+  assert.match(lines.join('\n'), /0\/28 successful daily-main runs with matching tool and runner versions; collecting baseline/);
+  assert.equal(comparison.history.provenance.length, 0);
+  assert.equal(comparison.comparisons[0].rollingBaseline, null);
 });

@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '17 6 * * 1'
+    - cron: '17 6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -42,7 +42,7 @@ jobs:
         run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps --no-shell chromium
-      - name: Load prior weekly-main summaries
+      - name: Load prior daily-main summaries
         id: history
         run: node scripts/compare_performance.mjs --load-history
         env:
@@ -91,7 +91,7 @@ jobs:
           name: performance-reports
           path: ${{ runner.temp }}/performance-reports/
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 14
       - name: Upload performance summary
         id: summary_artifact
         if: always()
