@@ -42,7 +42,8 @@ for (const route of routes) {
           `main navigation ${name} link`,
           route,
           width,
-          test.info()
+          test.info(),
+          'navigation'
         );
       }
 
@@ -55,7 +56,8 @@ for (const route of routes) {
           `footer ${label} link`,
           route,
           width,
-          test.info()
+          test.info(),
+          'footer'
         );
       }
 
@@ -79,10 +81,20 @@ for (const route of routes) {
           action,
           label,
           route,
-          width,
-          test.info()
+          width
         );
       }
+
+      const hitAreaAnnotations = test.info().annotations.filter(
+        ({ type }) => type === 'responsive-hit-area'
+      );
+      expect(hitAreaAnnotations.length).toBeGreaterThan(0);
+      expect(
+        hitAreaAnnotations.every(({ description }) =>
+          description.startsWith('navigation:main navigation ') ||
+          description.startsWith('footer:footer ')
+        )
+      ).toBe(true);
     });
   }
 }

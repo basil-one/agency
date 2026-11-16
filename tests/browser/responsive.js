@@ -42,7 +42,7 @@ export async function assertResponsivePage(page, route, width) {
   }
 }
 
-export async function assertResponsiveTarget(page, locator, label, route, width, testInfo) {
+export async function assertResponsiveTarget(page, locator, label, route, width, testInfo, region) {
   await expect(
     locator,
     `Responsive usability failure on ${route} at ${width}px: ${label} is not visible. ` +
@@ -67,8 +67,7 @@ export async function assertResponsiveTarget(page, locator, label, route, width,
     'Next step: inspect the element and its containing layout.'
   ).toBeLessThanOrEqual(width + viewportTolerance);
 
-  if (testInfo) {
-    const region = label.startsWith('main navigation') ? 'navigation' : 'footer';
+  if (testInfo && region) {
     testInfo.annotations.push({
       type: 'responsive-hit-area',
       description: `${region}:${label}:${box.width.toFixed(1)}x${box.height.toFixed(1)}`
