@@ -103,16 +103,33 @@ def audit_site(site_dir: Path, config_path: Path) -> tuple[int, list[str]]:
     return len(pages), findings
 
 
+def format_summary(page_count: int, findings: list[str]) -> str:
+    result = "passed" if not findings else "failed"
+    finding_count = len(findings)
+    noun = "finding" if finding_count == 1 else "findings"
+    lines = [
+        f"- Generated HTML pages audited: {page_count}",
+        f"- Page titles, canonical URLs, and indexability: **{result}** ({finding_count} {noun}).",
+    ]
+    if findings:
+        lines.extend(("", "## SEO findings", "", *(f"- {finding}" for finding in findings)))
+    return "\n".join(lines) + "\n"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--site-dir", type=Path, default=Path("_site"))
     parser.add_argument("--config", type=Path, default=Path("_config.yml"))
+    parser.add_argument("--report", type=Path)
     args = parser.parse_args()
 
     try:
         page_count, findings = audit_site(args.site_dir, args.config)
     except (OSError, ValueError) as error:
         parser.error(str(error))
+
+    if args.report:
+        args.report.write_text(format_summary(page_count, findings), encoding="utf-8")
 
     if findings:
         print("\n".join(findings))

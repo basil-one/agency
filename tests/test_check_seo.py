@@ -1,8 +1,11 @@
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
+from unittest.mock import patch
 
-from scripts.check_seo import audit_site
+from scripts.check_seo import audit_site, format_summary, main
 
 
 class CheckSeoTests(unittest.TestCase):
@@ -73,6 +76,51 @@ class CheckSeoTests(unittest.TestCase):
         self.assertIn("nonempty <title>", findings[0])
         self.assertIn("googlebot", findings[1])
         self.assertIn("none", findings[1])
+
+    def test_summary_reports_page_count_and_successful_checks(self):
+        summary = format_summary(3, [])
+
+        self.assertIn("Generated HTML pages audited: 3", summary)
+        self.assertIn(
+            "Page titles, canonical URLs, and indexability: **passed** (0 findings).",
+            summary,
+        )
+
+    def test_summary_reports_failed_checks_and_actionable_findings(self):
+        finding = "ERROR: / (index.html): expected one nonempty <title>."
+
+        summary = format_summary(1, [finding])
+
+        self.assertIn("Generated HTML pages audited: 1", summary)
+        self.assertIn(
+            "Page titles, canonical URLs, and indexability: **failed** (1 finding).",
+            summary,
+        )
+        self.assertIn(f"- {finding}", summary)
+
+    def test_failed_audit_writes_report_and_keeps_failure_status(self):
+        self.write_page(
+            '<link rel="canonical" href="https://agency.example/">'
+            '<meta name="robots" content="noindex">'
+        )
+        report = self.root / "seo-summary.md"
+        arguments = [
+            "check_seo.py",
+            "--site-dir",
+            str(self.site),
+            "--config",
+            str(self.config),
+            "--report",
+            str(report),
+        ]
+
+        with patch("sys.argv", arguments), redirect_stdout(StringIO()) as output:
+            result = main()
+
+        self.assertEqual(result, 1)
+        self.assertIn("noindex", output.getvalue())
+        self.assertIn("Generated HTML pages audited: 1", report.read_text())
+        self.assertIn("indexability: **failed**", report.read_text())
 
 
 if __name__ == "__main__":

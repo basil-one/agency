@@ -25,14 +25,12 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 | Dimension | On pull requests | Over time |
 | --- | --- | --- |
-| Build integrity | Production Jekyll build | No separate scheduled check |
-| Link integrity | Generated-site internal links, fragments, assets, and external destinations | Weekly/manual external-link audit; uncertain responses reported separately |
-| SEO integrity | Generated page titles, canonical URLs, and indexing directives | No separate scheduled/deployed-site check |
-| Source quality | Super-Linter (including Ruff C901 complexity) and Ruby syntax validation | Conventions enforced on subsequent PRs |
-| Dependency security | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
-| Rendered-site integrity | Production-generated pages load in Chromium; main navigation and visitor actions work | No separate scheduled check |
-
-See [build integrity](workflows/build-integrity.yml), [link integrity](workflows/link-integrity.yml), [SEO integrity](workflows/seo-integrity.yml), [source quality](workflows/source-quality.yml), [dependency security](workflows/dependency-security.yml), and [rendered-site integrity](workflows/rendered-site-integrity.yml) for the checks and their diagnostics.
+| [Build integrity](workflows/build-integrity.yml) | Production Jekyll build | No separate scheduled check |
+| [Link integrity](workflows/link-integrity.yml) | Generated-site internal links, fragments, assets, and external destinations | Weekly/manual external-link audit; uncertain responses reported separately |
+| [SEO integrity](workflows/seo-integrity.yml) | Generated page titles, canonical URLs, and indexing directives | No separate scheduled/deployed-site check |
+| [Source quality](workflows/source-quality.yml) | Super-Linter (including Ruff C901 complexity) and Ruby syntax validation | Conventions enforced on subsequent PRs |
+| [Dependency security](workflows/dependency-security.yml) | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
+| [Rendered-site integrity](workflows/rendered-site-integrity.yml) | Production-generated pages load in Chromium; main navigation and visitor actions work | No separate scheduled check |
 
 ## Commitments being established
 
