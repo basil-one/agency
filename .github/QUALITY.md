@@ -25,7 +25,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 | Dimension | On pull requests | Over time |
 | --- | --- | --- |
-| Build integrity | Production Jekyll build | Weekly build as part of the link-integrity workflow |
+| Build integrity | Production Jekyll build | No separate scheduled check |
 | Link integrity | Generated-site internal links, fragments, and assets | Weekly/manual external-link audit; uncertain responses reported separately |
 | Source quality | Super-Linter and Ruby syntax validation | Conventions enforced on subsequent PRs |
 | Dependency security | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
