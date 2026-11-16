@@ -20,10 +20,10 @@ function makeSummary() {
     timing: { measurementSeconds: 264.1 },
     environment: {
       lighthouse: '13.6.0',
-      chrome: '159.0.8154.6',
+      chrome: 'Google Chrome for Testing 159.0.8154.6',
       node: 'v22.23.4',
-      ruby: '3.3.13',
-      jekyll: '3.10.0',
+      ruby: 'ruby 3.3.13 (2026-10-23 revision af48f08f21) [x86_64-linux]',
+      jekyll: 'jekyll 3.10.0',
       runner: 'ubuntu-24.04'
     },
     conditions: {
@@ -106,10 +106,19 @@ test('puts completed informational outcome first and summarizes representative L
   assert.match(report, /\| Home \| 1\.23 s \| 567 ms \| 89 ms \|/);
   assert.match(report, /\| Know Your Patterns \|/);
   assert.match(report, /\| Reflections \|/);
-  assert.match(report, /\| Latest reflection \(\/reflections\/example\/\) \|/);
+  assert.match(report, /\| Latest reflection \| 1\.23 s \| 567 ms \| 89 ms \|/);
   assert.match(report, /Technical details/);
   assert.match(report, /\| Page \| Profile \| FCP \| LCP \| Speed Index \| TBT \| CLS \|/);
-  assert.match(report, /Lighthouse 13\.6\.0; Chrome 159\.0\.8154\.6; Node v22\.23\.4/);
+  assert.match(
+    report,
+    /Lighthouse 13\.6\.0; Google Chrome for Testing 159\.0\.8154\.6; Node v22\.23\.4; ruby 3\.3\.13 .*; jekyll 3\.10\.0; runner ubuntu-24\.04\./
+  );
+  assert.doesNotMatch(report, /Chrome Google Chrome|Ruby ruby|Jekyll jekyll/);
+  assert.match(report, /\| Latest reflection \| mobile \|/);
+  assert.match(
+    report,
+    /Latest reflection route: `\/reflections\/example\/` \(selected dynamically\)\./
+  );
   assert.match(report, /264\.1 seconds/);
 });
 
@@ -130,6 +139,8 @@ test('renders route/profile-specific deltas and matching baseline provenance whe
   assert.match(report, /Fixed reference:\*\* \[available\]/);
   assert.match(report, /28\/28 compatible successful daily-main runs available/);
   assert.match(report, /^\| Home \| mobile \| \+100 ms \(\+8\.8%\) \| \+200 ms \(\+19\.3%\)/m);
+  assert.match(report, /^\| Latest reflection \| mobile \|/m);
+  assert.doesNotMatch(report, /Latest reflection \(\/reflections\/example\/\)/);
   assert.match(report, /Fixed TBT Δ/);
 });
 

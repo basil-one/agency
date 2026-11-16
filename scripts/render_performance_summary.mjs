@@ -26,7 +26,7 @@ function routeLabel(route) {
   if (route === '/') return 'Home';
   if (route === '/know-your-patterns/') return 'Know Your Patterns';
   if (route === '/reflections/') return 'Reflections';
-  return `Latest reflection (${route})`;
+  return 'Latest reflection';
 }
 
 function formatValue(metric, value) {
@@ -169,6 +169,12 @@ function technicalDetails(summary, comparison, inputs) {
     for (const result of summary.results) {
       lines.push(`| ${routeLabel(result.route)} | ${result.formFactor} | ${formatValue('first-contentful-paint', result.values?.['first-contentful-paint'])} | ${formatValue('largest-contentful-paint', result.values?.['largest-contentful-paint'])} | ${formatValue('speed-index', result.values?.['speed-index'])} | ${formatValue('total-blocking-time', result.values?.['total-blocking-time'])} | ${formatValue('cumulative-layout-shift', result.values?.['cumulative-layout-shift'])} |`);
     }
+    const latestReflection = summary.results.find(
+      (result) => routeLabel(result.route) === 'Latest reflection'
+    );
+    if (latestReflection) {
+      lines.push('', `- Latest reflection route: \`${latestReflection.route}\` (selected dynamically).`);
+    }
   } else {
     lines.push('No complete route/profile metric table is available.');
   }
@@ -179,7 +185,7 @@ function technicalDetails(summary, comparison, inputs) {
       '',
       '### Environment and conditions',
       '',
-      `- Lighthouse ${env.lighthouse ?? 'unknown'}; Chrome ${env.chrome ?? 'unknown'}; Node ${env.node ?? 'unknown'}; Ruby ${env.ruby ?? 'unknown'}; Jekyll ${env.jekyll ?? 'unknown'}; runner ${env.runner ?? 'unknown'}.`,
+      `- Lighthouse ${env.lighthouse ?? 'unknown'}; ${env.chrome ?? 'Chrome version unknown'}; Node ${env.node ?? 'unknown'}; ${env.ruby ?? 'Ruby version unknown'}; ${env.jekyll ?? 'Jekyll version unknown'}; runner ${env.runner ?? 'unknown'}.`,
       `- ${conditions.site ?? 'Site build conditions unavailable'}; mobile: ${conditions.mobile ?? 'unknown'}; desktop: ${conditions.desktop ?? 'unknown'}; Analytics collection blocked: ${conditions.analyticsCollectionBlocked === true ? 'yes' : 'unknown'}; lab-only: ${conditions.labOnly === true ? 'yes' : 'unknown'}.`,
       `- Captured: ${summary.capturedAt ?? 'unknown'}; source SHA: \`${summary.source?.sha ?? 'unknown'}\`; source run: ${summary.source?.runUrl ?? 'not available'}.`,
       `- Timing: ${Number.isFinite(summary.timing?.measurementSeconds) ? `${summary.timing.measurementSeconds.toFixed(1)} seconds for measurement` : 'measurement duration unavailable'}; total Actions duration is shown in the run overview.`
