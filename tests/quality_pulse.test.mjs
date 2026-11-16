@@ -127,7 +127,7 @@ test('Pulse uses actual job completion time, not workflow updated_at', async () 
   });
   assert.match(
     markdown,
-    /\| Build Integrity \| Fresh — passed \| Completed 2026-11-16 17:59:00\.000 UTC \|/
+    /\| Site Build Integrity \| Fresh — passed \| Completed 2026-11-16 17:59:00\.000 UTC \|/
   );
 });
 
@@ -149,7 +149,7 @@ test('Pulse reports unknown when completion-time job metadata is inaccessible', 
       return { ok: true, json: async () => ({ workflow_runs: [] }) };
     }
   });
-  assert.match(markdown, /\| Build Integrity \| Unknown completion time \| Started 2026-11-16 06:24:05\.000 UTC \|/);
+  assert.match(markdown, /\| Site Build Integrity \| Unknown completion time \| Started 2026-11-16 06:24:05\.000 UTC \|/);
   assert.match(markdown, /Jobs API returned HTTP 403/);
   assert.match(markdown, /Review required/);
 });
@@ -174,7 +174,7 @@ test('missing today reports prior verification separately from stale data', () =
 
 test('partial pulse highlights missing coverage and exact run evidence', () => {
   const results = [
-    { name: 'Build Integrity', result: evaluateRuns([passingRun], date, undefined, jobsCompletedBeforeCutoff) },
+    { name: 'Site Build Integrity', result: evaluateRuns([passingRun], date, undefined, jobsCompletedBeforeCutoff) },
     { name: 'Link Integrity', result: evaluateRuns([], date) },
     {
       name: 'SEO Integrity',

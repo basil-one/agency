@@ -67,3 +67,18 @@ jobs:
             echo "- SEO results unavailable." >> "$GITHUB_STEP_SUMMARY"
             echo "  See audit step logs." >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  bridge-seo-integrity:
+    name: SEO Integrity
+    if: always() && github.event_name == 'pull_request'
+    needs: seo
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Verify original SEO check
+        env:
+          PREREQUISITE_RESULT: ${{ needs.seo.result }}
+        run: node scripts/verify_required_check.mjs

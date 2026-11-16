@@ -11,6 +11,7 @@
     "test:performance-skip": "node --test tests/performance_skip.test.mjs",
     "test:performance-summary": "node --test tests/performance_summary.test.mjs",
     "test:quality-pulse": "node --test tests/quality_pulse.test.mjs tests/dependency_posture.test.mjs",
+    "test:required-check-bridge": "node --test tests/required_check_bridge.test.mjs",
     "measure:performance": "node scripts/measure_performance.mjs"
   },
   "devDependencies": {

@@ -326,3 +326,18 @@ jobs:
             `${lines.join('\n')}\n`,
           );
           NODE
+
+  bridge-rendered-site-integrity:
+    name: Rendered Site Integrity
+    if: always() && github.event_name == 'pull_request'
+    needs: browser-smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Verify original rendered-site check
+        env:
+          PREREQUISITE_RESULT: ${{ needs.browser-smoke.result }}
+        run: node scripts/verify_required_check.mjs
