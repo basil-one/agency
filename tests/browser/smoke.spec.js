@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { assertNoAccessibilityViolations } from './accessibility.js';
 
 const routes = [
   '/',
@@ -28,6 +29,11 @@ for (const route of routes) {
     await expect(page.locator('main')).toBeVisible();
     await expect(page.locator('main h1').first()).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
+  });
+
+  test(`${route} has no detectable accessibility violations`, async ({ page }) => {
+    await page.goto(route);
+    await assertNoAccessibilityViolations(page, route);
   });
 }
 

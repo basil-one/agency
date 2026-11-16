@@ -64,12 +64,32 @@ jobs:
           echo "Confirmed the expected missing-route HTTP 404 diagnostic."
         env:
           CI: 'true'
+      - name: Verify accessibility diagnostic
+        id: accessibility_negative
+        if: always() && steps.build.outcome == 'success'
+        run: |
+          output="$RUNNER_TEMP/browser-accessibility-negative.log"
+          if npm run \
+            test:browser:accessibility-negative >"$output" 2>&1; then
+            cat "$output"
+            echo "Expected the controlled accessibility fixture to fail."
+            exit 1
+          fi
+          cat "$output"
+          grep -F 'Accessibility violations detected on in-memory accessibility failure fixture.' "$output"
+          grep -F 'Element: img' "$output"
+          grep -F 'Rule: image-alt' "$output"
+          grep -F 'Next step:' "$output"
+          echo "Confirmed actionable diagnostics for the in-memory accessibility fixture."
+        env:
+          CI: 'true'
       - name: Summarize rendered-site checks
         if: always()
         env:
           BUILD_OUTCOME: ${{ steps.build.outcome }}
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
           NEGATIVE_OUTCOME: ${{ steps.negative.outcome }}
+          ACCESSIBILITY_NEGATIVE_OUTCOME: ${{ steps.accessibility_negative.outcome }}
           RESULTS_FILE: ${{ runner.temp }}/browser-results.json
         run: |
           node <<'NODE'
@@ -159,6 +179,24 @@ jobs:
               '- Expected missing-route diagnostic: **not completed**; inspect',
               '  earlier step logs.',
               '- The deliberate HTTP 404 case is expected, not a regression.',
+            );
+          }
+
+          if (process.env.ACCESSIBILITY_NEGATIVE_OUTCOME === 'success') {
+            lines.push(
+              '- Controlled accessibility diagnostic: **passed**;',
+              '  the in-memory missing-alt fixture produced the expected',
+              '  page, element, rule, and next-step details.',
+            );
+          } else if (process.env.ACCESSIBILITY_NEGATIVE_OUTCOME === 'failure') {
+            lines.push(
+              '- Controlled accessibility diagnostic: **failed**; see its logs.',
+              '  The fixture exists only in memory and is not part of the site.',
+            );
+          } else {
+            lines.push(
+              '- Controlled accessibility diagnostic: **not completed**;',
+              '  inspect earlier step logs. The fixture exists only in memory.',
             );
           }
 
