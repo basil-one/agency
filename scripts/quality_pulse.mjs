@@ -37,25 +37,62 @@ function timestamp(value) {
 }
 
 function runTime(run) {
-  return timestamp(run.completed_at ?? run.created_at);
+  if (run.completionEvidence?.completedAt) {
+    return `Completed ${timestamp(run.completionEvidence.completedAt)}`;
+  }
+  if (run.run_started_at) return `Started ${timestamp(run.run_started_at)}`;
+  if (run.created_at) return `Created ${timestamp(run.created_at)}`;
+  return 'run time unavailable';
 }
 
 function runLink(run) {
   return run.html_url ?? '';
 }
 
-function evaluateRuns(runs, date, cutoff = cutoffTime) {
+function completionEvidenceFromJobs(jobs) {
+  if (!Array.isArray(jobs) || jobs.length === 0) {
+    return { status: 'unknown', reason: 'No workflow job completion records were returned.' };
+  }
+  if (jobs.some((job) => job.status !== 'completed')) {
+    return { status: 'incomplete', reason: 'One or more workflow jobs are still incomplete.' };
+  }
+  const executedJobs = jobs.filter((job) => job.conclusion !== 'skipped');
+  if (executedJobs.length === 0) {
+    return { status: 'unknown', reason: 'No workflow job ran to completion.' };
+  }
+  if (executedJobs.some((job) => !['success', 'neutral', 'failure', 'timed_out', 'cancelled'].includes(job.conclusion))) {
+    return { status: 'unknown', reason: 'Workflow job conclusions are unavailable or invalid.' };
+  }
+  const completionTimes = executedJobs.map((job) =>
+    typeof job.completed_at === 'string' ? Date.parse(job.completed_at) : Number.NaN
+  );
+  if (completionTimes.some((value) => !Number.isFinite(value))) {
+    return { status: 'unknown', reason: 'Workflow job completion timestamps are unavailable or invalid.' };
+  }
+  const completedAt = new Date(Math.max(...completionTimes)).toISOString();
+  return {
+    status: 'completed',
+    completedAt,
+    successful: executedJobs.every((job) => ['success', 'neutral'].includes(job.conclusion))
+  };
+}
+
+function evaluateRuns(runs, date, cutoff = cutoffTime, completionByRunId = new Map()) {
   const dailyRuns = runs
     .filter((run) => run.created_at?.slice(0, 10) === date)
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   const cutoffAt = new Date(`${date}T${cutoff}`);
   const today = dailyRuns[0];
   if (today) {
+    const todayEvidenceRun = {
+      ...today,
+      completionEvidence: completionByRunId.get(today.id)
+    };
     if (today.conclusion === 'failure' || today.conclusion === 'timed_out') {
       return {
         state: 'failed',
         label: 'Fresh — failed',
-        run: today,
+        run: todayEvidenceRun,
         detail: 'Open the workflow run for findings and the next corrective action.'
       };
     }
@@ -63,7 +100,7 @@ function evaluateRuns(runs, date, cutoff = cutoffTime) {
       return {
         state: 'failed',
         label: 'Cancelled',
-        run: today,
+        run: todayEvidenceRun,
         detail: 'The scheduled verification was cancelled; inspect the run and rerun if appropriate.'
       };
     }
@@ -71,7 +108,7 @@ function evaluateRuns(runs, date, cutoff = cutoffTime) {
       return {
         state: 'skipped',
         label: 'Skipped',
-        run: today,
+        run: todayEvidenceRun,
         detail: 'The daily verification was skipped; confirm whether the skip was intentional.'
       };
     }
@@ -79,34 +116,39 @@ function evaluateRuns(runs, date, cutoff = cutoffTime) {
       return {
         state: 'late',
         label: 'Late / incomplete',
-        run: today,
+        run: todayEvidenceRun,
         detail: `The scheduled run was still ${today.status ?? 'incomplete'} at the ${cutoff} cutoff.`
       };
     }
     if (today.conclusion === 'success') {
-      if (
-        !today.completed_at ||
-        Number.isNaN(Date.parse(today.completed_at)) ||
-        Date.parse(today.completed_at) > cutoffAt.valueOf()
-      ) {
+      const completion = completionByRunId.get(today.id);
+      if (completion?.status !== 'completed' || completion.successful !== true) {
+        return {
+          state: 'unknown',
+          label: 'Unknown completion time',
+          run: today,
+          detail: `${completion?.reason ?? 'Workflow job completion evidence does not establish a successful finished check'} The run is not marked fresh.`
+        };
+      }
+      if (Date.parse(completion.completedAt) > cutoffAt.valueOf()) {
         return {
           state: 'late',
           label: 'Late',
-          run: today,
-          detail: `The successful run completed after the ${cutoff} cutoff; today's result is late.`
+          run: todayEvidenceRun,
+          detail: `The latest workflow job completed after the ${cutoff} cutoff; today's result is late.`
         };
       }
       return {
         state: 'fresh',
         label: 'Fresh — passed',
-        run: today,
-        detail: 'Daily scheduled verification completed before the cutoff.'
+        run: todayEvidenceRun,
+        detail: 'All workflow jobs completed by the cutoff.'
       };
     }
     return {
       state: 'unknown',
       label: 'Unknown outcome',
-      run: today,
+      run: todayEvidenceRun,
       detail: `The workflow reported ${today.conclusion ?? 'no conclusion'}; inspect the run.`
     };
   }
@@ -134,14 +176,14 @@ function evaluateRuns(runs, date, cutoff = cutoffTime) {
     return {
       state: 'prior',
       label: 'Prior verification',
-      run: previous,
+      run: { ...previous, completionEvidence: completionByRunId.get(previous.id) },
       detail: `No fresh run today. Last successful verification was ${ageDays} day(s) earlier; do not treat it as today's check.`
     };
   }
   return {
     state: 'stale',
     label: 'Stale',
-    run: previous,
+    run: { ...previous, completionEvidence: completionByRunId.get(previous.id) },
     detail: `No fresh run today. Last successful verification was ${ageDays} days earlier; inspect schedule health and rerun.`
   };
 }
@@ -174,6 +216,34 @@ async function fetchRuns({ apiUrl, repository, workflow, token, date, fetchImpl 
     throw new Error('GitHub Actions API returned an unreadable workflow-run list');
   }
   return data.workflow_runs;
+}
+
+async function fetchRunCompletion({ apiUrl, repository, runId, token, fetchImpl }) {
+  const url = new URL(
+    `/repos/${repository}/actions/runs/${runId}/jobs`,
+    apiUrl
+  );
+  url.search = new URLSearchParams({ per_page: '100', page: '1' });
+  const response = await fetchImpl(url, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: ['Bearer', token].join(' '),
+      'X-GitHub-Api-Version': '2022-11-28'
+    },
+    signal: AbortSignal.timeout(15_000)
+  });
+  if (!response.ok) {
+    return { status: 'unknown', reason: `GitHub Actions Jobs API returned HTTP ${response.status}.` };
+  }
+  const data = await response.json();
+  if (
+    !Array.isArray(data.jobs) ||
+    !Number.isInteger(data.total_count) ||
+    data.total_count > data.jobs.length
+  ) {
+    return { status: 'unknown', reason: 'GitHub Actions Jobs API returned incomplete job records.' };
+  }
+  return completionEvidenceFromJobs(data.jobs);
 }
 
 function performanceDetail(result) {
@@ -372,9 +442,33 @@ async function buildPulse({
           date,
           fetchImpl
         });
+        const todayRun = runs
+          .filter((run) => run.created_at?.slice(0, 10) === date)
+          .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+        const previousRun = runs
+          .filter(
+            (run) =>
+              run.conclusion === 'success' &&
+              run.created_at?.slice(0, 10) < date
+          )
+          .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+        const evidenceRun = todayRun ?? previousRun;
+        const completionByRunId = new Map();
+        if (evidenceRun?.id && evidenceRun.status === 'completed') {
+          completionByRunId.set(
+            evidenceRun.id,
+            await fetchRunCompletion({
+              apiUrl,
+              repository,
+              runId: evidenceRun.id,
+              token,
+              fetchImpl
+            })
+          );
+        }
         return {
           name: dimension.name,
-          result: evaluateRuns(runs, date, cutoffTime)
+          result: evaluateRuns(runs, date, cutoffTime, completionByRunId)
         };
       } catch (error) {
         return {
@@ -460,6 +554,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
 export {
   applyDependencyPosture,
   buildPulse,
+  completionEvidenceFromJobs,
   describePerformanceComparison,
   evaluateRuns,
   renderPulse
