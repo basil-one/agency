@@ -40,6 +40,8 @@ jobs:
           JEKYLL_ENV: production
       - name: Install browser test dependencies
         run: npm ci
+      - name: Run performance history tests
+        run: npm run test:performance-history
       - name: Install Chromium
         run: npx playwright install --with-deps --no-shell chromium
       - name: Load prior daily-main summaries
@@ -86,7 +88,7 @@ jobs:
       - name: Upload Lighthouse reports
         id: upload
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: performance-reports
           path: ${{ runner.temp }}/performance-reports/
@@ -96,7 +98,7 @@ jobs:
         id: summary_artifact
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: performance-summary
           path: |
@@ -150,7 +152,7 @@ jobs:
               echo '- Baseline comparison: **unavailable** because no complete measurement summary was produced; results are unavailable, not zero.'
             fi
             if [ "$REPORTS_OUTCOME" = success ] && [ -n "$REPORTS_URL" ]; then
-              echo "- Raw Lighthouse JSON: [download the \`performance-reports\` artifact]($REPORTS_URL) (30-day retention)."
+              echo "- Raw Lighthouse JSON: [download the \`performance-reports\` artifact]($REPORTS_URL) (14-day retention)."
             else
               echo '- Raw Lighthouse JSON artifact: unavailable; inspect the **Upload Lighthouse reports** step.'
             fi
