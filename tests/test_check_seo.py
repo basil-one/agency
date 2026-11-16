@@ -25,7 +25,7 @@ class CheckSeoTests(unittest.TestCase):
 
     def test_accepts_expected_title_canonical_and_indexable_page(self):
         self.write_page(
-            '<html><head><title>Home | Agency</title>'
+            "<html><head><title>Home | Agency</title>"
             '<link rel="canonical" href="https://agency.example/"></head></html>'
         )
 
@@ -36,7 +36,7 @@ class CheckSeoTests(unittest.TestCase):
 
     def test_reports_wrong_canonical_with_expected_url_and_remedy(self):
         self.write_page(
-            '<title>Reflection</title>'
+            "<title>Reflection</title>"
             '<link rel="canonical" href="https://wrong.example/reflections/example/">',
             "reflections/example/index.html",
         )
