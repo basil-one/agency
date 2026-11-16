@@ -194,12 +194,13 @@ function renderSummary(
   chromeVersion,
   rubyVersion,
   jekyllVersion,
-  elapsedSeconds
+  elapsedSeconds,
+  machineSummary
 ) {
   const lines = [
     '# Performance integrity',
     '',
-    '- **Mode:** informational lab baseline; performance values do not fail this check.',
+    `- **Mode:** ${process.env.PERFORMANCE_EVENT_NAME ?? 'local'} run on \`${process.env.PERFORMANCE_SOURCE_BRANCH ?? 'local'}\`; informational lab baseline, not a performance-quality judgment.`,
     `- **Tools:** Lighthouse ${lighthouseVersion}; ${chromeVersion}; ${rubyVersion}; ${jekyllVersion}; Node ${process.version}.`,
     `- **Conditions:** ${process.env.PERFORMANCE_RUNNER ?? `local ${process.platform}/${process.arch}`}; Jekyll production build served locally; Lighthouse default mobile configuration and desktop preset; ${runCount} fresh-browser runs per route and form factor; medians shown; external scripts are allowed but Google Analytics collection requests are blocked to avoid synthetic visits. These are lab measurements, not field data or real-user Core Web Vitals.`,
     `- **Coverage:** ${results.length / 2} generated routes × 2 form factors × ${runCount} runs.`,
@@ -221,6 +222,10 @@ function renderSummary(
     `- **First-party assets loaded across measured pages:** ${assetInventory.length} distinct \`/assets/\` files, ${(totalAssetBytes / 1024).toFixed(1)} KiB resource size; largest files: ${assetInventory.slice(0, 5).map((asset) => `\`${asset.path}\` (${(asset.bytes / 1024).toFixed(1)} KiB)`).join(', ') || 'none found'}.`,
     `- **External scripts in rendered HTML** (query strings omitted; network requests are observed, not gated): ${externalScripts.map((source) => describeExternalScript(source, externalScriptObservations)).join(', ') || 'none found'}.`,
     '- **Evidence sources:** route pages and external-script references come from generated `_site`; metrics, tool versions, loaded assets, and external-script requests come from the raw Lighthouse JSON reports. The workflow records measurement/diagnostic outcomes separately; results are not a pass/fail performance judgment.'
+  );
+  writeFileSync(
+    resolve(reportDirectory, 'performance-summary.json'),
+    `${JSON.stringify(machineSummary, null, 2)}\n`
   );
   if (process.env.GITHUB_STEP_SUMMARY) {
     writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`, { flag: 'a' });
@@ -313,16 +318,70 @@ async function main() {
     }
 
     const lighthouseVersion = JSON.parse(readFileSync(reportFileName(routes[0], 'mobile', 1), 'utf8')).lighthouseVersion;
+    const externalScripts = collectExternalScripts(origin);
+    const externalScriptSummary = externalScripts.map((source) => {
+      const observation = externalScriptObservations.get(source);
+      return {
+        source,
+        samples: observation?.samples ?? 0,
+        successful: observation?.successful ?? 0,
+        medianTransferBytes: observation?.transferSizes.length
+          ? median(observation.transferSizes)
+          : null
+      };
+    });
+    const machineSummary = {
+      schemaVersion: 1,
+      complete: true,
+      capturedAt: new Date().toISOString(),
+      source: {
+        eventName: process.env.PERFORMANCE_EVENT_NAME ?? 'local',
+        branch: process.env.PERFORMANCE_SOURCE_BRANCH ?? null,
+        sha: process.env.GITHUB_SHA ?? null,
+        runId: process.env.GITHUB_RUN_ID ?? null,
+        runUrl: process.env.GITHUB_RUN_ID && process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY
+          ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+          : null
+      },
+      coverage: {
+        routeCount: routes.length,
+        formFactors: ['mobile', 'desktop'],
+        runCount,
+        routeProfiles: results.length,
+        measurementCount: results.length * runCount
+      },
+      environment: {
+        runner: process.env.PERFORMANCE_RUNNER ?? `local ${process.platform}/${process.arch}`,
+        lighthouse: lighthouseVersion,
+        chrome: chromeVersion,
+        ruby: rubyVersion,
+        jekyll: jekyllVersion,
+        node: process.version
+      },
+      conditions: {
+        site: 'Jekyll production build served locally',
+        mobile: 'Lighthouse default mobile configuration',
+        desktop: 'Lighthouse desktop preset',
+        analyticsCollectionBlocked: true,
+        labOnly: true
+      },
+      firstPartyAssets: [...loadedAssets.values()].sort(
+        (left, right) => right.bytes - left.bytes || left.path.localeCompare(right.path)
+      ),
+      externalScripts: externalScriptSummary,
+      results
+    };
     renderSummary(
       results,
       [...loadedAssets.values()].sort((left, right) => right.bytes - left.bytes || left.path.localeCompare(right.path)),
-      collectExternalScripts(origin),
+      externalScripts,
       externalScriptObservations,
       lighthouseVersion,
       chromeVersion,
       rubyVersion,
       jekyllVersion,
-      (Date.now() - startedAt) / 1000
+      (Date.now() - startedAt) / 1000,
+      machineSummary
     );
   } finally {
     await stopServer(server);

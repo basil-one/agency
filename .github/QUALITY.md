@@ -38,11 +38,15 @@ The next quality capabilities extend the same stance:
 
 | Dimension | Intended practice |
 | --- | --- |
-| Performance (CI-07) | Measure generated pages on demand while establishing a stable, visitor-relevant basis for any future regression check |
+| Performance (CI-07) | Measure generated pages and calibrate a stable, visitor-relevant basis for any future regression check |
 
 These are commitments under development, **not existing checks**. Each becomes an operating safeguard only after its behavior, reporting, and action path are verified.
 
-The on-demand Lighthouse workflow runs four generated routes on mobile and desktop with three measurements per route/profile. Its results are informational lab observations, not field data or a claim about real-user Core Web Vitals; no performance gate, threshold, PR check, or schedule is added. A workflow using only `workflow_dispatch` can be manually run only after its file is on the default branch, so the first full baseline run must follow a human merge. Lighthouse is pinned as a development dependency to audit the generated pages in Chromium and retain raw reports; it is not included in production site assets.
+The Lighthouse workflow runs on pull requests, weekly on `main` (Monday at 06:17 UTC), and by manual dispatch. It measures four generated routes on mobile and desktop with three runs per route/profile. Results and comparisons are informational lab observations, not field data or a claim about real-user Core Web Vitals; they do not add a required check or automatic numeric failure threshold.
+
+The workflow compares medians with a versioned fixed reference and up to four recent successful weekly-`main` summaries. The fixed reference in `.github/performance-reference.json` is intentionally pending: after merge, manually run the workflow on `main` or wait for its first scheduled run, review the machine-readable summary, and commit that summary as the reference. Pull-request runs are never reference data. Read-only Actions API access retrieves only successful scheduled runs and their small summary artifacts; missing permissions, expired artifacts, or insufficient weekly history are reported as unavailable/collecting history, not as zero measurements. Raw Lighthouse reports are retained for 30 days and machine-readable summaries for 90 days, subject to repository retention settings. A provisional, non-gating review signal is proposed only after four weekly samples: LCP above the rolling median by more than `max(2 × weekly MAD, 500 ms)` in two consecutive weekly runs. This is a human-review proposal, not an active budget or regression gate.
+
+The first scheduled run and dispatch-only behavior cannot be verified until a human merges the workflow onto the default branch. Lighthouse is pinned as a development dependency to measure generated pages in Chromium and retain raw reports; it is not included in production site assets.
 
 To run the same measurement locally, build with `JEKYLL_ENV=production bundle exec jekyll build --trace`, run `npm ci`, install Chromium with `npx playwright install --with-deps --no-shell chromium`, then run `npm run measure:performance`. Raw Lighthouse reports are written to the ignored `performance-reports/` directory. Checks run on PRs or a schedule according to the risk they address—not because every dimension needs the same frequency.
 

@@ -1,9 +1,14 @@
 name: Performance integrity
 
 on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * 1'
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -37,14 +42,37 @@ jobs:
         run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps --no-shell chromium
+      - name: Load prior weekly-main summaries
+        id: history
+        run: node scripts/compare_performance.mjs --load-history
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PERFORMANCE_HISTORY_PATH: ${{ runner.temp }}/performance-history.json
       - name: Measure rendered pages
         id: measure
         run: npm run measure:performance
         env:
           PERFORMANCE_RUNNER: ubuntu-24.04
           PERFORMANCE_REPORT_DIR: ${{ runner.temp }}/performance-reports
+          PERFORMANCE_EVENT_NAME: ${{ github.event_name }}
+          PERFORMANCE_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SHA: ${{ github.sha }}
+      - name: Compare with fixed and rolling baselines
+        id: comparison
+        if: always() && steps.measure.outcome == 'success'
+        run: node scripts/compare_performance.mjs
+        env:
+          PERFORMANCE_REPORT_DIR: ${{ runner.temp }}/performance-reports
+          PERFORMANCE_HISTORY_PATH: ${{ runner.temp }}/performance-history.json
+          PERFORMANCE_REFERENCE_PATH: .github/performance-reference.json
+          PERFORMANCE_EVENT_NAME: ${{ github.event_name }}
+          PERFORMANCE_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
       - name: Verify missing-route diagnostic
         id: negative
+        if: always() && steps.measure.outcome == 'success'
         run: |
           output="$RUNNER_TEMP/performance-negative.log"
           if npm run measure:performance -- --negative-test >"$output" 2>&1; then
@@ -64,16 +92,34 @@ jobs:
           path: ${{ runner.temp }}/performance-reports/
           if-no-files-found: warn
           retention-days: 30
+      - name: Upload performance summary
+        id: summary_artifact
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-summary
+          path: |
+            ${{ runner.temp }}/performance-reports/performance-summary.json
+            ${{ runner.temp }}/performance-reports/performance-comparison.json
+          if-no-files-found: warn
+          retention-days: 90
       - name: Summarize baseline execution
         if: always()
         env:
           MEASURE_OUTCOME: ${{ steps.measure.outcome }}
+          COMPARISON_OUTCOME: ${{ steps.comparison.outcome }}
           NEGATIVE_OUTCOME: ${{ steps.negative.outcome }}
-          ARTIFACT_OUTCOME: ${{ steps.upload.outcome }}
-          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          REPORTS_OUTCOME: ${{ steps.upload.outcome }}
+          REPORTS_URL: ${{ steps.upload.outputs.artifact-url }}
+          SUMMARY_OUTCOME: ${{ steps.summary_artifact.outcome }}
+          SUMMARY_URL: ${{ steps.summary_artifact.outputs.artifact-url }}
+          TRIGGER_NAME: ${{ github.event_name }}
+          TRIGGER_REF: ${{ github.head_ref || github.ref_name }}
         run: |
           {
             echo '# Performance baseline execution'
+            echo "- Trigger: \`$TRIGGER_NAME\`; ref \`$TRIGGER_REF\`."
             case "$MEASURE_OUTCOME" in
               success)
                 echo '- Measurement execution: **completed**. Results are informational lab observations, not a performance-quality judgment or threshold check.'
@@ -96,10 +142,22 @@ jobs:
                 echo '- Controlled missing-route diagnostic: **not completed**; inspect earlier Actions steps.'
                 ;;
             esac
-            if [ "$ARTIFACT_OUTCOME" = success ] && [ -n "$ARTIFACT_URL" ]; then
-              echo "- Raw Lighthouse JSON: [download the \`performance-reports\` artifact]($ARTIFACT_URL) (30-day retention)."
+            if [ "$COMPARISON_OUTCOME" = success ]; then
+              echo '- Baseline comparison: **completed**; numeric deltas and history provenance are in the comparison summary above.'
+            elif [ "$MEASURE_OUTCOME" = success ]; then
+              echo '- Baseline comparison: **not completed**; inspect the **Compare with fixed and rolling baselines** step. Measurement output remains informational.'
+            else
+              echo '- Baseline comparison: **unavailable** because no complete measurement summary was produced; results are unavailable, not zero.'
+            fi
+            if [ "$REPORTS_OUTCOME" = success ] && [ -n "$REPORTS_URL" ]; then
+              echo "- Raw Lighthouse JSON: [download the \`performance-reports\` artifact]($REPORTS_URL) (30-day retention)."
             else
               echo '- Raw Lighthouse JSON artifact: unavailable; inspect the **Upload Lighthouse reports** step.'
+            fi
+            if [ "$SUMMARY_OUTCOME" = success ] && [ -n "$SUMMARY_URL" ]; then
+              echo "- Machine-readable current summary and comparison: [download the \`performance-summary\` artifact]($SUMMARY_URL) (90-day retention)."
+            else
+              echo '- Machine-readable summary artifact: unavailable; inspect the **Upload performance summary** step.'
             fi
             echo "- Sources: Lighthouse JSON reports supply route/profile measurements, tool versions, and network observations; generated \`_site\` supplies the pages and external-script inventory; Actions step outcomes supply execution and diagnostic status."
             echo '- Runtime: measurement runtime is reported separately from the total Actions job duration, which includes setup, build, dependency/browser installation, diagnostic verification, and artifact upload and is shown in the run overview.'

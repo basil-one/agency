@@ -7,6 +7,7 @@
     "test:browser:negative": "playwright test tests/browser/negative.spec.js",
     "test:browser:accessibility-negative": "playwright test tests/browser/accessibility-negative.spec.js",
     "test:browser:responsive-negative": "playwright test tests/browser/responsive-negative.spec.js",
+    "test:performance-history": "node --test tests/performance_history.test.mjs",
     "measure:performance": "node scripts/measure_performance.mjs"
   },
   "devDependencies": {
