@@ -210,5 +210,5 @@ jobs:
             echo "- Changed paths ($CHANGED_COUNT): \`$CHANGED_PATHS\`."
             echo '- Lighthouse samples collected: **0**.'
             echo '- No Lighthouse measurement, baseline comparison, metrics, or artifacts were produced by this PR run.'
-            echo '- The next daily `main` run after merge performs the full measurement for post-merge monitoring.'
+            echo '- The next daily main run after merge performs the full measurement for post-merge monitoring.'
           } >> "$GITHUB_STEP_SUMMARY"
