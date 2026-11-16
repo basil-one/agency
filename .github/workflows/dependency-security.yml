@@ -14,7 +14,33 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/dependency-review-action@v5
+        id: dependency_review
         with:
           fail-on-severity: moderate
           fail-on-scopes: runtime, development, unknown
           license-check: false
+      - name: Summarize dependency review
+        if: always()
+        env:
+          REVIEW_OUTCOME: ${{ steps.dependency_review.outcome }}
+        run: |
+          case "$REVIEW_OUTCOME" in
+            success)
+              printf '%s\n' \
+                "- Dependency review: **passed**." \
+                "  Threshold: moderate+; scopes: runtime/development/unknown." \
+                >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            failure)
+              printf '%s\n' \
+                "- Dependency review: **failed**; see action findings/logs." \
+                "  Threshold: moderate+; scopes: runtime/development/unknown." \
+                >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              printf '%s\n' \
+                "- Dependency review: **not completed**; see earlier logs." \
+                "  Threshold: moderate+; scopes: runtime/development/unknown." \
+                >> "$GITHUB_STEP_SUMMARY"
+              ;;
+          esac

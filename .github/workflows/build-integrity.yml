@@ -21,6 +21,23 @@ jobs:
         env:
           BUNDLE_FROZEN: 'true'
       - name: Build site
+        id: build
         run: bundle exec jekyll build --trace
         env:
           JEKYLL_ENV: production
+      - name: Summarize production build
+        if: always()
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+        run: |
+          case "$BUILD_OUTCOME" in
+            success)
+              echo "- Production Jekyll: **passed**." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            failure)
+              echo "- Jekyll: **failed**; see logs." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "- Jekyll not completed; see logs." >> "$GITHUB_STEP_SUMMARY"
+              ;;
+          esac

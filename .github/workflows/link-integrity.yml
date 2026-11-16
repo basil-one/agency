@@ -24,12 +24,15 @@ jobs:
         env:
           BUNDLE_FROZEN: 'true'
       - name: Build site
+        id: build
         run: bundle exec jekyll build --trace
         env:
           JEKYLL_ENV: production
       - name: Test link auditor
+        id: link_tests
         run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Audit generated site links
+        id: link_audit
         run: |
           python3 scripts/check_links.py \
             --site-dir _site \
@@ -38,7 +41,26 @@ jobs:
             --fail-on-likely-external
       - name: Add link audit report to job summary
         if: always()
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          TEST_OUTCOME: ${{ steps.link_tests.outcome }}
+          AUDIT_OUTCOME: ${{ steps.link_audit.outcome }}
         run: |
+          summary_outcome() {
+            case "$1" in
+              success) printf -- "- %s: **passed**.\n" "$2" ;;
+              failure) printf -- "- %s: **failed**; see logs.\n" "$2" ;;
+              *) printf -- "- %s: **not completed**; see prior logs.\n" "$2" ;;
+            esac
+          }
+          {
+            summary_outcome "$BUILD_OUTCOME" "Production Jekyll build"
+            summary_outcome "$TEST_OUTCOME" "Link-auditor unit tests"
+            summary_outcome "$AUDIT_OUTCOME" "Generated-site link audit"
+          } >> "$GITHUB_STEP_SUMMARY"
           if [ -f "$RUNNER_TEMP/link-audit-report.md" ]; then
             cat "$RUNNER_TEMP/link-audit-report.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Link report unavailable." >> "$GITHUB_STEP_SUMMARY"
+            echo "  See audit step logs." >> "$GITHUB_STEP_SUMMARY"
           fi

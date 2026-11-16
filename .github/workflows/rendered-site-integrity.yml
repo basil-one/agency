@@ -32,6 +32,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Build site
+        id: build
         run: bundle exec jekyll build --trace
         env:
           JEKYLL_ENV: production
@@ -40,19 +41,129 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps --only-shell chromium
       - name: Run rendered-site smoke tests
-        run: npm run test:browser
+        id: smoke
+        run: npm run test:browser -- --reporter=json
         env:
           CI: 'true'
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/browser-results.json
       - name: Verify missing-route diagnostic
+        id: negative
         run: |
           output="$RUNNER_TEMP/browser-negative.log"
-          if npm run test:browser:negative >"$output" 2>&1; then
+          diagnostic='Expected /__browser-test-missing-route__/'
+          diagnostic="$diagnostic to return HTTP 200"
+          if npm run \
+            test:browser:negative >"$output" 2>&1; then
             cat "$output"
             echo "Expected the deliberately missing route test to fail."
             exit 1
           fi
           cat "$output"
-          grep -F 'Expected /__browser-test-missing-route__/ to return HTTP 200' "$output"
-          echo "The missing-route check failed with an actionable diagnostic as expected." >> "$GITHUB_STEP_SUMMARY"
+          grep -F "$diagnostic" "$output"
+          grep -F 'received HTTP 404' "$output"
+          echo "Confirmed the expected missing-route HTTP 404 diagnostic."
         env:
           CI: 'true'
+      - name: Summarize rendered-site checks
+        if: always()
+        env:
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          NEGATIVE_OUTCOME: ${{ steps.negative.outcome }}
+          RESULTS_FILE: ${{ runner.temp }}/browser-results.json
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const outcome = (value) => {
+            if (value === 'success') return 'passed';
+            if (value === 'failure') return 'failed';
+            return 'not completed';
+          };
+          const suites = [];
+          let resultsAvailable = false;
+          let resultsError;
+
+          if (fs.existsSync(process.env.RESULTS_FILE)) {
+            try {
+              const content = fs.readFileSync(process.env.RESULTS_FILE, 'utf8');
+              const report = JSON.parse(content);
+              const collect = (suite) => {
+                for (const spec of suite.specs ?? []) {
+                  for (const test of spec.tests ?? []) {
+                    const result = test.results?.at(-1);
+                    suites.push({
+                      title: spec.title,
+                      status: result?.status ?? 'not completed',
+                    });
+                  }
+                }
+                for (const child of suite.suites ?? []) collect(child);
+              };
+              for (const suite of report.suites ?? []) collect(suite);
+              resultsAvailable = suites.length > 0;
+            } catch {
+              resultsError = 'Playwright JSON results could not be read.';
+            }
+          }
+
+          const passed = suites.filter(
+            (test) => test.status === 'passed',
+          ).length;
+          const skipped = suites.filter(
+            (test) => test.status === 'skipped',
+          ).length;
+          const incomplete = suites.filter(
+            (test) => test.status === 'not completed',
+          ).length;
+          const failed = suites.length - passed - skipped - incomplete;
+          const lines = [
+            '# Rendered-site integrity',
+            '',
+            `- Production Jekyll: **${outcome(process.env.BUILD_OUTCOME)}**.`,
+            `- Browser test step: **${outcome(process.env.SMOKE_OUTCOME)}**.`,
+          ];
+
+          if (resultsAvailable) {
+            lines.push(
+              `- Browser tests: ${passed} passed, ${failed} failed,`,
+              `  ${skipped} skipped, ${incomplete} not completed`,
+              `  (${suites.length} total).`,
+              ...suites.map((test) => `  - ${test.title}: **${test.status}**.`),
+            );
+            if (failed > 0 || incomplete > 0) {
+              lines.push('- Inspect the smoke-test step logs for diagnostics.');
+            }
+          } else {
+            lines.push(
+              '- Browser smoke results: **not available**;',
+              `  ${resultsError ?? 'no test results were produced'}`,
+              '- Inspect the smoke-test step logs.',
+            );
+          }
+
+          if (process.env.NEGATIVE_OUTCOME === 'success') {
+            lines.push(
+              '- Expected missing-route diagnostic: **passed**;',
+              '  the deliberately missing route',
+              '  produced an HTTP 200 expectation with HTTP 404.',
+              '- Its HTTP 404 is expected, not a regression.',
+            );
+          } else if (process.env.NEGATIVE_OUTCOME === 'failure') {
+            lines.push(
+              '- Expected missing-route diagnostic: **failed**; see its logs.',
+              '- The deliberate HTTP 404 case is expected, not a regression.',
+            );
+          } else {
+            lines.push(
+              '- Expected missing-route diagnostic: **not completed**; inspect',
+              '  earlier step logs.',
+              '- The deliberate HTTP 404 case is expected, not a regression.',
+            );
+          }
+
+          fs.appendFileSync(
+            process.env.GITHUB_STEP_SUMMARY,
+            `${lines.join('\n')}\n`,
+          );
+          NODE
