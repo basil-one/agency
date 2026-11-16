@@ -116,6 +116,9 @@ jobs:
           REPORTS_URL: ${{ steps.upload.outputs.artifact-url }}
           SUMMARY_OUTCOME: ${{ steps.summary_artifact.outcome }}
           SUMMARY_URL: ${{ steps.summary_artifact.outputs.artifact-url }}
+          COMPARISON_DELTAS: ${{ steps.comparison.outputs.deltas_available }}
+          HISTORY_STATUS: ${{ steps.comparison.outputs.history_status }}
+          HISTORY_COUNT: ${{ steps.comparison.outputs.history_count }}
           TRIGGER_NAME: ${{ github.event_name }}
           TRIGGER_REF: ${{ github.head_ref || github.ref_name }}
         run: |
@@ -145,7 +148,15 @@ jobs:
                 ;;
             esac
             if [ "$COMPARISON_OUTCOME" = success ]; then
-              echo '- Baseline comparison: **completed**; numeric deltas and history provenance are in the comparison summary above.'
+              if [ "$COMPARISON_DELTAS" = true ]; then
+                echo '- Baseline comparison evaluation: **completed**; numerical deltas are available in the comparison summary above.'
+              elif [ "$HISTORY_STATUS" = unavailable ]; then
+                echo '- Baseline comparison evaluation: **completed**; numerical deltas are unavailable because rolling history lookup failed. See the comparison summary for the error and next action.'
+              elif [ -n "$COMPARISON_DELTAS" ]; then
+                echo "- Baseline comparison evaluation: **completed**; no comparable baseline yet. Rolling history is collecting ($HISTORY_COUNT/28 compatible successful daily-main runs); no numerical deltas are available."
+              else
+                echo '- Baseline comparison evaluation: **completed**; no numerical comparison was produced. Inspect the **Compare with fixed and rolling baselines** step.'
+              fi
             elif [ "$MEASURE_OUTCOME" = success ]; then
               echo '- Baseline comparison: **not completed**; inspect the **Compare with fixed and rolling baselines** step. Measurement output remains informational.'
             else

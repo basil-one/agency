@@ -70,9 +70,9 @@ function makeSummary({
   };
 }
 
-function makeHistory(summaries) {
+function makeHistory(summaries, status) {
   return {
-    status: summaries.length === 28 ? 'available' : 'collecting_history',
+    status: status ?? (summaries.length === 28 ? 'available' : 'collecting_history'),
     summaries,
     skipped: []
   };
@@ -95,11 +95,47 @@ test('reports unavailable fixed and rolling baselines without fabricating deltas
   );
   const report = lines.join('\n');
 
-  assert.match(report, /\*\*Fixed reference:\*\* unavailable/);
-  assert.match(report, /0\/28 successful daily-main runs with matching tool and runner versions; collecting baseline/);
-  assert.match(report, /\| `\/` \| mobile \| — · — · — · — · — \| — · — · — · — · — \|/);
+  assert.match(report, /\*\*Fixed reference:\*\* pending first reviewed successful main measurement/);
+  assert.match(report, /\*\*Rolling daily-main baseline:\*\* collecting \(0\/28 compatible successful daily-main runs\)/);
+  assert.match(report, /No comparison\/deltas available yet/);
+  assert.doesNotMatch(report, /^\| `\//m);
   assert.equal(comparison.fixedReference.available, false);
+  assert.equal(comparison.deltasAvailable, false);
   assert.equal(comparison.comparisons[0].rollingBaseline, null);
+});
+
+test('reports unavailable history without disguising an API error as collecting', () => {
+  const history = {
+    ...makeHistory([], 'unavailable'),
+    reason: 'GitHub Actions API returned HTTP 403.',
+    skipped: ['history permission denied']
+  };
+  const { lines, comparison } = buildComparison(
+    makeSummary({ eventName: 'pull_request', branch: 'copilot/change' }),
+    undefined,
+    history
+  );
+  const report = lines.join('\n');
+
+  assert.match(report, /\*\*Rolling daily-main baseline:\*\* unavailable \(GitHub Actions API returned HTTP 403\)\./);
+  assert.match(report, /\*\*History lookup details:\*\* history permission denied/);
+  assert.doesNotMatch(report, /collecting \(0\/28/);
+  assert.equal(comparison.history.status, 'unavailable');
+  assert.equal(comparison.deltasAvailable, false);
+});
+
+test('renders a comparison table when the fixed reference is available', () => {
+  const fixed = makeSummary({ lcp: 1_000 });
+  const { lines, comparison } = buildComparison(
+    makeSummary({ eventName: 'pull_request', branch: 'copilot/change', lcp: 1_200 }),
+    fixed,
+    makeHistory([])
+  );
+
+  assert.match(lines.join('\n'), /^\| Route \| Profile \| Fixed Δ/m);
+  assert.match(lines.join('\n'), /^\| `\/` \| mobile \|/m);
+  assert.equal(comparison.fixedReference.available, true);
+  assert.equal(comparison.deltasAvailable, true);
 });
 
 test('compares against 28 matching daily-main summaries without applying a performance threshold', () => {
@@ -116,10 +152,10 @@ test('compares against 28 matching daily-main summaries without applying a perfo
 
   assert.equal(comparison.history.provenance.length, 28);
   assert.equal(comparison.history.requiredDailySamples, 28);
-  assert.match(report, /28\/28 successful daily-main runs with matching tool and runner versions; available/);
+  assert.match(report, /28\/28 compatible successful daily-main runs; available/);
   assert.match(report, /\+587 ms \(\+57\.9%\)/);
   assert.match(report, /do not fail this workflow/);
-  assert.doesNotMatch(report, /threshold|candidate|signal/i);
+  assert.equal(comparison.deltasAvailable, true);
 });
 
 test('does not compare with history collected under different tools', () => {
@@ -136,7 +172,7 @@ test('does not compare with history collected under different tools', () => {
     makeHistory(prior)
   );
 
-  assert.match(lines.join('\n'), /0\/28 successful daily-main runs with matching tool and runner versions; collecting baseline/);
+  assert.match(lines.join('\n'), /0\/28 compatible successful daily-main runs\)/);
   assert.equal(comparison.history.provenance.length, 0);
   assert.equal(comparison.comparisons[0].rollingBaseline, null);
 });

@@ -319,6 +319,8 @@ function buildComparison(current, reference, history) {
     capturedAt: summary.capturedAt,
     sha: summary.source.sha
   }));
+  const deltasAvailable = Boolean(readyReference || rolling.size);
+  const historyReason = comparisonHistory.reason?.replace(/[.!?]+$/, '') ?? 'history lookup failed';
   const lines = [
     '',
     '## Baseline comparison',
@@ -328,13 +330,17 @@ function buildComparison(current, reference, history) {
       ? `[successful main run](${readyReference.source.runUrl})`
       : referenceReady
         ? 'not comparable; tool or runner versions differ from the versioned reference'
-        : 'unavailable; reference awaits an actual successful main measurement and human versioning'}.`,
+        : 'pending first reviewed successful main measurement'}.`,
     `- **Rolling daily-main baseline:** ${comparisonHistory.status === 'unavailable'
-      ? `unavailable (${comparisonHistory.reason})`
-      : `${compatibleHistory.length}/${historyLimit} successful daily-main runs with matching tool and runner versions; ${comparisonHistory.status === 'available' ? 'available' : 'collecting baseline'}`}.`,
-    '- Deltas are descriptive only; they do not fail this workflow or establish a performance-quality verdict.',
-    '- A dash means no matching route/profile baseline metric is available (for example, when the latest reflection route changes).'
+      ? `unavailable (${historyReason})`
+      : comparisonHistory.status === 'available'
+        ? `${historyLimit}/${historyLimit} compatible successful daily-main runs; available`
+        : `collecting (${compatibleHistory.length}/${historyLimit} compatible successful daily-main runs)`}.`,
+    '- Deltas are descriptive only; they do not fail this workflow or establish a performance-quality verdict.'
   ];
+  if (deltasAvailable) {
+    lines.push('- A dash means no matching route/profile baseline metric is available (for example, when the latest reflection route changes).');
+  }
   if (historyProvenance.length) {
     const newest = historyProvenance[0];
     const oldest = historyProvenance.at(-1);
@@ -362,7 +368,7 @@ function buildComparison(current, reference, history) {
 
   }
 
-  if (rows.length) {
+  if (rows.length && deltasAvailable) {
     lines.push(
       '',
       '| Route | Profile | Fixed Δ (FCP · LCP · SI · TBT · CLS) | Rolling Δ (same order) |',
@@ -370,7 +376,7 @@ function buildComparison(current, reference, history) {
       ...rows
     );
   } else {
-    lines.push('', '- Metric deltas unavailable; no complete measurement summary was produced.');
+    lines.push('', '- No comparison/deltas available yet.');
   }
 
   const comparisons = [referenceReady, ...history.summaries].filter(Boolean);
@@ -396,7 +402,13 @@ function buildComparison(current, reference, history) {
     },
     fixedReference: readyReference
       ? { available: true, runUrl: readyReference.source.runUrl }
-      : { available: false, reason: 'No versioned successful main reference has been established.' },
+      : {
+          available: false,
+          reason: referenceReady
+            ? 'The versioned reference uses a different tool or runner environment.'
+            : 'No versioned successful main reference has been established.'
+        },
+    deltasAvailable,
     comparisons: [...currentResults].map(([slot, result]) => {
       const fixedResult = referenceResults.get(slot);
       const rollingResult = rolling.get(slot);
@@ -476,6 +488,13 @@ async function main() {
   const { lines, comparison } = buildComparison(summary, reference, history);
   writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
   writeFileSync(join(reportDirectory, 'performance-comparison.json'), `${JSON.stringify(comparison, null, 2)}\n`);
+  if (process.env.GITHUB_OUTPUT) {
+    writeFileSync(
+      process.env.GITHUB_OUTPUT,
+      `deltas_available=${comparison.deltasAvailable}\nhistory_status=${comparison.history.status}\nhistory_count=${comparison.history.availableDailySamples}\n`,
+      { flag: 'a' }
+    );
+  }
   if (process.env.GITHUB_STEP_SUMMARY) {
     writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`, { flag: 'a' });
   }
