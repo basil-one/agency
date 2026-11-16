@@ -100,7 +100,7 @@ test('Pulse uses actual job completion time, not workflow updated_at', async () 
     generatedAt: `${date}T18:17:00Z`,
     fetchImpl: async (url) => {
       const path = new URL(url).pathname;
-      if (path.endsWith('/actions/workflows/build-integrity.yml/runs')) {
+      if (path.endsWith('/actions/workflows/site-build-integrity.yml/runs')) {
         return {
           ok: true,
           json: async () => ({ workflow_runs: [{
@@ -140,7 +140,7 @@ test('Pulse reports unknown when completion-time job metadata is inaccessible', 
     generatedAt: `${date}T18:17:00Z`,
     fetchImpl: async (url) => {
       const path = new URL(url).pathname;
-      if (path.endsWith('/actions/workflows/build-integrity.yml/runs')) {
+      if (path.endsWith('/actions/workflows/site-build-integrity.yml/runs')) {
         return { ok: true, json: async () => ({ workflow_runs: [passingRun] }) };
       }
       if (path.endsWith('/actions/runs/123/jobs')) {

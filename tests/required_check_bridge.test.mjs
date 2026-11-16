@@ -5,7 +5,7 @@ import test from 'node:test';
 import { assertSuccessfulPrerequisite } from '../scripts/verify_required_check.mjs';
 
 const workflows = [
-  ['build-integrity.yml', 'Site Build Integrity', 'bridge-site-build-integrity', 'Site Build Integrity', 'Build integrity', 'build'],
+  ['site-build-integrity.yml', 'Site Build Integrity', 'bridge-site-build-integrity', 'Site Build Integrity', 'Build integrity', 'build'],
   ['link-integrity.yml', 'Link Integrity', 'bridge-link-integrity', 'Link Integrity', 'Link integrity', 'links'],
   ['seo-integrity.yml', 'SEO Integrity', 'bridge-seo-integrity', 'SEO Integrity', 'SEO integrity', 'seo'],
   ['source-quality.yml', 'Source Quality', 'bridge-source-quality', 'Source Quality', 'Source quality', 'lint'],

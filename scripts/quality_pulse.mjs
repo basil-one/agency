@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const dimensions = [
-  { name: 'Site Build Integrity', file: 'build-integrity.yml' },
+  { name: 'Site Build Integrity', file: 'site-build-integrity.yml' },
   { name: 'Link Integrity', file: 'link-integrity.yml' },
   { name: 'SEO Integrity', file: 'seo-integrity.yml' },
   { name: 'Source Quality', file: 'source-quality.yml' },
