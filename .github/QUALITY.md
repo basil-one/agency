@@ -27,9 +27,24 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 | --- | --- | --- |
 | Build integrity | Production Jekyll build and tests | Weekly build as part of the link-audit workflow |
 | Link integrity | Generated-site internal links, fragments, and assets | Weekly/manual external-link audit; uncertain responses reported separately |
+| SEO integrity | Generated HTML titles, canonicals, and indexing directives | Weekly generated-site audit; consider a separate live-endpoint check if hosting behavior or indexing endpoints need monitoring |
 | Source quality | Super-Linter and Ruby syntax validation | Conventions enforced on subsequent PRs |
 
 See [Jekyll build and link audit](workflows/jekyll-build.yml) and [code quality](workflows/code-quality.yml) for the actual configuration, run details, and diagnostics.
+
+The SEO audit checks every generated HTML page for one nonempty title, one canonical URL matching its configured site and generated route, and no `noindex` or `none` meta directive. It intentionally does not require descriptions or social metadata, which remain optional/editorial, and does not infer a sitemap or robots.txt requirement. For the current production build (19 pages), a passing run reports:
+
+```text
+SEO audit passed: 19 generated HTML pages checked (nonempty titles, expected canonicals, no noindex directives).
+```
+
+A deliberately incorrect canonical produces a page-specific diagnostic, for example:
+
+```text
+ERROR: /reflections/example/ (reflections/example/index.html): canonical URL is 'https://wrong.example/reflections/example/'; expected 'https://agency.basil.one/reflections/example/'. Check canonical_url in _layouts/default.html against site.url, baseurl, and the page URL.
+```
+
+The weekly build inspects generated files, not hosting behavior. A narrowly scoped scheduled request to deployed routes and any explicitly configured robots/sitemap endpoints could catch drift in redirects, response headers, or deployed indexing directives; it is not added here because no robots.txt or sitemap.xml is currently generated and no live-endpoint policy is defined.
 
 ## Commitments being established
 
