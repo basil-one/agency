@@ -122,8 +122,79 @@ class CheckLinksTests(unittest.TestCase):
         self.assertIn("Uncertain external responses", report)
         self.assertIn("HTTP 403", report)
         self.assertIn("ACTION: `connect`", report)
-        self.assertIn("## Coaching and contact destinations", report)
+        self.assertIn("## Key visitor destinations", report)
         self.assertIn("source pages: /", report)
+
+    def test_reports_arbitrary_http_action_but_excludes_mailto(self):
+        destination = "https://news.example/subscribe"
+        email = "mailto:hello@agency.example"
+        self.write(
+            "index.html",
+            f'<a href="{destination}">Newsletter</a><a href="{email}">Email</a>',
+        )
+        config = self.root / "_config.yml"
+        config.write_text(
+            'url: "https://agency.example"\n'
+            'baseurl: ""\naction_links:\n'
+            f'  newsletter: "{destination}"\n'
+            f'  email: "{email}"\n'
+        )
+
+        with patch(
+            "scripts.check_links.check_external", return_value=("healthy", "HTTP 200")
+        ) as check_external_mock:
+            report, errors, likely_broken = report_for_site(self.site, config)
+
+        self.assertEqual((errors, likely_broken), (0, 0))
+        check_external_mock.assert_called_once_with(destination)
+        self.assertIn("## Key visitor destinations", report)
+        self.assertIn(f"- **newsletter**: `{destination}` — healthy: HTTP 200", report)
+        self.assertNotIn("**email**", report)
+
+    def test_action_destination_lists_sorted_source_pages(self):
+        destination = "https://connect.example/path"
+        self.write("index.html", f'<a href="{destination}">Connect</a>')
+        self.write("about/index.html", f'<a href="{destination}">Connect</a>')
+        config = self.root / "_config.yml"
+        config.write_text(
+            'url: "https://agency.example"\n'
+            'baseurl: ""\naction_links:\n'
+            f'  connect: "{destination}"\n'
+        )
+
+        with patch("scripts.check_links.check_external", return_value=("healthy", "HTTP 200")):
+            report, errors, likely_broken = report_for_site(self.site, config)
+
+        self.assertEqual((errors, likely_broken), (0, 0))
+        self.assertIn(
+            f"- **connect**: `{destination}` — healthy: HTTP 200 — source pages: /, /about/",
+            report,
+        )
+
+    def test_external_destinations_are_checked_in_order_with_delay(self):
+        self.write(
+            "index.html",
+            '<a href="https://z.example/path">Z</a><a href="https://a.example/path">A</a>',
+        )
+        config = self.root / "_config.yml"
+        config.write_text('url: "https://agency.example"\nbaseurl: ""\n')
+
+        with (
+            patch(
+                "scripts.check_links.check_external", return_value=("healthy", "HTTP 200")
+            ) as check,
+            patch("scripts.check_links.time.sleep") as sleep,
+        ):
+            report_for_site(self.site, config, external_delay=0.4)
+
+        self.assertEqual(
+            check.call_args_list,
+            [
+                unittest.mock.call("https://a.example/path"),
+                unittest.mock.call("https://z.example/path"),
+            ],
+        )
+        sleep.assert_called_once_with(0.4)
 
     def test_likely_broken_external_link_fails_scheduled_audit(self):
         self.write("index.html", '<a href="https://broken.example/path">Broken</a>')
@@ -154,10 +225,45 @@ class CheckLinksTests(unittest.TestCase):
         self.assertIn("Source:** `/`", report)
         self.assertIn("Destination:** `https://broken.example/path`", report)
 
+    def test_external_404_fails_and_corrected_200_passes_full_audit(self):
+        config = self.root / "_config.yml"
+        config.write_text('url: "https://agency.example"\nbaseurl: ""\n')
+        report_path = self.root / "report.md"
+
+        with patch("scripts.check_links.public_destination", return_value=(True, "")):
+            for path, expected_status in (("/missing", 1), ("/ok", 0)):
+                self.write("index.html", f'<a href="{self.external_origin}{path}">External</a>')
+                with patch(
+                    "sys.argv",
+                    [
+                        "check_links.py",
+                        "--site-dir",
+                        str(self.site),
+                        "--config",
+                        str(config),
+                        "--report",
+                        str(report_path),
+                        "--fail-on-likely-external",
+                    ],
+                ):
+                    self.assertEqual(main(), expected_status)
+
+                report = report_path.read_text(encoding="utf-8")
+                if path == "/missing":
+                    self.assertIn("HTTP 404", report)
+                    self.assertIn("Likely broken external links", report)
+                else:
+                    self.assertIn("External destinations checked: 1", report)
+                    self.assertIn("Likely broken external links\n\nNone.", report)
+
     def test_skip_external_does_not_make_requests(self):
         self.write("index.html", '<a href="https://external.example/path">External</a>')
         config = self.root / "_config.yml"
-        config.write_text('url: "https://agency.example"\nbaseurl: ""\n')
+        config.write_text(
+            'url: "https://agency.example"\n'
+            'baseurl: ""\naction_links:\n'
+            '  connect: "https://external.example/path"\n'
+        )
         report_path = self.root / "report.md"
 
         with patch("scripts.check_links.check_external") as check_external_mock:
@@ -176,7 +282,12 @@ class CheckLinksTests(unittest.TestCase):
             ):
                 self.assertEqual(main(), 0)
         check_external_mock.assert_not_called()
-        self.assertIn("External destinations checked: 0", report_path.read_text(encoding="utf-8"))
+        report = report_path.read_text(encoding="utf-8")
+        self.assertIn("External destinations checked: 0", report)
+        self.assertIn(
+            "- **connect**: `https://external.example/path` — not checked",
+            report,
+        )
 
     def test_command_fails_for_broken_internal_target(self):
         self.write(
