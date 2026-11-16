@@ -1,4 +1,4 @@
-name: Rendered-site browser tests
+name: Rendered-site integrity
 
 on:
   pull_request:
@@ -9,12 +9,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: rendered-site-browser-tests-${{ github.ref }}
+  group: rendered-site-integrity-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   browser-smoke:
-    name: Browser smoke tests
+    name: Rendered-site integrity
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
