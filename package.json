@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:browser": "playwright test tests/browser/smoke.spec.js",
+    "test:browser": "playwright test tests/browser/smoke.spec.js tests/browser/responsive.spec.js",
     "test:browser:negative": "playwright test tests/browser/negative.spec.js",
-    "test:browser:accessibility-negative": "playwright test tests/browser/accessibility-negative.spec.js"
+    "test:browser:accessibility-negative": "playwright test tests/browser/accessibility-negative.spec.js",
+    "test:browser:responsive-negative": "playwright test tests/browser/responsive-negative.spec.js"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
