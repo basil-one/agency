@@ -23,8 +23,6 @@ The local site is available at http://localhost:4000.
 
 Pull requests to `main` run a production Jekyll build, link-integrity checks, and source linting. Results and diagnostics appear in the pull request's **Checks** tab. A weekly workflow also audits external links.
 
-Dependency review checks pull requests for newly introduced vulnerabilities. Dependabot proposes weekly Bundler and GitHub Actions updates for human review.
-
 ## License
 
 The HTML structure and site code in this repository are licensed under the MIT License.
