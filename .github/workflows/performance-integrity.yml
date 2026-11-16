@@ -30,44 +30,45 @@ jobs:
       - name: Classify pull request changes for Lighthouse
         id: classify
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         run: node scripts/classify_performance_skip.mjs
         env:
           PERFORMANCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PERFORMANCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PERFORMANCE_EVENT_NAME: ${{ github.event_name }}
       - uses: ruby/setup-ruby@v1
-        if: steps.classify.outputs.skip_measurement != 'true'
+        if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
         with:
           ruby-version: '3.3'
           bundler-cache: true
         env:
           BUNDLE_FROZEN: 'true'
       - uses: actions/setup-node@v6
-        if: steps.classify.outputs.skip_measurement != 'true'
+        if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
         with:
           node-version: '22'
           cache: npm
       - name: Build site
-        if: steps.classify.outputs.skip_measurement != 'true'
+        if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
         run: bundle exec jekyll build --trace
         env:
           JEKYLL_ENV: production
       - name: Install browser test dependencies
-        if: steps.classify.outputs.skip_measurement != 'true'
+        if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
         run: npm ci
       - name: Install Chromium
-        if: steps.classify.outputs.skip_measurement != 'true'
+        if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
         run: npx playwright install --with-deps --no-shell chromium
       - name: Load prior daily-main summaries
         id: history
-        if: steps.classify.outputs.skip_measurement != 'true'
+        if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
         run: node scripts/compare_performance.mjs --load-history
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PERFORMANCE_HISTORY_PATH: ${{ runner.temp }}/performance-history.json
       - name: Measure rendered pages
         id: measure
-        if: steps.classify.outputs.skip_measurement != 'true'
+        if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
         run: npm run measure:performance
         env:
           PERFORMANCE_RUNNER: ubuntu-24.04
@@ -80,7 +81,7 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
       - name: Compare with fixed and rolling baselines
         id: comparison
-        if: always() && steps.classify.outputs.skip_measurement != 'true' && steps.measure.outcome == 'success'
+        if: always() && (steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true') && steps.measure.outcome == 'success'
         run: node scripts/compare_performance.mjs
         env:
           PERFORMANCE_REPORT_DIR: ${{ runner.temp }}/performance-reports
@@ -90,7 +91,7 @@ jobs:
           PERFORMANCE_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
       - name: Verify missing-route diagnostic
         id: negative
-        if: always() && steps.classify.outputs.skip_measurement != 'true' && steps.measure.outcome == 'success'
+        if: always() && (steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true') && steps.measure.outcome == 'success'
         run: |
           output="$RUNNER_TEMP/performance-negative.log"
           if npm run measure:performance -- --negative-test >"$output" 2>&1; then
@@ -103,7 +104,7 @@ jobs:
           echo "Confirmed the expected missing-route diagnostic."
       - name: Upload Lighthouse reports
         id: upload
-        if: always() && steps.classify.outputs.skip_measurement != 'true'
+        if: always() && (steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true')
         uses: actions/upload-artifact@v7
         with:
           name: performance-reports
@@ -112,7 +113,7 @@ jobs:
           retention-days: 14
       - name: Upload performance summary
         id: summary_artifact
-        if: always() && steps.classify.outputs.skip_measurement != 'true'
+        if: always() && (steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true')
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
@@ -123,7 +124,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
       - name: Summarize baseline execution
-        if: always() && steps.classify.outputs.skip_measurement != 'true'
+        if: always() && (steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true')
         env:
           MEASURE_OUTCOME: ${{ steps.measure.outcome }}
           COMPARISON_OUTCOME: ${{ steps.comparison.outcome }}
@@ -132,6 +133,7 @@ jobs:
           REPORTS_URL: ${{ steps.upload.outputs.artifact-url }}
           SUMMARY_OUTCOME: ${{ steps.summary_artifact.outcome }}
           SUMMARY_URL: ${{ steps.summary_artifact.outputs.artifact-url }}
+          CLASSIFIER_OUTCOME: ${{ steps.classify.outcome }}
           COMPARISON_DELTAS: ${{ steps.comparison.outputs.deltas_available }}
           HISTORY_STATUS: ${{ steps.comparison.outputs.history_status }}
           HISTORY_COUNT: ${{ steps.comparison.outputs.history_count }}
@@ -141,6 +143,9 @@ jobs:
           {
             echo '# Performance baseline execution'
             echo "- Trigger: \`$TRIGGER_NAME\`; ref \`$TRIGGER_REF\`."
+            if [ "$CLASSIFIER_OUTCOME" = failure ]; then
+              echo '- Changed-file classification failed; the fail-open fallback ran the full measurement.'
+            fi
             case "$MEASURE_OUTCOME" in
               success)
                 echo '- Measurement execution: **completed**. Results are informational lab observations, not a performance-quality judgment or threshold check.'
@@ -192,7 +197,7 @@ jobs:
             echo '- Runtime: measurement runtime is reported separately from the total Actions job duration, which includes setup, build, dependency/browser installation, diagnostic verification, and artifact upload and is shown in the run overview.'
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Summarize intentional reflection-only skip
-        if: always() && steps.classify.outputs.skip_measurement == 'true'
+        if: always() && steps.classify.outcome != 'failure' && steps.classify.outputs.skip_measurement == 'true'
         env:
           SKIP_REASON: ${{ steps.classify.outputs.skip_reason }}
           CHANGED_COUNT: ${{ steps.classify.outputs.changed_count }}

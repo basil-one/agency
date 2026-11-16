@@ -118,6 +118,7 @@ test('runs the full baseline for changed media, embeds, HTML, and Liquid', () =>
   const unsafeBodies = [
     '![portrait](/assets/portrait.png)',
     '![external image](https://images.example.test/content)',
+    '![shortcut reference image]',
     '[download](/assets/recording.mp3)',
     '[stylesheet](/assets/css/site.css)',
     '<iframe src="https://example.test/embed"></iframe>',
@@ -134,7 +135,7 @@ test('runs the full baseline for changed media, embeds, HTML, and Liquid', () =>
 });
 
 test('runs the full baseline when a Markdown image reference target changes', () => {
-  const original = reflection('existing', '![diagram][diagram]\n\n[diagram]: https://images.example.test/original');
+  const original = reflection('existing', '![diagram]\n\n[diagram]: https://images.example.test/original');
   const updated = original.replace('images.example.test/original', 'images.example.test/updated');
   const result = scenario({
     base: { '_reflections/existing.md': original },

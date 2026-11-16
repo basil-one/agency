@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 const maxFileSize = 1_000_000;
 const editorialFields = new Set(['title', 'description', 'subtitle']);
 const mediaReference = /\.(?:avif|bmp|gif|jpe?g|png|svg|webp|mp4|webm|mov|mp3|wav|ogg|pdf|css|m?js)(?:[?#)\s]|$)/i;
-const markdownImage = /!\s*\[[^\]]*\]\s*(?:\([^)]*\)|\[[^\]]*\])/;
+const markdownImage = /!\s*\[[^\]]*\](?:\s*(?:\([^)]*\)|\[[^\]]*\]))?/;
 const embeddedMedia = /\b(?:youtube(?:-nocookie)?\.com|youtu\.be|vimeo\.com|soundcloud\.com)\b/i;
 const markup = /<\s*\/?\s*[a-z][^>]*>|<!--|-->|{%|{{|}}|%}/i;
 
@@ -110,6 +110,9 @@ function imageReferenceLabels(lines) {
   for (const line of lines ?? []) {
     for (const match of line.matchAll(/!\s*\[([^\]]*)\]\s*\[([^\]]*)\]/g)) {
       labels.add((match[2] || match[1]).trim().toLowerCase());
+    }
+    for (const match of line.matchAll(/!\s*\[([^\]]+)\](?!\s*(?:\(|\[))/g)) {
+      labels.add(match[1].trim().toLowerCase());
     }
   }
   return labels;
