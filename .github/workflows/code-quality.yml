@@ -1,4 +1,4 @@
-name: Code quality
+name: Source quality
 
 on:
   pull_request:
