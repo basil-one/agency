@@ -45,6 +45,7 @@ The next quality capabilities extend the same stance:
 | Responsive usability (CI-05) | Exercise representative viewports and visitor pathways |
 
 These are commitments under development, **not existing checks**. Each becomes an operating safeguard only after its behavior, reporting, and action path are verified.
+
 Performance measurements are lab observations of the locally generated site, not field data or a claim about real-user Core Web Vitals. Regression thresholds remain deferred until repeated runs demonstrate a stable, visitor-relevant signal. Checks run on PRs or a schedule according to the risk they address—not because every dimension needs the same frequency.
 
 The outcome is a quiet, trustworthy system that brings forward a problem **and a practical path to resolution** when attention is needed.
