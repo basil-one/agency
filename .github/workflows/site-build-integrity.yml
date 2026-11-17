@@ -1,8 +1,11 @@
-name: Build integrity
+name: Site Build Integrity
 
 on:
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -30,6 +33,8 @@ jobs:
         env:
           BUILD_OUTCOME: ${{ steps.build.outcome }}
         run: |
+          echo "# Site Build Integrity" >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
           case "$BUILD_OUTCOME" in
             success)
               echo "- Production Jekyll: **passed**." >> "$GITHUB_STEP_SUMMARY"
@@ -41,3 +46,18 @@ jobs:
               echo "- Jekyll not completed; see logs." >> "$GITHUB_STEP_SUMMARY"
               ;;
           esac
+
+  bridge-site-build-integrity:
+    name: Site Build Integrity
+    if: always() && github.event_name == 'pull_request'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Verify original build check
+        env:
+          PREREQUISITE_RESULT: ${{ needs.build.result }}
+        run: node scripts/verify_required_check.mjs

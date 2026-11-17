@@ -276,7 +276,9 @@ function renderPerformanceSummary(inputs) {
   lines.push(
     statusText,
     '',
-    '- **Informational lab verification only.** Not “performance passed,” not field Core Web Vitals, and not a regression gate.',
+    complete
+    ? '- Measurements were collected using controlled Lighthouse tests, not actual visitors. Comparisons are informational; no automatic regression thresholds are enforced.'
+    : '- No complete measurement is reported. Any partial output is not treated as complete; comparisons are informational and no automatic regression thresholds are enforced.',
     `- Run: \`${inputs.eventName ?? 'unknown'}\` on ref \`${inputs.ref ?? 'unknown'}\`; job status: ${job}.`
   );
   if (complete) {

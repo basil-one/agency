@@ -23,31 +23,18 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 ## Safeguards in Operation
 
-| Dimension | On pull requests | Over time |
+| Dimension | On pull requests | Daily on `main` |
 | --- | --- | --- |
-| [Build integrity](workflows/build-integrity.yml) | Production Jekyll build | No separate scheduled check |
-| [Link integrity](workflows/link-integrity.yml) | Generated-site internal links, fragments, assets, and external destinations | Weekly/manual external-link audit; uncertain responses reported separately |
-| [SEO integrity](workflows/seo-integrity.yml) | Generated page titles, canonical URLs, and indexing directives | No separate scheduled/deployed-site check |
-| [Source quality](workflows/source-quality.yml) | Super-Linter (including Ruff C901 complexity) and Ruby syntax validation | Conventions enforced on subsequent PRs |
-| [Dependency security](workflows/dependency-security.yml) | Check dependency changes for known vulnerabilities | GitHub Dependency graph, Dependabot alerts, and security-update PRs; humans review and merge fixes |
-| [Rendered-site integrity](workflows/rendered-site-integrity.yml) | Production-generated pages load in Chromium; main navigation and visitor actions work; generated pages are scanned for detectable accessibility violations; representative pages exercise responsive layouts and visitor pathways at 320px, 768px, and 1280px CSS widths | No separate scheduled check |
+| [Site Build Integrity](workflows/site-build-integrity.yml) | Production Jekyll build | Production Jekyll build |
+| [Link Integrity](workflows/link-integrity.yml) | Generated-site internal links, fragments, assets, and external destinations | Same audit; uncertain external responses are reported separately |
+| [SEO Integrity](workflows/seo-integrity.yml) | Generated page titles, canonical URLs, and indexing directives | Same generated-site audit |
+| [Source Quality](workflows/source-quality.yml) | Super-Linter (including Ruff C901) and Ruby syntax | Same source checks |
+| [Dependency Security](workflows/dependency-security.yml) | Dependency changes reviewed at moderate-or-higher severity across runtime, development, and unknown scopes | Open Dependabot alerts across enabled ecosystems; API/permission failures are unknown, not clean |
+| [Rendered Site Integrity](workflows/rendered-site-integrity.yml) | Chromium smoke routes, detectable accessibility violations, and responsive usability at 320px, 768px, and 1280px | Same browser, accessibility, and responsive suite |
+| [Performance Integrity](workflows/performance-integrity.yml) | Four routes × mobile/desktop × three runs; only reflection-text-only changes intentionally skip measurement | Full Lighthouse measurement and informational fixed/rolling comparisons |
 
-## Commitments Being Established
+## Quality Pulse
 
-The next quality capabilities extend the same stance:
+The Quality Pulse summarizes daily scheduled checks on `main` in one native Actions Job Summary. To find it, open GitHub Actions → Quality Pulse → latest scheduled run → Summary. It also surfaces concise current-vs-fixed and rolling performance comparisons when compatible data are available; detailed evidence is in the linked Performance Integrity Summary. It is informational—not a required PR check or remediation verdict—and links to its evidence. Fresh, failed, skipped, late, missing, stale, prior, and unknown results remain distinct; unavailable evidence is never reported as a pass. A human reviews findings and decides whether to rerun, fix, or accept them. If a scheduled check or Pulse is missing, inspect Actions on `main` and dispatch the workflow when available. Schedules may be delayed, missed, or disabled after 60 days without repository activity, so periodically check Actions directly; the Pulse cannot report its own suspension.
 
-| Dimension | Intended practice |
-| --- | --- |
-| Performance (CI-07) | Measure generated pages and calibrate a stable, visitor-relevant basis for any future regression check |
-
-These are commitments under development, **not existing checks**. Each becomes an operating safeguard only after its behavior, reporting, and action path are verified.
-
-The Lighthouse workflow runs on pull requests, daily on `main` (06:17 UTC), and by manual dispatch. A pull request whose changes are exclusively added or edited text-only Markdown reflections under `_reflections/` intentionally skips measurement; the check reports zero Lighthouse samples, and the next daily `main` run performs the full measurement after merge. All other pull requests, including mixed or uncertain diffs, and all daily/manual runs measure four generated routes on mobile and desktop with three runs per route/profile. Results and comparisons are informational lab observations, not field data or a claim about real-user Core Web Vitals; they do not add a required check or automatic numeric failure threshold. GitHub may delay or miss scheduled runs and may disable schedules for public repositories after 60 days of repository inactivity.
-
-The workflow compares medians with a versioned fixed reference and a rolling baseline from up to 28 recent successful daily-`main` summaries whose tool and runner versions match the current measurement. The fixed reference in `.github/performance-reference.json` is intentionally pending: after merge, manually run the workflow on `main` or wait for its first scheduled run, review the machine-readable summary, and commit that summary as the reference. Pull-request runs are never reference data. Read-only Actions API access retrieves successful scheduled runs and their small summary artifacts; missing permissions, expired artifacts, insufficient history, or incompatible tool versions are reported as unavailable/collecting baseline, not as zero measurements. Raw Lighthouse reports are retained for 14 days and machine-readable summaries for 90 days, subject to repository retention settings. At roughly 5.1 MB per raw artifact, 14 days of daily reports are about 72 MB before other repository artifacts. Numeric deltas are informational review signals only; no threshold or automatic performance failure is active.
-
-The first scheduled run cannot be verified until a human merges the workflow onto the default branch. Schedule timing is best-effort, and the repository may need a manual dispatch if GitHub delays, misses, or disables scheduled runs. Lighthouse is pinned as a development dependency to measure generated pages in Chromium and retain raw reports; it is not included in production site assets.
-
-To run the same measurement locally, build with `JEKYLL_ENV=production bundle exec jekyll build --trace`, run `npm ci`, install Chromium with `npx playwright install --with-deps --no-shell chromium`, then run `npm run measure:performance`. Raw Lighthouse reports are written to the ignored `performance-reports/` directory. Checks run on PRs or a schedule according to the risk they address—not because every dimension needs the same frequency.
-
-The outcome is a quiet, trustworthy system that brings forward a problem **and a practical path to resolution** when attention is needed.
+Lighthouse results are informational lab measurements, not field data; they have no automatic threshold. Fixed comparisons use a reviewed successful `main` sample; rolling comparisons require 28 compatible successful scheduled `main` runs, never PR runs. Raw reports are retained for 14 days and compact performance summaries for 90 days.

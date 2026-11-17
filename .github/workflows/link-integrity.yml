@@ -1,10 +1,10 @@
-name: Link integrity
+name: Link Integrity
 
 on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '17 6 * * 1'
+    - cron: '29 6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -46,6 +46,8 @@ jobs:
           TEST_OUTCOME: ${{ steps.link_tests.outcome }}
           AUDIT_OUTCOME: ${{ steps.link_audit.outcome }}
         run: |
+          echo "# Link Integrity" >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
           summary_outcome() {
             case "$1" in
               success) printf -- "- %s: **passed**.\n" "$2" ;;
@@ -64,3 +66,18 @@ jobs:
             echo "- Link report unavailable." >> "$GITHUB_STEP_SUMMARY"
             echo "  See audit step logs." >> "$GITHUB_STEP_SUMMARY"
           fi
+
+  bridge-link-integrity:
+    name: Link Integrity
+    if: always() && github.event_name == 'pull_request'
+    needs: links
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Verify original link check
+        env:
+          PREREQUISITE_RESULT: ${{ needs.links.result }}
+        run: node scripts/verify_required_check.mjs
