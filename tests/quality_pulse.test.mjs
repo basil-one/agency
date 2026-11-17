@@ -31,7 +31,15 @@ const jobsCompletedBeforeCutoff = new Map([
 const performanceComparison = {
   schemaVersion: 1,
   fixedReference: { available: true, runUrl: 'https://github.com/basil-one/agency/actions/runs/99' },
-  history: { status: 'available', availableDailySamples: 28, requiredDailySamples: 28 },
+  history: {
+    status: 'available',
+    availableDailySamples: 28,
+    requiredDailySamples: 28,
+    searchedRuns: 28,
+    reason: null,
+    skipped: [],
+    provenance: []
+  },
   comparisons: [
     {
       route: '/',
@@ -281,22 +289,46 @@ test('dependency posture artifacts keep API denial, findings, and clean checks d
 });
 
 test('performance baseline details distinguish pending and available comparisons', () => {
+  const collectingHistory = (availableDailySamples) => ({
+    status: 'collecting_history',
+    availableDailySamples,
+    requiredDailySamples: 28,
+    searchedRuns: 28,
+    reason: `${availableDailySamples} of 28 recent successful daily-main summaries match the current tool and runner versions.`,
+    skipped: [],
+    provenance: []
+  });
   assert.equal(
     describePerformanceComparison({
       fixedReference: {
         available: false,
         reason: 'No versioned successful main reference has been established.'
       },
-      history: { status: 'collecting', availableDailySamples: 4, requiredDailySamples: 28 }
+      history: collectingHistory(3)
     }),
-    'Fixed reference: pending; rolling baseline: collecting 4/28'
+    'Fixed reference: pending; rolling baseline: collecting 3/28'
   );
   assert.equal(
     describePerformanceComparison({
       fixedReference: { available: true },
-      history: { status: 'available', availableDailySamples: 28, requiredDailySamples: 28 }
+      history: performanceComparison.history
     }),
     'Fixed reference: available; rolling baseline: available 28/28'
+  );
+  assert.equal(
+    describePerformanceComparison({
+      fixedReference: { available: true },
+      history: {
+        status: 'unavailable',
+        availableDailySamples: 0,
+        requiredDailySamples: 28,
+        searchedRuns: 0,
+        reason: 'History lookup failed.',
+        skipped: [],
+        provenance: []
+      }
+    }),
+    'Fixed reference: available; rolling baseline: unavailable'
   );
 });
 
@@ -351,14 +383,19 @@ test('trend delta formatting uses stored values and never calculates a zero-base
 test('fixed-only, rolling-only, and unavailable trend references stay distinct', () => {
   const fixedOnly = structuredClone(performanceComparison);
   fixedOnly.fixedReference = { available: true };
-  fixedOnly.history = { status: 'collecting', availableDailySamples: 4, requiredDailySamples: 28 };
+  fixedOnly.history = {
+    ...fixedOnly.history,
+    status: 'collecting_history',
+    availableDailySamples: 3,
+    reason: '3 of 28 recent successful daily-main summaries match the current tool and runner versions.'
+  };
   for (const comparison of fixedOnly.comparisons) {
     for (const deltas of Object.values(comparison.deltas)) deltas.rolling = null;
   }
   let output = renderPerformanceTrends({
     trends: { state: 'fresh', measurementDate: date, comparison: fixedOnly }
   }).join('\n');
-  assert.match(output, /Fixed reference: available; rolling baseline: collecting 4\/28/);
+  assert.match(output, /Fixed reference: available; rolling baseline: collecting 3\/28/);
   assert.match(output, /\| Mobile LCP \| \+1\.50 s \(\+10\.0%\) \| — \|/);
 
   const rollingOnly = structuredClone(performanceComparison);
@@ -374,7 +411,15 @@ test('fixed-only, rolling-only, and unavailable trend references stay distinct',
 
   const noBaselines = structuredClone(rollingOnly);
   noBaselines.fixedReference = { available: false, reason: 'The versioned reference uses a different tool or runner environment.' };
-  noBaselines.history = { status: 'unavailable' };
+  noBaselines.history = {
+    status: 'unavailable',
+    availableDailySamples: 0,
+    requiredDailySamples: 28,
+    searchedRuns: 0,
+    reason: 'History lookup failed.',
+    skipped: [],
+    provenance: []
+  };
   output = renderPerformanceTrends({
     trends: { state: 'fresh', measurementDate: date, comparison: noBaselines }
   }).join('\n');
@@ -468,7 +513,11 @@ test('Pulse loads a valid comparison artifact and keeps failed or unavailable ar
     total_count: 1,
     jobs: [{ status: 'completed', conclusion: 'success', completed_at: `${date}T06:26:00Z` }]
   };
-  const buildWithArtifact = async ({ artifactResponse, artifactJson = performanceComparison, conclusion = 'success' }) => {
+  const buildWithArtifact = async ({
+    artifactResponse,
+    artifactJson = performanceComparison,
+    conclusion = 'success'
+  }) => {
     const fetchImpl = async (url) => {
       const path = new URL(url).pathname;
       if (path.endsWith('/actions/workflows/performance-integrity.yml/runs')) {
@@ -502,6 +551,8 @@ test('Pulse loads a valid comparison artifact and keeps failed or unavailable ar
   });
   assert.match(valid, /\| Mobile LCP \| \+1\.50 s/);
   assert.match(valid, /actions\/runs\/700\/artifacts\/456/);
+  assert.ok(valid.indexOf('## Findings') < valid.indexOf('## Performance Trends'));
+  assert.ok(valid.indexOf('## Performance Trends') < valid.indexOf('## Evidence'));
 
   const malformed = await buildWithArtifact({
     artifactResponse: {
@@ -534,4 +585,98 @@ test('Pulse loads a valid comparison artifact and keeps failed or unavailable ar
   });
   assert.match(failedMeasurement, /Performance Integrity result is fresh — failed/);
   assert.doesNotMatch(failedMeasurement, /\| Mobile LCP \|/);
+});
+
+test('real comparison artifact history states render through source lookup with honest homepage deltas', async () => {
+  const artifactResponse = {
+    ok: true,
+    json: async () => ({ artifacts: [{ name: 'performance-summary', expired: false, id: 456 }] })
+  };
+  const buildArtifact = async (history) => {
+    const comparison = structuredClone(performanceComparison);
+    comparison.history = history;
+    for (const result of comparison.comparisons) {
+      for (const deltas of Object.values(result.deltas)) {
+        deltas.rolling = history.status === 'available' ? deltas.rolling : null;
+      }
+    }
+    return buildPulse({
+      apiUrl: 'https://api.github.com',
+      repository: 'basil-one/agency',
+      token: 'test-token',
+      date,
+      generatedAt: `${date}T18:17:00Z`,
+      fetchImpl: async (url) => {
+        const path = new URL(url).pathname;
+        if (path.endsWith('/actions/workflows/performance-integrity.yml/runs')) {
+          return {
+            ok: true,
+            json: async () => ({ workflow_runs: [{ ...passingRun, id: 700 }] })
+          };
+        }
+        if (path.endsWith('/actions/runs/700/jobs')) {
+          return {
+            ok: true,
+            json: async () => ({
+              total_count: 1,
+              jobs: [{
+                status: 'completed',
+                conclusion: 'success',
+                completed_at: `${date}T06:26:00Z`
+              }]
+            })
+          };
+        }
+        if (path.endsWith('/actions/runs/700/artifacts')) return artifactResponse;
+        if (path.endsWith('/actions/artifacts/456/zip')) {
+          return { ok: true, arrayBuffer: async () => new ArrayBuffer(0) };
+        }
+        return { ok: true, json: async () => ({ workflow_runs: [] }) };
+      },
+      unzipImpl: () => JSON.stringify(comparison)
+    });
+  };
+  const history = (status, availableDailySamples, extra = {}) => ({
+    status,
+    availableDailySamples,
+    requiredDailySamples: 28,
+    searchedRuns: 28,
+    reason: status === 'collecting_history'
+      ? `${availableDailySamples} of 28 recent successful daily-main summaries match the current tool and runner versions.`
+      : undefined,
+    skipped: [],
+    provenance: [],
+    ...extra
+  });
+
+  for (const count of [0, 3, 27]) {
+    const markdown = await buildArtifact(history('collecting_history', count));
+    assert.match(markdown, new RegExp(`rolling baseline: collecting ${count}/28`));
+    assert.match(markdown, /\| Mobile LCP \| \+1\.50 s \(\+10\.0%\) \| — \|/);
+    assert.match(markdown, /\[comparison artifact\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/700\/artifacts\/456\)/);
+    assert.ok(markdown.indexOf('## Performance Trends') < markdown.indexOf('## Evidence'));
+  }
+
+  const available = await buildArtifact(history('available', 28));
+  assert.match(available, /rolling baseline: available 28\/28/);
+  assert.match(available, /\| Mobile LCP \| \+1\.50 s \(\+10\.0%\) \| -200 ms \(-5\.0%\) \|/);
+
+  const unavailable = await buildArtifact(history('unavailable', 0, {
+    reason: 'History lookup failed.'
+  }));
+  assert.match(unavailable, /rolling baseline: unavailable/);
+  assert.match(unavailable, /\| Mobile LCP \| \+1\.50 s \(\+10\.0%\) \| — \|/);
+
+  for (const malformed of [
+    history('collecting_history', 28),
+    history('collecting_history', -1),
+    history('available', 27),
+    history('unavailable', 1),
+    history('collecting_history', 3, { requiredDailySamples: 27 }),
+    history('other', 3)
+  ]) {
+    const markdown = await buildArtifact(malformed);
+    assert.match(markdown, /rolling baseline: unknown/);
+    assert.match(markdown, /\| Mobile LCP \| \+1\.50 s \(\+10\.0%\) \| — \|/);
+  }
 });

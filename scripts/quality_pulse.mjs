@@ -273,26 +273,29 @@ function describePerformanceComparison(comparison) {
         : /no versioned successful main reference/i.test(fixed.reason)
           ? 'pending'
           : 'unknown';
-  const history = comparison.history ?? {};
-  const rollingState = history.status === 'available'
-    ? Number.isInteger(history.availableDailySamples) &&
-      Number.isInteger(history.requiredDailySamples) &&
-      history.availableDailySamples === history.requiredDailySamples &&
-      history.requiredDailySamples === 28
-      ? 'available 28/28'
-      : 'unknown'
-    : history.status === 'unavailable'
-      ? 'unavailable'
-      : history.status === 'collecting'
-        ? Number.isInteger(history.availableDailySamples) &&
-          Number.isInteger(history.requiredDailySamples) &&
-          history.availableDailySamples >= 0 &&
-          history.availableDailySamples < history.requiredDailySamples &&
-          history.requiredDailySamples === 28
-          ? `collecting ${history.availableDailySamples}/28`
-          : 'unknown'
-        : 'unknown';
+  const rollingState = rollingBaselineState(comparison.history ?? {});
   return `Fixed reference: ${fixedState}; rolling baseline: ${rollingState}`;
+}
+
+function rollingBaselineState(history) {
+  const validCounts = Number.isInteger(history.availableDailySamples) &&
+    Number.isInteger(history.requiredDailySamples) &&
+    history.requiredDailySamples === 28 &&
+    history.availableDailySamples >= 0 &&
+    history.availableDailySamples <= history.requiredDailySamples;
+  if (!validCounts) return 'unknown';
+  if (history.status === 'available') {
+    return history.availableDailySamples === 28 ? 'available 28/28' : 'unknown';
+  }
+  if (['collecting_history', 'collecting'].includes(history.status)) {
+    return history.availableDailySamples < 28
+      ? `collecting ${history.availableDailySamples}/28`
+      : 'unknown';
+  }
+  if (history.status === 'unavailable') {
+    return history.availableDailySamples === 0 ? 'unavailable' : 'unknown';
+  }
+  return 'unknown';
 }
 
 function isPerformanceComparison(value) {
@@ -321,9 +324,7 @@ function homepageTrendRows(comparison) {
   const homepage = comparison.comparisons.find((item) => item.route === '/');
   if (!homepage) return [];
   const fixedAvailable = comparison.fixedReference.available === true;
-  const rollingAvailable = comparison.history.status === 'available' &&
-    comparison.history.availableDailySamples === 28 &&
-    comparison.history.requiredDailySamples === 28;
+  const rollingAvailable = rollingBaselineState(comparison.history) === 'available 28/28';
   const measures = [
     ['mobile', 'largest-contentful-paint', 'Mobile LCP'],
     ['mobile', 'total-blocking-time', 'Mobile TBT'],
