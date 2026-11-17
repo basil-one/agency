@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   lint:
-    name: Source quality
+    name: Source Quality
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -48,18 +48,3 @@ jobs:
             summary_outcome "$LINTER_OUTCOME" "Super-Linter + Ruff C901"
             echo "Linter findings: GitHub annotations and Super-Linter logs."
           } >> "$GITHUB_STEP_SUMMARY"
-
-  bridge-source-quality:
-    name: Source Quality
-    if: always() && github.event_name == 'pull_request'
-    needs: lint
-    runs-on: ubuntu-24.04
-    timeout-minutes: 2
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-      - name: Verify original source check
-        env:
-          PREREQUISITE_RESULT: ${{ needs.lint.result }}
-        run: node scripts/verify_required_check.mjs

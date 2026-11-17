@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   links:
-    name: Link integrity
+    name: Link Integrity
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -66,18 +66,3 @@ jobs:
             echo "- Link report unavailable." >> "$GITHUB_STEP_SUMMARY"
             echo "  See audit step logs." >> "$GITHUB_STEP_SUMMARY"
           fi
-
-  bridge-link-integrity:
-    name: Link Integrity
-    if: always() && github.event_name == 'pull_request'
-    needs: links
-    runs-on: ubuntu-24.04
-    timeout-minutes: 2
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-      - name: Verify original link check
-        env:
-          PREREQUISITE_RESULT: ${{ needs.links.result }}
-        run: node scripts/verify_required_check.mjs
