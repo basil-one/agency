@@ -4,6 +4,47 @@ function escapeMarkdown(value) {
   return String(value ?? 'unknown').replace(/[|`<>]/g, '\\$&');
 }
 
+function sanitizeDiagnostic(value, token) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replaceAll(token, '[REDACTED]')
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 500)
+    .replace(/[\\|`<>[\]{}*_!#]/g, '\\$&');
+}
+
+async function getApiErrorDetails(response, token) {
+  let body = {};
+  try {
+    body = await response.json();
+  } catch {
+    body = {};
+  }
+  const message = sanitizeDiagnostic(body?.message, token);
+  const rawDocumentationUrl = body?.documentation_url;
+  let documentationUrl = '';
+  if (typeof rawDocumentationUrl === 'string') {
+    try {
+      const url = new URL(rawDocumentationUrl);
+      if (
+        url.protocol === 'https:' &&
+        ['docs.github.com', 'github.com'].includes(url.hostname)
+      ) {
+        documentationUrl = `${url.origin}${url.pathname}`;
+      }
+    } catch {
+      documentationUrl = '';
+    }
+  }
+  const requestId = response.headers?.get?.('x-github-request-id') ?? '';
+  const safeRequestId = /^[a-zA-Z0-9-]{1,100}$/.test(requestId)
+    ? requestId
+    : '';
+  return { message, documentationUrl, requestId: safeRequestId };
+}
+
 async function checkDependencyPosture({
   apiUrl,
   repository,
@@ -42,11 +83,27 @@ async function checkDependencyPosture({
         signal: AbortSignal.timeout(15_000)
       });
       if (!response.ok) {
-        lines.push(`**Unknown — GitHub Dependabot alerts API returned HTTP ${response.status}.**`);
+        const errorDetails = await getApiErrorDetails(response, token);
+        const detail = `GitHub Dependabot alerts API returned HTTP ${response.status}${errorDetails.message ? `: ${errorDetails.message}` : ''}`;
+        lines.push(`**Unknown — ${detail}.**`);
+        if (errorDetails.documentationUrl) {
+          lines.push(`- Documentation: ${errorDetails.documentationUrl}`);
+        }
+        if (errorDetails.requestId) {
+          lines.push(`- GitHub request ID: ${errorDetails.requestId}.`);
+        }
         return {
           status: 'unknown',
           alerts: [],
-          detail: `GitHub Dependabot alerts API returned HTTP ${response.status}`,
+          detail: [
+            detail,
+            errorDetails.documentationUrl
+              ? `Documentation: ${errorDetails.documentationUrl}`
+              : '',
+            errorDetails.requestId
+              ? `GitHub request ID: ${errorDetails.requestId}`
+              : ''
+          ].filter(Boolean).join('\n'),
           markdown: lines.join('\n')
         };
       }
