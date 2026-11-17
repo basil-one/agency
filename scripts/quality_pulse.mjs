@@ -46,7 +46,7 @@ function runTime(run) {
 }
 
 function runLink(run) {
-  return run.html_url ?? '';
+  return run?.html_url ?? '';
 }
 
 function completionEvidenceFromJobs(jobs) {
@@ -261,21 +261,135 @@ function performanceDetail(result) {
 
 function describePerformanceComparison(comparison) {
   if (!comparison) {
-    return 'fixed reference: unavailable; rolling baseline: unavailable';
+    return 'fixed reference: unknown; rolling baseline: unknown';
   }
   const fixed = comparison.fixedReference;
-  const fixedState = fixed?.available
+  const fixedState = fixed?.available === true
     ? 'available'
-    : fixed?.reason?.includes('different tool')
-      ? 'not comparable (tool or runner differs)'
-      : 'pending reviewed main anchor';
+    : typeof fixed?.reason !== 'string'
+      ? 'unknown'
+      : /different tool|runner environment/i.test(fixed.reason)
+        ? 'incompatible'
+        : /no versioned successful main reference/i.test(fixed.reason)
+          ? 'pending'
+          : 'unknown';
   const history = comparison.history ?? {};
   const rollingState = history.status === 'available'
-    ? `available (${history.availableDailySamples ?? 0}/${history.requiredDailySamples ?? 28})`
+    ? Number.isInteger(history.availableDailySamples) &&
+      Number.isInteger(history.requiredDailySamples) &&
+      history.availableDailySamples === history.requiredDailySamples &&
+      history.requiredDailySamples === 28
+      ? 'available 28/28'
+      : 'unknown'
     : history.status === 'unavailable'
       ? 'unavailable'
-      : `collecting (${history.availableDailySamples ?? 0}/${history.requiredDailySamples ?? 28})`;
-  return `fixed reference: ${fixedState}; rolling baseline: ${rollingState}`;
+      : history.status === 'collecting'
+        ? Number.isInteger(history.availableDailySamples) &&
+          Number.isInteger(history.requiredDailySamples) &&
+          history.availableDailySamples >= 0 &&
+          history.availableDailySamples < history.requiredDailySamples &&
+          history.requiredDailySamples === 28
+          ? `collecting ${history.availableDailySamples}/28`
+          : 'unknown'
+        : 'unknown';
+  return `Fixed reference: ${fixedState}; rolling baseline: ${rollingState}`;
+}
+
+function isPerformanceComparison(value) {
+  return Boolean(value?.schemaVersion === 1 &&
+    value.fixedReference &&
+    typeof value.fixedReference === 'object' &&
+    value.history &&
+    typeof value.history === 'object' &&
+    Array.isArray(value.comparisons));
+}
+
+function formatTrendDelta(delta) {
+  if (!delta || typeof delta !== 'object') return '—';
+  const absolute = Number.isFinite(delta.absolute)
+    ? `${delta.absolute > 0 ? '+' : ''}${Math.abs(delta.absolute) >= 1_000
+      ? `${(delta.absolute / 1_000).toFixed(2)} s`
+      : `${Math.round(delta.absolute)} ms`}`
+    : undefined;
+  const percentage = Number.isFinite(delta.percentage)
+    ? `(${delta.percentage > 0 ? '+' : ''}${delta.percentage.toFixed(1)}%)`
+    : undefined;
+  return [absolute, percentage].filter(Boolean).join(' ') || '—';
+}
+
+function homepageTrendRows(comparison) {
+  const homepage = comparison.comparisons.find((item) => item.route === '/');
+  if (!homepage) return [];
+  const fixedAvailable = comparison.fixedReference.available === true;
+  const rollingAvailable = comparison.history.status === 'available' &&
+    comparison.history.availableDailySamples === 28 &&
+    comparison.history.requiredDailySamples === 28;
+  const measures = [
+    ['mobile', 'largest-contentful-paint', 'Mobile LCP'],
+    ['mobile', 'total-blocking-time', 'Mobile TBT'],
+    ['desktop', 'largest-contentful-paint', 'Desktop LCP']
+  ];
+  return measures.flatMap(([formFactor, metric, label]) => {
+    const result = comparison.comparisons.find(
+      (item) => item.route === homepage.route && item.formFactor?.toLowerCase() === formFactor
+    );
+    if (!result || !Object.hasOwn(result.deltas ?? {}, metric)) return [];
+    return [{
+      label,
+      fixed: fixedAvailable ? formatTrendDelta(result.deltas?.[metric]?.fixed) : '—',
+      rolling: rollingAvailable ? formatTrendDelta(result.deltas?.[metric]?.rolling) : '—'
+    }];
+  });
+}
+
+function renderPerformanceTrends(result) {
+  const trends = result?.trends;
+  const lines = [
+    '## Performance Trends',
+    '',
+    'Lower is better for these lab metrics; positive deltas mean a higher measured value. Comparisons are informational and do not establish a sustained direction.'
+  ];
+  const canShowComparison = ['fresh', 'prior'].includes(trends?.state) &&
+    isPerformanceComparison(trends?.comparison) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(trends.measurementDate ?? '');
+  if (!canShowComparison) {
+    const reason = trends?.reason ??
+      (trends?.comparison
+        ? 'the measurement is not a dated successful current or prior run'
+        : 'no successful measurement evidence is available.');
+    lines.push('', `Performance comparison unavailable: ${reason}`);
+    if (trends?.runUrl) lines.push(`Source: [Performance Integrity run](${trends.runUrl}).`);
+    if (trends?.baseline) lines.push(`Baselines: ${trends.baseline}.`);
+    return lines;
+  }
+
+  const measurement = trends.state === 'prior'
+    ? `Prior successful measurement — ${trends.measurementDate}; not today's verification.`
+    : `Measurement — ${trends.measurementDate} UTC (fresh scheduled run).`;
+  lines.push(
+    '',
+    `**${measurement}**`,
+    `**Baselines:** ${describePerformanceComparison(trends.comparison)}.`
+  );
+  const sources = [];
+  if (trends.runUrl) sources.push(`[Performance Integrity run](${trends.runUrl})`);
+  if (trends.artifactUrl) sources.push(`[comparison artifact](${trends.artifactUrl})`);
+  const fixedRunUrl = trends.comparison.fixedReference?.runUrl;
+  if (fixedRunUrl) sources.push(`[fixed reference run](${fixedRunUrl})`);
+  if (sources.length) lines.push(`**Evidence:** ${sources.join(' · ')}.`);
+  lines.push(
+    '',
+    '| Measure | vs. fixed reference | vs. rolling baseline |',
+    '| --- | --- | --- |'
+  );
+  const rows = homepageTrendRows(trends.comparison);
+  if (rows.length) {
+    for (const row of rows) lines.push(`| ${row.label} | ${row.fixed} | ${row.rolling} |`);
+  } else {
+    lines.push('| Homepage metrics | — | — |');
+  }
+  lines.push('', 'Other pages and full metric details are in the linked Performance Integrity summary.');
+  return lines;
 }
 
 async function fetchArtifactJson({
@@ -285,7 +399,9 @@ async function fetchArtifactJson({
   runId,
   artifactName,
   fileName,
-  fetchImpl
+  fetchImpl,
+  includeMetadata = false,
+  unzipImpl = execFileSync
 }) {
   const headers = {
     Accept: 'application/vnd.github+json',
@@ -326,12 +442,13 @@ async function fetchArtifactJson({
   const archivePath = join(directory, `${artifactName}.zip`);
   try {
     writeFileSync(archivePath, archive);
-    const json = execFileSync(
+    const json = unzipImpl(
       'unzip',
       ['-p', archivePath, fileName],
       { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
     );
-    return JSON.parse(json);
+    const data = JSON.parse(json);
+    return includeMetadata ? { data, artifact } : data;
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -397,6 +514,8 @@ function renderPulse({ date, generatedAt, results, cutoff = cutoffTime }) {
   } else {
     lines.push('No material failures or missing coverage were reported.');
   }
+  const performance = results.find((item) => item.name === 'Performance Integrity');
+  lines.push('', ...renderPerformanceTrends(performance?.result), '');
   lines.push(
     '',
     '## Evidence',
@@ -429,7 +548,8 @@ async function buildPulse({
   token,
   date,
   generatedAt = new Date().toISOString(),
-  fetchImpl = fetch
+  fetchImpl = fetch,
+  unzipImpl = execFileSync
 }) {
   const results = await Promise.all(
     dimensions.map(async (dimension) => {
@@ -486,22 +606,52 @@ async function buildPulse({
   if (
     performance?.result.run?.id &&
     performance.result.run.status === 'completed' &&
-    ['success', 'failure'].includes(performance.result.run.conclusion)
+    ['fresh', 'prior'].includes(performance.result.state) &&
+    performance.result.run.conclusion === 'success'
   ) {
     try {
-      const comparison = await fetchArtifactJson({
+      const { data: comparison, artifact } = await fetchArtifactJson({
         apiUrl,
         repository,
         token,
         runId: performance.result.run.id,
         artifactName: 'performance-summary',
         fileName: 'performance-comparison.json',
-        fetchImpl
+        fetchImpl,
+        includeMetadata: true,
+        unzipImpl
       });
+      if (!isPerformanceComparison(comparison)) {
+        throw new Error('performance-comparison.json has an unsupported or incomplete structure');
+      }
+      const measurementDate = performance.result.run.created_at?.slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(measurementDate ?? '')) {
+        throw new Error('Performance Integrity run has no valid measurement date');
+      }
       performance.result.baseline = describePerformanceComparison(comparison);
+      performance.result.trends = {
+        state: performance.result.state,
+        measurementDate,
+        comparison,
+        runUrl: runLink(performance.result.run),
+        artifactUrl: `https://github.com/${repository}/actions/runs/${performance.result.run.id}/artifacts/${artifact.id}`
+      };
     } catch (error) {
-      performance.result.baseline = `fixed reference: unknown; rolling baseline: unknown (${error.message})`;
+      performance.result.baseline = `fixed reference: unknown; rolling baseline: unknown`;
+      performance.result.trends = {
+        reason: `comparison artifact unavailable or invalid (${error.message})`,
+        baseline: performance.result.baseline,
+        runUrl: runLink(performance.result.run)
+      };
     }
+  } else if (performance) {
+    const result = performance.result;
+    performance.result.trends = {
+      reason: result.state === 'prior'
+        ? 'no prior successful comparison artifact is available'
+        : `today's Performance Integrity result is ${result.label.toLowerCase()}; no successful current trend is shown`,
+      runUrl: runLink(result.run)
+    };
   }
   const dependency = results.find((item) => item.name === 'Dependency Security');
   if (
@@ -557,5 +707,9 @@ export {
   completionEvidenceFromJobs,
   describePerformanceComparison,
   evaluateRuns,
+  formatTrendDelta,
+  homepageTrendRows,
+  isPerformanceComparison,
+  renderPerformanceTrends,
   renderPulse
 };
