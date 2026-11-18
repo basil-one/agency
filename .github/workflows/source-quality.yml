@@ -34,20 +34,31 @@ jobs:
           online: false
           color: false
       - name: Verify invalid permissions are rejected
-        id: invalid_permissions
-        continue-on-error: true
-        uses: jdx/jactionlint@72c00452809bcca05b8bc12acdcf15dd7a9c1c5e # v2.6.0
-        with:
-          executable: ${{ steps.jactionlint.outputs.executable }}
-          files: tests/fixtures/actionlint-invalid-permission.yml
-          profile: correctness
-          online: false
-          color: false
-      - name: Confirm invalid permission test failed
-        if: always()
         env:
-          INVALID_PERMISSIONS_OUTCOME: ${{ steps.invalid_permissions.outcome }}
-        run: test "$INVALID_PERMISSIONS_OUTCOME" = failure
+          JACTIONLINT_EXECUTABLE: ${{ steps.jactionlint.outputs.executable }}
+        run: |
+          fixture="$(mktemp)"
+          output="$(mktemp)"
+          trap 'rm -f "$fixture" "$output"' EXIT
+          cat > "$fixture" <<'YAML'
+          name: Invalid permission fixture
+          on: push
+          permissions:
+            invalid-permission-scope: read
+          jobs:
+            test:
+              runs-on: ubuntu-latest
+              steps:
+                - run: echo "fixture"
+          YAML
+          if "$JACTIONLINT_EXECUTABLE" --profile correctness --color=never "$fixture" >"$output" 2>&1; then
+            echo "jactionlint accepted the invalid permission fixture"
+            exit 1
+          fi
+          if ! grep -Fq 'unknown permission scope "invalid-permission-scope"' "$output"; then
+            echo "jactionlint rejected the fixture for an unexpected reason"
+            exit 1
+          fi
       - name: Super-Linter
         id: super_linter
         uses: super-linter/super-linter/slim@v9.0.0
