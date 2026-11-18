@@ -1,0 +1,12 @@
+name: Invalid permission fixture
+
+on: push
+
+permissions:
+  invalid-permission-scope: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "fixture"

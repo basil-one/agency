@@ -28,7 +28,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 | [Site Build Integrity](workflows/site-build-integrity.yml) | Production Jekyll build | Production Jekyll build |
 | [Link Integrity](workflows/link-integrity.yml) | Generated-site internal links, fragments, assets, and external destinations | Same audit; uncertain external responses are reported separately |
 | [SEO Integrity](workflows/seo-integrity.yml) | Generated page titles, canonical URLs, and indexing directives | Same generated-site audit |
-| [Source Quality](workflows/source-quality.yml) | Super-Linter (including Ruff C901) and Ruby syntax | Same source checks |
+| [Source Quality](workflows/source-quality.yml) | jactionlint workflow validation, Super-Linter (including Ruff C901), and Ruby syntax | Same source checks |
 | [Dependency Security](workflows/dependency-security.yml) | Dependency changes reviewed at moderate-or-higher severity across runtime, development, and unknown scopes | Open Dependabot alerts across enabled ecosystems; API/permission failures are unknown, not clean |
 | [Rendered Site Integrity](workflows/rendered-site-integrity.yml) | Chromium smoke routes, detectable accessibility violations, and responsive usability at 320px, 768px, and 1280px | Same browser, accessibility, and responsive suite |
 | [Performance Integrity](workflows/performance-integrity.yml) | Four routes × mobile/desktop × three runs; only reflection-text-only changes intentionally skip measurement | Full Lighthouse measurement and informational fixed/rolling comparisons |
