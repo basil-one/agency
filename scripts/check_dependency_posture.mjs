@@ -4,6 +4,125 @@ function escapeMarkdown(value) {
   return String(value ?? 'unknown').replace(/[|`<>]/g, '\\$&');
 }
 
+function sanitizeDiagnostic(value, token) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replaceAll(token, '[REDACTED]')
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 500)
+    .replace(/[\\|`<>[\]{}*_!#]/g, '\\$&');
+}
+
+async function getApiErrorDetails(response, token) {
+  let body = {};
+  try {
+    body = await response.json();
+  } catch {
+    body = {};
+  }
+  const message = sanitizeDiagnostic(body?.message, token);
+  const rawDocumentationUrl = body?.documentation_url;
+  let documentationUrl = '';
+  if (typeof rawDocumentationUrl === 'string') {
+    try {
+      const url = new URL(rawDocumentationUrl);
+      if (
+        url.protocol === 'https:' &&
+        ['docs.github.com', 'github.com'].includes(url.hostname)
+      ) {
+        documentationUrl = `${url.origin}${url.pathname}`;
+      }
+    } catch {
+      documentationUrl = '';
+    }
+  }
+  const requestId = response.headers?.get?.('x-github-request-id') ?? '';
+  const safeRequestId = /^[a-zA-Z0-9-]{1,100}$/.test(requestId)
+    ? requestId
+    : '';
+  return { message, documentationUrl, requestId: safeRequestId };
+}
+
+function splitLinkHeader(header) {
+  const links = [];
+  let start = 0;
+  let inTarget = false;
+  let inQuote = false;
+  for (let index = 0; index < header.length; index += 1) {
+    const character = header[index];
+    if (character === '"' && !inTarget) inQuote = !inQuote;
+    if (character === '<' && !inQuote) inTarget = true;
+    if (character === '>' && !inQuote) inTarget = false;
+    if (character === ',' && !inTarget && !inQuote) {
+      links.push(header.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  links.push(header.slice(start).trim());
+  return links;
+}
+
+function getNextCursor(response, apiUrl, repository, seenCursors) {
+  const header = response.headers?.get?.('link');
+  if (!header) return { cursor: null };
+
+  const expectedPath = new URL(
+    `/repos/${repository}/dependabot/alerts`,
+    apiUrl
+  ).pathname;
+  let nextCursor = null;
+  for (const link of splitLinkHeader(header)) {
+    const relation = link.match(/;\s*rel\s*=\s*(?:"([^"]*)"|([^;\s]+))/i);
+    const relationValue = relation?.[1] ?? relation?.[2] ?? '';
+    const isNext = relationValue.split(/\s+/).includes('next');
+    const hasNextMarker = /\brel\s*=\s*"?next(?:[";\s]|$)/i.test(link);
+    const beginsWithTarget = link.match(/^<([^<>]*)>(.*)$/);
+    if (!isNext) {
+      if (hasNextMarker) {
+        return { error: 'Dependabot alerts API returned a malformed next-page link' };
+      }
+      continue;
+    }
+    if (nextCursor !== null || !beginsWithTarget) {
+      return { error: 'Dependabot alerts API returned a malformed next-page link' };
+    }
+    let url;
+    try {
+      url = new URL(beginsWithTarget[1], apiUrl);
+    } catch {
+      return { error: 'Dependabot alerts API returned a malformed next-page link' };
+    }
+    const query = url.searchParams;
+    const afterValues = query.getAll('after');
+    if (
+      url.origin !== new URL(apiUrl).origin ||
+      url.pathname !== expectedPath ||
+      url.username ||
+      url.password ||
+      url.hash ||
+      query.getAll('state').length !== 1 ||
+      query.get('state') !== 'open' ||
+      query.getAll('per_page').length !== 1 ||
+      query.get('per_page') !== '100' ||
+      afterValues.length !== 1 ||
+      !afterValues[0] ||
+      afterValues[0].length > 2048 ||
+      query.has('page') ||
+      query.has('before') ||
+      [...query.keys()].some((key) => !['state', 'per_page', 'after'].includes(key))
+    ) {
+      return { error: 'Dependabot alerts API returned an invalid next-page cursor' };
+    }
+    nextCursor = afterValues[0];
+  }
+  if (nextCursor !== null && seenCursors.has(nextCursor)) {
+    return { error: 'Dependabot alerts API returned a repeated next-page cursor' };
+  }
+  return { cursor: nextCursor };
+}
+
 async function checkDependencyPosture({
   apiUrl,
   repository,
@@ -22,17 +141,23 @@ async function checkDependencyPosture({
   }
 
   const alerts = [];
+  const seenCursors = new Set();
+  let cursor = null;
   try {
-    for (let page = 1; page <= 100; page += 1) {
+    for (let requestCount = 1; requestCount <= 100; requestCount += 1) {
       const url = new URL(
         `/repos/${repository}/dependabot/alerts`,
         apiUrl
       );
-      url.search = new URLSearchParams({
+      const query = new URLSearchParams({
         state: 'open',
-        per_page: '100',
-        page: String(page)
+        per_page: '100'
       });
+      if (cursor !== null) {
+        query.set('after', cursor);
+        seenCursors.add(cursor);
+      }
+      url.search = query;
       const response = await fetchImpl(url, {
         headers: {
           Accept: 'application/vnd.github+json',
@@ -42,11 +167,27 @@ async function checkDependencyPosture({
         signal: AbortSignal.timeout(15_000)
       });
       if (!response.ok) {
-        lines.push(`**Unknown — GitHub Dependabot alerts API returned HTTP ${response.status}.**`);
+        const errorDetails = await getApiErrorDetails(response, token);
+        const detail = `GitHub Dependabot alerts API returned HTTP ${response.status}${errorDetails.message ? `: ${errorDetails.message}` : ''}`;
+        lines.push(`**Unknown — ${detail}.**`);
+        if (errorDetails.documentationUrl) {
+          lines.push(`- Documentation: ${errorDetails.documentationUrl}`);
+        }
+        if (errorDetails.requestId) {
+          lines.push(`- GitHub request ID: ${errorDetails.requestId}.`);
+        }
         return {
           status: 'unknown',
           alerts: [],
-          detail: `GitHub Dependabot alerts API returned HTTP ${response.status}`,
+          detail: [
+            detail,
+            errorDetails.documentationUrl
+              ? `Documentation: ${errorDetails.documentationUrl}`
+              : '',
+            errorDetails.requestId
+              ? `GitHub request ID: ${errorDetails.requestId}`
+              : ''
+          ].filter(Boolean).join('\n'),
           markdown: lines.join('\n')
         };
       }
@@ -61,16 +202,27 @@ async function checkDependencyPosture({
         };
       }
       alerts.push(...pageAlerts);
-      if (pageAlerts.length < 100) break;
-      if (page === 100) {
-        lines.push('**Unknown — alert pagination exceeded the 100-page safety limit.**');
+      const next = getNextCursor(response, apiUrl, repository, seenCursors);
+      if (next.error) {
+        lines.push(`**Unknown — ${next.error}.**`);
         return {
           status: 'unknown',
           alerts: [],
-          detail: 'Alert pagination exceeded the 100-page safety limit',
+          detail: next.error,
           markdown: lines.join('\n')
         };
       }
+      if (next.cursor === null) break;
+      if (requestCount === 100) {
+        lines.push('**Unknown — alert pagination exceeded the 100-request safety limit.**');
+        return {
+          status: 'unknown',
+          alerts: [],
+          detail: 'Alert pagination exceeded the 100-request safety limit',
+          markdown: lines.join('\n')
+        };
+      }
+      cursor = next.cursor;
     }
   } catch (error) {
     const reason = error?.name === 'TimeoutError' ? 'timed out' : 'could not be reached';

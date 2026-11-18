@@ -58,7 +58,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-      security-events: read
+      vulnerability-alerts: read
     steps:
       - uses: actions/checkout@v5
         with:
