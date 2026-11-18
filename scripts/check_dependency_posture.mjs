@@ -77,9 +77,10 @@ function getNextCursor(response, apiUrl, repository, seenCursors) {
     const relation = link.match(/;\s*rel\s*=\s*(?:"([^"]*)"|([^;\s]+))/i);
     const relationValue = relation?.[1] ?? relation?.[2] ?? '';
     const isNext = relationValue.split(/\s+/).includes('next');
+    const hasNextMarker = /\brel\s*=\s*"?next(?:[";\s]|$)/i.test(link);
     const beginsWithTarget = link.match(/^<([^<>]*)>(.*)$/);
     if (!isNext) {
-      if (!beginsWithTarget && /\brel\s*=\s*"?next(?:[";\s]|$)/i.test(link)) {
+      if (hasNextMarker) {
         return { error: 'Dependabot alerts API returned a malformed next-page link' };
       }
       continue;

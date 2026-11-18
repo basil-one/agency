@@ -152,18 +152,23 @@ test('API failures report sanitized GitHub diagnostics without exposing response
 });
 
 test('malformed next links remain unknown', async () => {
-  const result = await checkDependencyPosture({
-    ...options,
-    fetchImpl: async () => ({
-      ok: true,
-      json: async () => [],
-      headers: {
-        get: (name) => name === 'link' ? 'rel="next"' : null
-      }
-    })
-  });
-  assert.equal(result.status, 'unknown');
-  assert.match(result.detail, /malformed next-page link/);
+  for (const link of [
+    'rel="next"',
+    '<https://api.github.com/repos/basil-one/agency/dependabot/alerts?state=open&per_page=100&after=cursor>; rel="next'
+  ]) {
+    const result = await checkDependencyPosture({
+      ...options,
+      fetchImpl: async () => ({
+        ok: true,
+        json: async () => [],
+        headers: {
+          get: (name) => name === 'link' ? link : null
+        }
+      })
+    });
+    assert.equal(result.status, 'unknown');
+    assert.match(result.detail, /malformed next-page link/);
+  }
 });
 
 test('invalid next cursors remain unknown', async () => {
