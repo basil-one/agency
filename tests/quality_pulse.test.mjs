@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   applyDependencyPosture,
+  buildOrchestratedPulse,
   buildPulse,
   completionEvidenceFromJobs,
   describePerformanceComparison,
@@ -679,4 +680,153 @@ test('real comparison artifact history states render through source lookup with 
     assert.match(markdown, /rolling baseline: unknown/);
     assert.match(markdown, /\| Mobile LCP \| \+1\.50 s \(\+10\.0%\) \| — \|/);
   }
+});
+
+test('orchestrated Pulse reports same-cycle job results and requires valid evidence artifacts', async () => {
+  const runId = '888';
+  const runUrl = `https://github.com/basil-one/agency/actions/runs/${runId}`;
+  const needs = Object.fromEntries([
+    'site-build',
+    'link',
+    'seo',
+    'source-quality',
+    'dependency-security',
+    'rendered-site',
+    'performance'
+  ].map((jobId) => [jobId, { result: 'success' }]));
+  const performanceSummary = {
+    complete: true,
+    capturedAt: `${date}T06:30:00.000Z`,
+    source: { eventName: 'schedule', branch: 'main', runId }
+  };
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.pathname.endsWith('/actions/runs/888/artifacts')) {
+      const artifactName = parsed.searchParams.get('name');
+      const id = artifactName === 'performance-summary' ? 456 : 457;
+      return {
+        ok: true,
+        json: async () => ({ artifacts: [{ name: artifactName, expired: false, id }] })
+      };
+    }
+    if (/\/actions\/artifacts\/(456|457)\/zip$/.test(parsed.pathname)) {
+      return { ok: true, arrayBuffer: async () => new ArrayBuffer(0) };
+    }
+    throw new Error(`Unexpected request: ${parsed.pathname}`);
+  };
+  const unzipImpl = (_command, args) => {
+    if (args.at(-1) === 'performance-comparison.json') return JSON.stringify(performanceComparison);
+    if (args.at(-1) === 'performance-summary.json') return JSON.stringify(performanceSummary);
+    if (args.at(-1) === 'dependency-posture.json') {
+      return JSON.stringify({ status: 'passed', detail: 'No open medium-or-higher alerts' });
+    }
+    throw new Error(`Unexpected artifact file: ${args.at(-1)}`);
+  };
+  const pulse = await buildOrchestratedPulse({
+    apiUrl: 'https://api.github.com',
+    repository: 'basil-one/agency',
+    token: 'test-token',
+    needs,
+    runId,
+    runUrl,
+    date,
+    generatedAt: `${date}T06:40:00Z`,
+    fetchImpl,
+    unzipImpl
+  });
+
+  assert.equal(pulse.successful, true);
+  assert.match(pulse.markdown, /All 7 dimensions passed in this cycle/);
+  assert.match(pulse.markdown, /\| Site Build Integrity \| Passed \| Same-cycle job result \|/);
+  assert.match(pulse.markdown, /\[same-cycle run\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/888\)/);
+  assert.match(pulse.markdown, /actions\/runs\/888\/artifacts\/456/);
+  assert.match(pulse.markdown, /actions\/runs\/888\/artifacts\/457/);
+  assert.match(pulse.markdown, /No fixed wall-clock completion cutoff is applied/);
+  assert.doesNotMatch(pulse.markdown, /18:00:00Z|prior verification/);
+
+  performanceSummary.source.eventName = 'workflow_dispatch';
+  const manualPulse = await buildOrchestratedPulse({
+    apiUrl: 'https://api.github.com',
+    repository: 'basil-one/agency',
+    token: 'test-token',
+    needs,
+    runId,
+    runUrl,
+    eventName: 'workflow_dispatch',
+    date,
+    generatedAt: `${date}T06:40:00Z`,
+    fetchImpl,
+    unzipImpl
+  });
+  assert.equal(manualPulse.successful, true);
+  assert.match(manualPulse.markdown, /manually dispatched cycle/);
+});
+
+test('orchestrated Pulse never treats failed, skipped, cancelled, unknown, or missing jobs as passed', async () => {
+  const pulse = await buildOrchestratedPulse({
+    apiUrl: 'https://api.github.com',
+    repository: 'basil-one/agency',
+    token: 'test-token',
+    needs: {
+      'site-build': { result: 'failure' },
+      link: { result: 'skipped' },
+      seo: { result: 'cancelled' },
+      'source-quality': { result: 'unexpected' },
+      'dependency-security': { result: 'skipped' },
+      'rendered-site': { result: 'skipped' },
+      performance: { result: 'skipped' }
+    },
+    runId: '889',
+    runUrl: 'https://github.com/basil-one/agency/actions/runs/889',
+    date,
+    generatedAt: `${date}T06:40:00Z`,
+    fetchImpl: async () => {
+      throw new Error('No artifact should be requested for an unexecuted job');
+    }
+  });
+  assert.equal(pulse.successful, false);
+  assert.match(pulse.markdown, /Cycle incomplete — 7 of 7 dimensions/);
+  assert.match(pulse.markdown, /\| Site Build Integrity \| Failed \|/);
+  assert.match(pulse.markdown, /\| Link Integrity \| Skipped \|/);
+  assert.match(pulse.markdown, /\| SEO Integrity \| Incomplete \/ cancelled \|/);
+  assert.match(pulse.markdown, /\| Source Quality \| Unknown outcome \|/);
+  assert.match(pulse.markdown, /\| Performance Integrity \| Skipped \|/);
+
+  const missing = await buildOrchestratedPulse({
+    apiUrl: 'https://api.github.com',
+    repository: 'basil-one/agency',
+    token: 'test-token',
+    needs: {},
+    runId: '890',
+    runUrl: 'https://github.com/basil-one/agency/actions/runs/890',
+    date
+  });
+  assert.equal(missing.successful, false);
+  assert.match(missing.markdown, /\| Site Build Integrity \| Missing \|/);
+});
+
+test('orchestrated Pulse marks missing same-cycle artifacts unknown rather than successful', async () => {
+  const pulse = await buildOrchestratedPulse({
+    apiUrl: 'https://api.github.com',
+    repository: 'basil-one/agency',
+    token: 'test-token',
+    needs: {
+      'site-build': { result: 'success' },
+      link: { result: 'success' },
+      seo: { result: 'success' },
+      'source-quality': { result: 'success' },
+      'dependency-security': { result: 'success' },
+      'rendered-site': { result: 'success' },
+      performance: { result: 'success' }
+    },
+    runId: '891',
+    runUrl: 'https://github.com/basil-one/agency/actions/runs/891',
+    date,
+    fetchImpl: async () => ({ ok: true, json: async () => ({ artifacts: [] }) })
+  });
+  assert.equal(pulse.successful, false);
+  assert.match(pulse.markdown, /\| Dependency Security \| Unknown \/ posture artifact unavailable \|/);
+  assert.match(pulse.markdown, /\| Performance Integrity \| Unknown \/ performance evidence unavailable \|/);
+  assert.match(pulse.markdown, /no clean result is inferred/);
+  assert.match(pulse.markdown, /no comparison is inferred/);
 });

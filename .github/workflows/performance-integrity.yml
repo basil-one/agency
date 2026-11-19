@@ -3,16 +3,20 @@ name: Performance Integrity
 on:
   pull_request:
     branches: [main]
-  schedule:
-    - cron: '17 6 * * *'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      caller_event_name:
+        description: Event that started the orchestration workflow
+        required: false
+        type: string
 
 permissions:
   actions: read
   contents: read
 
 concurrency:
-  group: performance-integrity-${{ github.ref }}
+  group: performance-integrity-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -36,7 +40,7 @@ jobs:
         env:
           PERFORMANCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PERFORMANCE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PERFORMANCE_EVENT_NAME: ${{ github.event_name }}
+          PERFORMANCE_EVENT_NAME: ${{ inputs.caller_event_name || github.event_name }}
       - uses: ruby/setup-ruby@v1
         id: ruby
         if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
@@ -79,7 +83,7 @@ jobs:
         env:
           PERFORMANCE_RUNNER: ubuntu-24.04
           PERFORMANCE_REPORT_DIR: ${{ runner.temp }}/performance-reports
-          PERFORMANCE_EVENT_NAME: ${{ github.event_name }}
+          PERFORMANCE_EVENT_NAME: ${{ inputs.caller_event_name || github.event_name }}
           PERFORMANCE_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -93,7 +97,7 @@ jobs:
           PERFORMANCE_REPORT_DIR: ${{ runner.temp }}/performance-reports
           PERFORMANCE_HISTORY_PATH: ${{ runner.temp }}/performance-history.json
           PERFORMANCE_REFERENCE_PATH: .github/performance-reference.json
-          PERFORMANCE_EVENT_NAME: ${{ github.event_name }}
+          PERFORMANCE_EVENT_NAME: ${{ inputs.caller_event_name || github.event_name }}
           PERFORMANCE_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
       - name: Verify missing-route diagnostic
         id: negative
@@ -134,7 +138,7 @@ jobs:
         env:
           PERFORMANCE_REPORT_DIR: ${{ runner.temp }}/performance-reports
           JOB_STATUS: ${{ job.status }}
-          TRIGGER_NAME: ${{ github.event_name }}
+          TRIGGER_NAME: ${{ inputs.caller_event_name || github.event_name }}
           TRIGGER_REF: ${{ github.head_ref || github.ref_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SKIP_MEASUREMENT: ${{ steps.classify.outputs.skip_measurement }}

@@ -3,6 +3,8 @@ import test from 'node:test';
 import {
   buildComparison,
   isCompleteSummary,
+  isDailyPerformanceEvidence,
+  loadDailyHistory,
   referenceIsReady
 } from '../scripts/compare_performance.mjs';
 
@@ -75,6 +77,16 @@ function makeHistory(summaries, status) {
     status: status ?? (summaries.length === 28 ? 'available' : 'collecting_history'),
     summaries,
     skipped: []
+  };
+}
+
+function makeRun(id, created_at) {
+  return {
+    id,
+    created_at,
+    event: 'schedule',
+    head_branch: 'main',
+    status: 'completed'
   };
 }
 
@@ -156,6 +168,138 @@ test('compares against 28 matching daily-main summaries without applying a perfo
   assert.match(report, /\+587 ms \(\+57\.9%\)/);
   assert.match(report, /do not fail this workflow/);
   assert.equal(comparison.deltasAvailable, true);
+});
+
+test('preserves legacy scheduled and new orchestrated Lighthouse history provenance', () => {
+  const summary = makeSummary();
+  const legacyRun = {
+    id: '123',
+    event: 'schedule',
+    head_branch: 'main',
+    status: 'completed',
+    conclusion: 'success'
+  };
+  assert.equal(
+    isDailyPerformanceEvidence(summary, legacyRun, 'performance-integrity.yml'),
+    true
+  );
+  assert.equal(
+    isDailyPerformanceEvidence(summary, legacyRun, 'quality-pulse.yml', true),
+    true
+  );
+  assert.equal(
+    isDailyPerformanceEvidence(summary, { ...legacyRun, conclusion: 'failure' }, 'performance-integrity.yml'),
+    false
+  );
+  assert.equal(
+    isDailyPerformanceEvidence(summary, legacyRun, 'quality-pulse.yml', false),
+    false
+  );
+  assert.equal(
+    isDailyPerformanceEvidence(summary, { ...legacyRun, event: 'workflow_dispatch' }, 'quality-pulse.yml', true),
+    false
+  );
+  assert.equal(
+    isDailyPerformanceEvidence(
+      { ...summary, source: { ...summary.source, runId: '999' } },
+      legacyRun,
+      'quality-pulse.yml',
+      true
+    ),
+    false
+  );
+});
+
+test('history loads prior standalone runs and successful performance jobs from orchestrated runs', async () => {
+  const runs = {
+    'performance-integrity.yml': [{
+      ...makeRun('legacy-run', '2026-11-16T06:17:00Z'),
+      conclusion: 'success'
+    }],
+    'quality-pulse.yml': [
+      { ...makeRun('orchestrated-run', '2026-11-18T06:17:00Z'), conclusion: 'failure' },
+      { ...makeRun('failed-performance-run', '2026-11-17T06:17:00Z'), conclusion: 'success' },
+      { ...makeRun('manual-run', '2026-11-19T06:17:00Z'), event: 'workflow_dispatch' }
+    ]
+  };
+  const performanceJobs = {
+    'orchestrated-run': [{
+      name: 'Quality Pulse / Performance Integrity',
+      status: 'completed',
+      conclusion: 'success'
+    }],
+    'failed-performance-run': [{
+      name: 'Performance Integrity',
+      status: 'completed',
+      conclusion: 'failure'
+    }]
+  };
+  const artifacts = { 'legacy-run': 901, 'orchestrated-run': 902 };
+  let downloadedArtifact;
+  const fetchImpl = async (input) => {
+    const url = new URL(input);
+    if (url.pathname.endsWith('/actions/workflows/performance-integrity.yml/runs')) {
+      return { ok: true, json: async () => ({ workflow_runs: runs['performance-integrity.yml'] }) };
+    }
+    if (url.pathname.endsWith('/actions/workflows/quality-pulse.yml/runs')) {
+      return { ok: true, json: async () => ({ workflow_runs: runs['quality-pulse.yml'] }) };
+    }
+    const jobsMatch = url.pathname.match(/\/actions\/runs\/([^/]+)\/jobs$/);
+    if (jobsMatch) {
+      return {
+        ok: true,
+        json: async () => ({
+          total_count: performanceJobs[jobsMatch[1]].length,
+          jobs: performanceJobs[jobsMatch[1]]
+        })
+      };
+    }
+    const artifactsMatch = url.pathname.match(/\/actions\/runs\/([^/]+)\/artifacts$/);
+    if (artifactsMatch) {
+      return {
+        ok: true,
+        json: async () => ({
+          artifacts: [{
+            name: 'performance-summary',
+            expired: false,
+            size_in_bytes: 10,
+            id: artifacts[artifactsMatch[1]]
+          }]
+        })
+      };
+    }
+    const downloadMatch = url.pathname.match(/\/actions\/artifacts\/(\d+)\/zip$/);
+    if (downloadMatch) {
+      downloadedArtifact = Number(downloadMatch[1]);
+      return { ok: true, arrayBuffer: async () => new ArrayBuffer(0) };
+    }
+    throw new Error(`Unexpected request: ${url.pathname}`);
+  };
+  const unzipImpl = () => {
+    const runId = downloadedArtifact === 902 ? 'orchestrated-run' : 'legacy-run';
+    const summary = makeSummary({
+      capturedAt: runId === 'orchestrated-run'
+        ? '2026-11-18T06:30:00Z'
+        : '2026-11-16T06:30:00Z'
+    });
+    summary.source.runId = runId;
+    summary.source.runUrl = `https://github.com/basil-one/agency/actions/runs/${runId}`;
+    return JSON.stringify(summary);
+  };
+
+  const history = await loadDailyHistory({
+    fetchImpl,
+    token: 'test-token',
+    repository: 'basil-one/agency',
+    unzipImpl
+  });
+  assert.equal(history.status, 'collecting_history');
+  assert.deepEqual(history.summaries.map((summary) => summary.source.runId), [
+    'orchestrated-run',
+    'legacy-run'
+  ]);
+  assert.ok(history.skipped.some((item) => item.includes('failed-performance-run')));
+  assert.equal(history.summaries.some((summary) => summary.source.runId === 'manual-run'), false);
 });
 
 test('does not compare with history collected under different tools', () => {

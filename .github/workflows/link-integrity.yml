@@ -3,9 +3,8 @@ name: Link Integrity
 on:
   pull_request:
     branches: [main]
-  schedule:
-    - cron: '29 6 * * *'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read

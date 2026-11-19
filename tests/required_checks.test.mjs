@@ -14,7 +14,7 @@ const workflows = [
 test('required PR checks are emitted by their substantive workflow jobs', async () => {
   for (const [file, jobId, displayName] of workflows) {
     const yaml = await readFile(new URL(`../.github/workflows/${file}`, import.meta.url), 'utf8');
-    assert.match(yaml, /^on:\n  pull_request:\n    branches: \[main\]$/m, `${file} runs for PRs to main`);
+    assert.match(yaml, /^on:\n  pull_request:\n    branches: \[main\]\n  workflow_dispatch:\n  workflow_call:$/m, `${file} preserves its PR and callable entry points`);
 
     const jobsStart = yaml.indexOf('\njobs:\n') + '\njobs:\n'.length;
     const jobs = yaml.slice(jobsStart);
