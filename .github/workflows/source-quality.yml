@@ -58,6 +58,8 @@ jobs:
             echo "jactionlint rejected the fixture for an unexpected reason"
             exit 1
           fi
+      - name: Test daily quality orchestration and Pulse
+        run: npm run test:quality-pulse
       - name: Super-Linter
         id: super_linter
         uses: super-linter/super-linter/slim@v9.0.0
