@@ -65,8 +65,8 @@ for (const route of routes) {
         route === '/'
           ? [
               ['coaching action', page.locator('#work-together a[href="/know-your-patterns/"]')],
-              ['consulting contact', page.locator('#work-together a[data-ga-label="pattern_level_consulting_connect"]')],
-              ['Circle3 paper', page.locator('#work-together a[data-ga-label="circle3_paper_from_consulting"]')],
+              ['consulting contact', page.locator('#work-together a[data-ga-label="change_leadership_consulting_connect"]')],
+              ['Circle3 paper', page.locator('#work-together a[data-ga-label="circle3_paper_from_change_leadership_consulting"]')],
               ['reflections action', page.locator('#writing a[href="/reflections/"]')]
             ]
           : route === '/know-your-patterns/'
