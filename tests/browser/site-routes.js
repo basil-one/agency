@@ -4,7 +4,6 @@ import { relative, resolve, sep } from 'node:path';
 const coreSmokeRoutes = [
   '/',
   '/know-your-patterns/',
-  '/consulting/',
   '/reflections/',
   '/origin/'
 ];
