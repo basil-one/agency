@@ -52,9 +52,10 @@ ways:
     - heading: Pattern-Level Consulting
       label: Available by request
       body: >
-        For organizational challenges that keep returning, I help teams
-        recognize underlying patterns, bring perspectives together, and
-        develop approaches that fit their context. We can begin with a conversation.
+        When organizational change stalls or fragments, I help the people
+        driving it surface impediments, integrate perspectives, and turn
+        shared understanding into coordinated action. Circle3 is one
+        published example of the patterns I bring to this work.
       cta:
         destination: connect
         destination_type: action_link
@@ -62,6 +63,11 @@ ways:
         event: conversion
         analytics_label: pattern_level_consulting_connect
         label: Connect to Discuss
+      related_link:
+        destination: https://circle.basil.one/paper/
+        label: Read the Circle3 paper
+        event: resource_click
+        analytics_label: circle3_paper_from_consulting
 
 reflections:
   heading: Reflections
