@@ -85,7 +85,7 @@ test('primary navigation reaches the local reflections page', async ({ page }) =
 test('local and external calls to action are visible without leaving the local site', async ({ page }) => {
   await page.goto('/');
 
-  const offerLink = page.locator('#coaching a[href="/know-your-patterns/"]');
+  const offerLink = page.locator('#work-together a[href="/know-your-patterns/"]');
   const reflectionsLink = page.locator('#writing a[href="/reflections/"]');
   await expect(offerLink).toBeVisible();
   await expect(reflectionsLink).toBeVisible();
@@ -103,17 +103,17 @@ test('local and external calls to action are visible without leaving the local s
 test('consulting is available by request from the homepage', async ({ page }) => {
   await page.goto('/');
 
-  const consultingLink = page.locator('#coaching a[data-ga-label="pattern_level_consulting_connect"]');
+  const consultingLink = page.locator('#work-together a[data-ga-label="pattern_level_consulting_connect"]');
   await expect(consultingLink).toBeVisible();
   await expect(consultingLink).toHaveText('Connect to Discuss');
   expect(new URL(await consultingLink.getAttribute('href')).origin).not.toBe(localOrigin);
 
-  const paperLink = page.locator('#coaching a[data-ga-label="circle3_paper_from_consulting"]');
+  const paperLink = page.locator('#work-together a[data-ga-label="circle3_paper_from_consulting"]');
   await expect(paperLink).toHaveText('Read the Circle3 paper');
   await expect(paperLink).toHaveAttribute('href', 'https://circle.basil.one/paper/');
   const workTogetherLink = page.getByRole('navigation', { name: 'Main navigation' })
     .getByRole('link', { name: 'Work Together' });
-  await expect(workTogetherLink).toHaveAttribute('href', '/#coaching');
+  await expect(workTogetherLink).toHaveAttribute('href', '/#work-together');
 });
 
 test('new generated reflection pages enter route discovery and date-based smoke selection', async ({ page }) => {
