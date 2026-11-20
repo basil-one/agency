@@ -13,7 +13,6 @@ const smokeRoutes = selectSmokeRoutes(siteDirectory);
 const expectedHeadings = new Map([
   ['/', 'Adaptive Leadership, Applied'],
   ['/know-your-patterns/', 'Know Your Patterns'],
-  ['/consulting/', 'Pattern-Level Consulting'],
   ['/reflections/', 'Reflections'],
   ['/origin/', 'Creating Conditions']
 ]);
@@ -101,19 +100,13 @@ test('local and external calls to action are visible without leaving the local s
   expect(new URL(await reservationLink.getAttribute('href')).origin).not.toBe(localOrigin);
 });
 
-test('consulting is discoverable from the homepage and offers a conversation', async ({ page }) => {
+test('consulting is available by request from the homepage', async ({ page }) => {
   await page.goto('/');
 
-  const consultingLink = page.locator('#coaching a[href="/consulting/"]');
+  const consultingLink = page.locator('#coaching a[data-ga-label="pattern_level_consulting_connect"]');
   await expect(consultingLink).toBeVisible();
-  await consultingLink.click();
-
-  await expect(page).toHaveURL(`${localOrigin}/consulting/`);
-  await expect(page.locator('main h1')).toHaveText('Pattern-Level Consulting');
-
-  const connectLink = page.locator('#invitation a[data-ga-label="consulting_connect"]');
-  await expect(connectLink).toHaveText('Connect to Discuss');
-  expect(new URL(await connectLink.getAttribute('href')).origin).not.toBe(localOrigin);
+  await expect(consultingLink).toHaveText('Connect to Discuss');
+  expect(new URL(await consultingLink.getAttribute('href')).origin).not.toBe(localOrigin);
 });
 
 test('new generated reflection pages enter route discovery and date-based smoke selection', async ({ page }) => {
