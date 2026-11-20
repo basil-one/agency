@@ -74,8 +74,10 @@ for (const route of routes) {
                 ['booking action', page.locator('.hero-offer .reserve-button')],
                 ['contact action', page.locator('#booking a[href]').last()]
               ]
-            : route === '/reflections/'
-              ? [['reflection article link', page.locator('#reflections-list a').first()]]
+            : route === '/consulting/'
+              ? [['connect action', page.locator('#invitation a[href]')]]
+              : route === '/reflections/'
+                ? [['reflection article link', page.locator('#reflections-list a').first()]]
               : [['contact action', footer.getByRole('link', { name: 'Email' })]];
       for (const [label, action] of actions) {
         await assertResponsiveTarget(
