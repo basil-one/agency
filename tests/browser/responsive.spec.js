@@ -35,7 +35,7 @@ for (const route of routes) {
       await expect(main.locator('h1').first()).toBeVisible();
 
       const navigation = page.getByRole('navigation', { name: 'Main navigation' });
-      for (const name of ['Coaching', 'Reflections']) {
+      for (const name of ['Work Together', 'Reflections']) {
         await assertResponsiveTarget(
           page,
           navigation.getByRole('link', { name }),
@@ -66,6 +66,7 @@ for (const route of routes) {
           ? [
               ['coaching action', page.locator('#coaching a[href="/know-your-patterns/"]')],
               ['consulting contact', page.locator('#coaching a[data-ga-label="pattern_level_consulting_connect"]')],
+              ['Circle3 paper', page.locator('#coaching a[data-ga-label="circle3_paper_from_consulting"]')],
               ['reflections action', page.locator('#writing a[href="/reflections/"]')]
             ]
           : route === '/know-your-patterns/'
@@ -126,9 +127,9 @@ test('mobile navigation remains operable by touch', async ({ page }) => {
   await page.goto('/');
   const coachingLink = page
     .getByRole('navigation', { name: 'Main navigation' })
-    .getByRole('link', { name: 'Coaching' });
+    .getByRole('link', { name: 'Work Together' });
   const coachingBox = await coachingLink.boundingBox();
-  expect(coachingBox, 'Coaching navigation link must have a touch target.').not.toBeNull();
+  expect(coachingBox, 'Work Together navigation link must have a touch target.').not.toBeNull();
   await page.touchscreen.tap(coachingBox.x + coachingBox.width / 2, coachingBox.y + coachingBox.height / 2);
   await expect(page).toHaveURL(/\/#coaching$/);
   await expect(page.locator('#coaching')).toBeVisible();
