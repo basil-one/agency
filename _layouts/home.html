@@ -34,6 +34,9 @@ layout: default
         {% assign destination = item.cta.destination | relative_url %}
       {% endif %}
       <p><a{% if item.cta.class != empty %} class="{{ item.cta.class | escape }}"{% endif %} href="{{ destination | escape }}" data-ga-event="{{ item.cta.event | escape }}" data-ga-label="{{ item.cta.analytics_label | escape }}">{{ item.cta.label }}</a></p>
+      {% if item.related_link %}
+        <p><a href="{{ item.related_link.destination | escape }}" data-ga-event="{{ item.related_link.event | escape }}" data-ga-label="{{ item.related_link.analytics_label | escape }}">{{ item.related_link.label | escape }}</a></p>
+      {% endif %}
     </div>
   {% endfor %}
 </section>
