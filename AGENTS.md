@@ -1,6 +1,10 @@
+---
+published: false
+---
+
 # Working in Agency
 
-Agency is a Jekyll website for individual coaching and reflections. This repository is not the source for Circle3 or Garden. Follow the approved task; these instructions do not replace its requirements.
+Agency is a Jekyll website for individual coaching and reflections. Follow the approved task; these instructions do not replace its requirements.
 
 ## Understand before changing
 
