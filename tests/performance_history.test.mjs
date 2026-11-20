@@ -170,6 +170,97 @@ test('compares against 28 matching daily-main summaries without applying a perfo
   assert.equal(comparison.deltasAvailable, true);
 });
 
+test('accepts observed Ruby and Node patch drift while preserving exact recorded versions', () => {
+  const current = makeSummary();
+  current.environment.ruby = 'ruby 3.3.14 (2026-11-19 revision f4c37f481b) [x86_64-linux]';
+  current.environment.node = 'v22.23.4';
+  const previousNov18 = makeSummary();
+  previousNov18.environment.ruby = 'ruby 3.3.13 (2026-10-23 revision af48f08f21) [x86_64-linux]';
+  previousNov18.environment.node = 'v22.23.4';
+  const previousNov19 = makeSummary();
+  previousNov19.environment.ruby = 'ruby 3.3.14 (2026-11-19 revision f4c37f481b) [x86_64-linux]';
+  previousNov19.environment.node = 'v22.23.5';
+  const history = makeHistory(Array.from({ length: 28 }, (_, index) =>
+    structuredClone(index % 2 ? previousNov18 : previousNov19)
+  ));
+
+  const { lines, comparison } = buildComparison(current, previousNov18, history);
+
+  assert.equal(comparison.history.status, 'available');
+  assert.equal(comparison.history.availableDailySamples, 28);
+  assert.equal(comparison.fixedReference.available, true);
+  assert.deepEqual(comparison.conditions, []);
+  assert.match(lines.join('\n'), /Ruby and Node must match by major\.minor/);
+  assert.equal(current.environment.ruby, 'ruby 3.3.14 (2026-11-19 revision f4c37f481b) [x86_64-linux]');
+  assert.equal(current.environment.node, 'v22.23.4');
+  const pendingReference = buildComparison(
+    current,
+    { schemaVersion: 1, status: 'pending' },
+    history
+  ).comparison;
+  assert.equal(pendingReference.history.availableDailySamples, 28);
+  assert.equal(pendingReference.fixedReference.available, false);
+  const collecting = buildComparison(
+    current,
+    previousNov18,
+    makeHistory(Array.from({ length: 27 }, (_, index) =>
+      structuredClone(index % 2 ? previousNov18 : previousNov19)
+    ))
+  ).comparison;
+  assert.match(collecting.history.reason, /Ruby and Node major\.minor; other versions exact/);
+});
+
+test('rejects different runtime major.minor and exact-measured tool or platform versions', () => {
+  const incompatibleEnvironments = [
+    ['ruby', 'ruby 3.2.14 (2026-11-19 revision f4c37f481b) [x86_64-linux]', 'Ruby major.minor version differs'],
+    ['node', 'v21.23.4', 'Node major.minor version differs'],
+    ['lighthouse', '13.6.1', 'Lighthouse version/environment differs'],
+    ['chrome', '159.0.8154.7', 'Chrome version/environment differs'],
+    ['runner', 'ubuntu-24.04.1', 'runner version/environment differs'],
+    ['jekyll', 'jekyll 3.10.1', 'Jekyll version/environment differs'],
+    ['chrome', undefined, 'Chrome version/environment is missing']
+  ];
+
+  for (const [key, value, diagnostic] of incompatibleEnvironments) {
+    const current = makeSummary();
+    const baseline = makeSummary();
+    baseline.environment[key] = value;
+    const { comparison } = buildComparison(current, baseline, makeHistory([baseline]));
+    assert.equal(comparison.history.availableDailySamples, 0, `${key} mismatch excludes rolling sample`);
+    assert.equal(comparison.fixedReference.available, false, `${key} mismatch excludes fixed reference`);
+    assert.ok(comparison.conditions.includes(diagnostic), `${key} mismatch is reported`);
+  }
+});
+
+test('fails closed on missing or malformed Ruby and Node versions', () => {
+  const invalidVersions = [
+    ['ruby', undefined],
+    ['ruby', ''],
+    ['ruby', 'ruby 3.3'],
+    ['ruby', '3.3.14-not-a-runtime-output'],
+    ['node', undefined],
+    ['node', ''],
+    ['node', 'v22.23'],
+    ['node', 'node v22.23.4']
+  ];
+
+  for (const target of ['current', 'baseline']) {
+    for (const [key, value] of invalidVersions) {
+      const current = makeSummary();
+      const baseline = makeSummary();
+      const invalid = target === 'current' ? current : baseline;
+      invalid.environment[key] = value;
+      const { comparison } = buildComparison(current, baseline, makeHistory([baseline]));
+      assert.equal(comparison.history.availableDailySamples, 0, `${target} ${key} ${value} excludes rolling sample`);
+      assert.equal(comparison.fixedReference.available, false, `${target} ${key} ${value} excludes fixed reference`);
+      assert.ok(
+        comparison.conditions.includes(`${key === 'ruby' ? 'Ruby' : 'Node'} version is missing or unparseable`),
+        `${target} ${key} ${value} is reported as unknown`
+      );
+    }
+  }
+});
+
 test('preserves legacy scheduled and new orchestrated Lighthouse history provenance', () => {
   const summary = makeSummary();
   const legacyRun = {
@@ -200,6 +291,14 @@ test('preserves legacy scheduled and new orchestrated Lighthouse history provena
     false
   );
   assert.equal(
+    isDailyPerformanceEvidence(summary, { ...legacyRun, event: 'pull_request' }, 'quality-pulse.yml', true),
+    false
+  );
+  assert.equal(
+    isDailyPerformanceEvidence(summary, { ...legacyRun, head_branch: 'copilot/change' }, 'quality-pulse.yml', true),
+    false
+  );
+  assert.equal(
     isDailyPerformanceEvidence(
       { ...summary, source: { ...summary.source, runId: '999' } },
       legacyRun,
@@ -219,7 +318,9 @@ test('history loads prior standalone runs and successful performance jobs from o
     'quality-pulse.yml': [
       { ...makeRun('orchestrated-run', '2026-11-18T06:17:00Z'), conclusion: 'failure' },
       { ...makeRun('failed-performance-run', '2026-11-17T06:17:00Z'), conclusion: 'success' },
-      { ...makeRun('manual-run', '2026-11-19T06:17:00Z'), event: 'workflow_dispatch' }
+      { ...makeRun('manual-run', '2026-11-19T06:17:00Z'), event: 'workflow_dispatch' },
+      { ...makeRun('pull-request-run', '2026-11-15T06:17:00Z'), event: 'pull_request' },
+      { ...makeRun('branch-run', '2026-11-14T06:17:00Z'), head_branch: 'copilot/change' }
     ]
   };
   const performanceJobs = {
@@ -300,6 +401,8 @@ test('history loads prior standalone runs and successful performance jobs from o
   ]);
   assert.ok(history.skipped.some((item) => item.includes('failed-performance-run')));
   assert.equal(history.summaries.some((summary) => summary.source.runId === 'manual-run'), false);
+  assert.equal(history.summaries.some((summary) => summary.source.runId === 'pull-request-run'), false);
+  assert.equal(history.summaries.some((summary) => summary.source.runId === 'branch-run'), false);
 });
 
 test('does not compare with history collected under different tools', () => {

@@ -79,11 +79,29 @@ function referenceIsReady(reference) {
     Boolean(reference.source?.runUrl);
 }
 
+function runtimeMajorMinor(key, value) {
+  if (typeof value !== 'string') return undefined;
+  const version = key === 'ruby'
+    ? value.match(/^(?:ruby\s+)?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\s+\([^)]*\)(?:\s+\[[^\]]+\])?)?$/)
+    : value.match(/^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/);
+  return version ? `${version[1]}.${version[2]}` : undefined;
+}
+
+function runtimeCompatibility(current, baseline, key) {
+  const currentVersion = runtimeMajorMinor(key, current.environment?.[key]);
+  const baselineVersion = runtimeMajorMinor(key, baseline.environment?.[key]);
+  if (!currentVersion || !baselineVersion) return 'unknown';
+  return currentVersion === baselineVersion ? 'compatible' : 'different';
+}
+
 function sameMeasurementEnvironment(current, baseline) {
-  return ['runner', 'lighthouse', 'chrome', 'ruby', 'jekyll', 'node'].every((key) =>
-    current.environment?.[key] &&
+  const exactMatches = ['runner', 'lighthouse', 'chrome', 'jekyll'].every((key) =>
+    typeof current.environment?.[key] === 'string' &&
+    current.environment[key].length > 0 &&
     current.environment[key] === baseline.environment?.[key]
   );
+  return exactMatches &&
+    ['ruby', 'node'].every((key) => runtimeCompatibility(current, baseline, key) === 'compatible');
 }
 
 async function githubRequest(path, token, fetchImpl = fetch) {
@@ -285,12 +303,25 @@ function conditionDifferences(current, baseline) {
     runner: 'runner',
     lighthouse: 'Lighthouse',
     chrome: 'Chrome',
-    ruby: 'Ruby',
-    jekyll: 'Jekyll',
-    node: 'Node'
+    jekyll: 'Jekyll'
   })) {
-    if (current.environment?.[key] !== baseline.environment?.[key]) {
+    if (
+      typeof current.environment?.[key] !== 'string' ||
+      !current.environment[key] ||
+      typeof baseline.environment?.[key] !== 'string' ||
+      !baseline.environment[key]
+    ) {
+      differences.push(`${label} version/environment is missing`);
+    } else if (current.environment[key] !== baseline.environment[key]) {
       differences.push(`${label} version/environment differs`);
+    }
+  }
+  for (const [key, label] of [['ruby', 'Ruby'], ['node', 'Node']]) {
+    const compatibility = runtimeCompatibility(current, baseline, key);
+    if (compatibility === 'unknown') {
+      differences.push(`${label} version is missing or unparseable`);
+    } else if (compatibility === 'different') {
+      differences.push(`${label} major.minor version differs`);
     }
   }
   const currentScripts = new Map((current.externalScripts ?? []).map((script) => [script.source, script]));
@@ -355,7 +386,7 @@ function buildComparison(current, reference, history) {
       ? history.reason
       : compatibleHistory.length === historyLimit
         ? undefined
-        : `${compatibleHistory.length} of ${historyLimit} recent successful daily-main summaries match the current tool and runner versions.`
+        : `${compatibleHistory.length} of ${historyLimit} recent successful daily-main summaries match the current environment (Ruby and Node major.minor; other versions exact).`
   };
   comparisonHistory.summaries = compatibleHistory;
   const rolling = compatibleHistory.length === historyLimit
@@ -391,6 +422,7 @@ function buildComparison(current, reference, history) {
       : comparisonHistory.status === 'available'
         ? `${historyLimit}/${historyLimit} compatible successful daily-main runs; available`
         : `collecting (${compatibleHistory.length}/${historyLimit} compatible successful daily-main runs)`}.`,
+    '- **Environment compatibility:** runner, Lighthouse, Chrome, and Jekyll must match exactly; Ruby and Node must match by major.minor. Full versions remain in the summary artifact.',
     '- Deltas are descriptive only; they do not fail this workflow or establish a performance-quality verdict.'
   ];
   if (deltasAvailable) {
@@ -439,7 +471,7 @@ function buildComparison(current, reference, history) {
   if (differences.length) {
     lines.push(`- **Conditions to consider:** ${differences.join('; ')}.`);
   } else if (comparisons.length) {
-    lines.push('- **Conditions:** tool versions, runner and observed external-script load outcomes match available references.');
+    lines.push('- **Conditions:** compatible tool/runtime versions, runner and observed external-script load outcomes match available references.');
   } else {
     lines.push('- **Conditions:** no reference is available for environment or external-script comparison.');
   }
