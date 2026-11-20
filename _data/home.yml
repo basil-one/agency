@@ -49,6 +49,20 @@ ways:
         analytics_label: integration_session_booking
         label: Book an Integration Session
 
+    - heading: Pattern-Level Consulting
+      label: Available by request
+      body: >
+        For recurring organizational challenges, draw on independent
+        pattern-level practice to recognize what keeps showing up,
+        develop transferable approaches, and apply them in context.
+      cta:
+        destination: /consulting/
+        destination_type: path
+        class: ""
+        event: offer_detail_click
+        analytics_label: pattern_level_consulting
+        label: Explore Consulting
+
 reflections:
   heading: Reflections
   body: >
