@@ -13,6 +13,7 @@ const smokeRoutes = selectSmokeRoutes(siteDirectory);
 const expectedHeadings = new Map([
   ['/', 'Adaptive Leadership, Applied'],
   ['/know-your-patterns/', 'Know Your Patterns'],
+  ['/consulting/', 'Pattern-Level Consulting'],
   ['/reflections/', 'Reflections'],
   ['/origin/', 'Creating Conditions']
 ]);
