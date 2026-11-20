@@ -64,9 +64,9 @@ for (const route of routes) {
       const actions =
         route === '/'
           ? [
-              ['coaching action', page.locator('#coaching a[href="/know-your-patterns/"]')],
-              ['consulting contact', page.locator('#coaching a[data-ga-label="pattern_level_consulting_connect"]')],
-              ['Circle3 paper', page.locator('#coaching a[data-ga-label="circle3_paper_from_consulting"]')],
+              ['coaching action', page.locator('#work-together a[href="/know-your-patterns/"]')],
+              ['consulting contact', page.locator('#work-together a[data-ga-label="pattern_level_consulting_connect"]')],
+              ['Circle3 paper', page.locator('#work-together a[data-ga-label="circle3_paper_from_consulting"]')],
               ['reflections action', page.locator('#writing a[href="/reflections/"]')]
             ]
           : route === '/know-your-patterns/'
@@ -125,14 +125,14 @@ test('mobile navigation remains operable by touch', async ({ page }) => {
   await expect(page).toHaveURL(/\/reflections\/$/);
 
   await page.goto('/');
-  const coachingLink = page
+  const workTogetherLink = page
     .getByRole('navigation', { name: 'Main navigation' })
     .getByRole('link', { name: 'Work Together' });
-  const coachingBox = await coachingLink.boundingBox();
-  expect(coachingBox, 'Work Together navigation link must have a touch target.').not.toBeNull();
-  await page.touchscreen.tap(coachingBox.x + coachingBox.width / 2, coachingBox.y + coachingBox.height / 2);
-  await expect(page).toHaveURL(/\/#coaching$/);
-  await expect(page.locator('#coaching')).toBeVisible();
+  const workTogetherBox = await workTogetherLink.boundingBox();
+  expect(workTogetherBox, 'Work Together navigation link must have a touch target.').not.toBeNull();
+  await page.touchscreen.tap(workTogetherBox.x + workTogetherBox.width / 2, workTogetherBox.y + workTogetherBox.height / 2);
+  await expect(page).toHaveURL(/\/#work-together$/);
+  await expect(page.locator('#work-together')).toBeVisible();
 
   await page.goto('/');
   const originLink = page.locator('footer').getByRole('link', { name: 'Origin' });
