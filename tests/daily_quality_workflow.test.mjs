@@ -23,7 +23,7 @@ test('one daily workflow owns the schedule and fans out to all seven reusable ch
   assert.deepEqual(scheduled, ['quality-pulse.yml']);
 
   const orchestrator = await readFile(new URL('quality-pulse.yml', workflowDirectory), 'utf8');
-  assert.match(orchestrator, /cron: '17 6 \* \* \*'/);
+  assert.match(orchestrator, /cron: '17 3 \* \* \*'/);
   assert.match(orchestrator, /^  workflow_dispatch:$/m);
   for (const [file, jobId] of children) {
     const child = await readFile(new URL(file, workflowDirectory), 'utf8');
@@ -45,12 +45,14 @@ test('Pulse waits for every substantive result and preserves least-privilege per
   assert.match(pulse, /contents: read/);
   assert.match(orchestrator, /dependency-security:\n    name: Dependency Security\n    uses: \.\/\.github\/workflows\/dependency-security\.yml\n    permissions:\n      contents: read\n      vulnerability-alerts: read/);
   assert.match(orchestrator, /performance:\n    name: Performance Integrity\n    uses: \.\/\.github\/workflows\/performance-integrity\.yml\n    with:\n      caller_event_name: \$\{\{ github\.event_name \}\}\n    permissions:\n      actions: read\n      contents: read/);
-  assert.match(orchestrator, /cancel-in-progress: true/);
+  assert.match(orchestrator, /group: daily-quality-\$\{\{ github\.ref \}\}\n  cancel-in-progress: false/);
   for (const [file, group] of [
     ['performance-integrity.yml', 'performance-integrity'],
     ['rendered-site-integrity.yml', 'rendered-site-integrity']
   ]) {
     const yaml = await readFile(new URL(file, workflowDirectory), 'utf8');
-    assert.match(yaml, new RegExp(`group: ${group}-\\$\\{\\{ github\\.workflow \\}\\}-\\$\\{\\{ github\\.ref \\}\\}`));
+    assert.match(yaml, new RegExp(
+      `group: ${group}-\\$\\{\\{ github\\.workflow \\}\\}-\\$\\{\\{ github\\.ref \\}\\}\\n  cancel-in-progress: true`
+    ));
   }
 });

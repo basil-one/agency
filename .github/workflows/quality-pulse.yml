@@ -2,7 +2,7 @@ name: Quality Pulse
 
 on:
   schedule:
-    - cron: '17 6 * * *'
+    - cron: '17 3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: daily-quality-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   site-build:
