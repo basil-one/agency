@@ -107,6 +107,13 @@ test('consulting is available by request from the homepage', async ({ page }) =>
   await expect(consultingLink).toBeVisible();
   await expect(consultingLink).toHaveText('Connect to Discuss');
   expect(new URL(await consultingLink.getAttribute('href')).origin).not.toBe(localOrigin);
+
+  const paperLink = page.locator('#coaching a[data-ga-label="circle3_paper_from_consulting"]');
+  await expect(paperLink).toHaveText('Read the Circle3 paper');
+  await expect(paperLink).toHaveAttribute('href', 'https://circle.basil.one/paper/');
+  const workTogetherLink = page.getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('link', { name: 'Work Together' });
+  await expect(workTogetherLink).toHaveAttribute('href', '/#coaching');
 });
 
 test('new generated reflection pages enter route discovery and date-based smoke selection', async ({ page }) => {
