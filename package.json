@@ -10,7 +10,7 @@
     "test:performance-history": "node --test tests/performance_history.test.mjs",
     "test:performance-skip": "node --test tests/performance_skip.test.mjs",
     "test:performance-summary": "node --test tests/performance_summary.test.mjs",
-    "test:quality-pulse": "node --test tests/quality_pulse.test.mjs tests/dependency_posture.test.mjs",
+    "test:quality-pulse": "node --test tests/daily_quality_workflow.test.mjs tests/quality_pulse.test.mjs tests/dependency_posture.test.mjs",
     "test:required-checks": "node --test tests/required_checks.test.mjs",
     "measure:performance": "node scripts/measure_performance.mjs"
   },

@@ -79,15 +79,33 @@ function referenceIsReady(reference) {
     Boolean(reference.source?.runUrl);
 }
 
-function sameMeasurementEnvironment(current, baseline) {
-  return ['runner', 'lighthouse', 'chrome', 'ruby', 'jekyll', 'node'].every((key) =>
-    current.environment?.[key] &&
-    current.environment[key] === baseline.environment?.[key]
-  );
+function runtimeMajorMinor(key, value) {
+  if (typeof value !== 'string') return undefined;
+  const version = key === 'ruby'
+    ? value.match(/^(?:ruby\s+)?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\s+\([^)]*\)(?:\s+\[[^\]]+\])?)?$/)
+    : value.match(/^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/);
+  return version ? `${version[1]}.${version[2]}` : undefined;
 }
 
-async function githubRequest(path, token) {
-  const response = await fetch(`${process.env.GITHUB_API_URL ?? 'https://api.github.com'}${path}`, {
+function runtimeCompatibility(current, baseline, key) {
+  const currentVersion = runtimeMajorMinor(key, current.environment?.[key]);
+  const baselineVersion = runtimeMajorMinor(key, baseline.environment?.[key]);
+  if (!currentVersion || !baselineVersion) return 'unknown';
+  return currentVersion === baselineVersion ? 'compatible' : 'different';
+}
+
+function sameMeasurementEnvironment(current, baseline) {
+  const exactMatches = ['runner', 'lighthouse', 'chrome', 'jekyll'].every((key) =>
+    typeof current.environment?.[key] === 'string' &&
+    current.environment[key].length > 0 &&
+    current.environment[key] === baseline.environment?.[key]
+  );
+  return exactMatches &&
+    ['ruby', 'node'].every((key) => runtimeCompatibility(current, baseline, key) === 'compatible');
+}
+
+async function githubRequest(path, token, fetchImpl = fetch) {
+  const response = await fetchImpl(`${process.env.GITHUB_API_URL ?? 'https://api.github.com'}${path}`, {
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: 'Bearer ' + token,
@@ -101,9 +119,29 @@ async function githubRequest(path, token) {
   return response;
 }
 
-async function loadDailyHistory() {
-  const token = process.env.GITHUB_TOKEN;
-  const repository = process.env.GITHUB_REPOSITORY;
+function isDailyPerformanceEvidence(summary, run, workflowFile, performanceJobSucceeded = false) {
+  if (
+    run?.status !== 'completed' ||
+    run.event !== 'schedule' ||
+    run.head_branch !== 'main' ||
+    summary?.source?.eventName !== 'schedule' ||
+    summary.source.branch !== 'main' ||
+    String(summary.source.runId) !== String(run.id)
+  ) {
+    return false;
+  }
+  if (workflowFile === 'performance-integrity.yml') {
+    return run.conclusion === 'success';
+  }
+  return workflowFile === 'quality-pulse.yml' && performanceJobSucceeded;
+}
+
+async function loadDailyHistory({
+  fetchImpl = fetch,
+  unzipImpl = execFileSync,
+  token = process.env.GITHUB_TOKEN,
+  repository = process.env.GITHUB_REPOSITORY
+} = {}) {
   if (!token || !repository) {
     return {
       status: 'unavailable',
@@ -114,28 +152,64 @@ async function loadDailyHistory() {
   }
 
   const repoPath = repository.split('/').map(encodeURIComponent).join('/');
-  const workflowPath = encodeURIComponent('performance-integrity.yml');
-  const runsPath = `/repos/${repoPath}/actions/workflows/${workflowPath}/runs?branch=main&event=schedule&status=completed&per_page=100`;
   const summaries = [];
   const skipped = [];
 
   try {
-    const runsResponse = await githubRequest(runsPath, token);
-    const runsData = await runsResponse.json();
-    const runs = (runsData.workflow_runs ?? [])
-      .filter((run) =>
-        run.status === 'completed' &&
-        run.conclusion === 'success' &&
-        run.event === 'schedule' &&
-        run.head_branch === 'main'
-      )
-      .sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at))
-      .slice(0, runSearchLimit);
+    const sources = [
+      { workflowFile: 'performance-integrity.yml' },
+      { workflowFile: 'quality-pulse.yml' }
+    ];
+    const candidates = [];
+    for (const source of sources) {
+      const workflowPath = encodeURIComponent(source.workflowFile);
+      const runsPath = `/repos/${repoPath}/actions/workflows/${workflowPath}/runs?branch=main&event=schedule&status=completed&per_page=${runSearchLimit}`;
+      const runsResponse = await githubRequest(runsPath, token, fetchImpl);
+      const runsData = await runsResponse.json();
+      candidates.push(...(runsData.workflow_runs ?? [])
+        .filter((run) =>
+          run.status === 'completed' &&
+          run.event === 'schedule' &&
+          run.head_branch === 'main' &&
+          (source.workflowFile !== 'performance-integrity.yml' || run.conclusion === 'success')
+        )
+        .map((run) => ({ run, ...source })));
+    }
+    candidates.sort((left, right) =>
+      Date.parse(right.run.created_at) - Date.parse(left.run.created_at)
+    );
 
-    for (const run of runs) {
+    for (const { run, workflowFile } of candidates) {
       try {
+        let performanceJobSucceeded = workflowFile === 'performance-integrity.yml';
+        if (workflowFile === 'quality-pulse.yml') {
+          const jobsResponse = await githubRequest(
+            `/repos/${repoPath}/actions/runs/${run.id}/jobs?per_page=100&page=1`,
+            token,
+            fetchImpl
+          );
+          const jobsData = await jobsResponse.json();
+          if (
+            !Array.isArray(jobsData.jobs) ||
+            !Number.isInteger(jobsData.total_count) ||
+            jobsData.total_count > jobsData.jobs.length
+          ) {
+            skipped.push(`run ${run.id}: performance job evidence was incomplete`);
+            continue;
+          }
+          performanceJobSucceeded = jobsData.jobs.some((job) =>
+            typeof job.name === 'string' &&
+            job.name.split('/').at(-1).trim() === 'Performance Integrity' &&
+            job.status === 'completed' &&
+            job.conclusion === 'success'
+          );
+          if (!performanceJobSucceeded) {
+            skipped.push(`run ${run.id}: Performance Integrity job did not succeed`);
+            continue;
+          }
+        }
         const artifactsPath = `/repos/${repoPath}/actions/runs/${run.id}/artifacts?per_page=100`;
-        const artifactsResponse = await githubRequest(artifactsPath, token);
+        const artifactsResponse = await githubRequest(artifactsPath, token, fetchImpl);
         const artifactData = await artifactsResponse.json();
         const artifact = artifactData.artifacts?.find((item) =>
           item.name === 'performance-summary' &&
@@ -149,7 +223,8 @@ async function loadDailyHistory() {
 
         const archiveResponse = await githubRequest(
           `/repos/${repoPath}/actions/artifacts/${artifact.id}/zip`,
-          token
+          token,
+          fetchImpl
         );
         const archive = Buffer.from(await archiveResponse.arrayBuffer());
         if (archive.length > 1_000_000) {
@@ -161,7 +236,7 @@ async function loadDailyHistory() {
         try {
           const archivePath = join(directory, 'summary.zip');
           writeFileSync(archivePath, archive);
-          const contents = execFileSync(
+          const contents = unzipImpl(
             'unzip',
             ['-p', archivePath, 'performance-summary.json'],
             { encoding: 'utf8', maxBuffer: 1_000_000 }
@@ -169,9 +244,7 @@ async function loadDailyHistory() {
           const summary = JSON.parse(contents);
           if (
             !isCompleteSummary(summary) ||
-            summary.source?.eventName !== 'schedule' ||
-            summary.source?.branch !== 'main' ||
-            String(summary.source?.runId) !== String(run.id)
+            !isDailyPerformanceEvidence(summary, run, workflowFile, performanceJobSucceeded)
           ) {
             skipped.push(`run ${run.id}: summary provenance or coverage did not match`);
             continue;
@@ -193,7 +266,7 @@ async function loadDailyHistory() {
         : `Only ${summaries.length} of ${historyLimit} recent complete daily-main summaries are available.`,
       summaries,
       skipped,
-      searchedRuns: runs.length
+      searchedRuns: candidates.length
     };
   } catch (error) {
     return {
@@ -230,12 +303,25 @@ function conditionDifferences(current, baseline) {
     runner: 'runner',
     lighthouse: 'Lighthouse',
     chrome: 'Chrome',
-    ruby: 'Ruby',
-    jekyll: 'Jekyll',
-    node: 'Node'
+    jekyll: 'Jekyll'
   })) {
-    if (current.environment?.[key] !== baseline.environment?.[key]) {
+    if (
+      typeof current.environment?.[key] !== 'string' ||
+      !current.environment[key] ||
+      typeof baseline.environment?.[key] !== 'string' ||
+      !baseline.environment[key]
+    ) {
+      differences.push(`${label} version/environment is missing`);
+    } else if (current.environment[key] !== baseline.environment[key]) {
       differences.push(`${label} version/environment differs`);
+    }
+  }
+  for (const [key, label] of [['ruby', 'Ruby'], ['node', 'Node']]) {
+    const compatibility = runtimeCompatibility(current, baseline, key);
+    if (compatibility === 'unknown') {
+      differences.push(`${label} version is missing or unparseable`);
+    } else if (compatibility === 'different') {
+      differences.push(`${label} major.minor version differs`);
     }
   }
   const currentScripts = new Map((current.externalScripts ?? []).map((script) => [script.source, script]));
@@ -300,7 +386,7 @@ function buildComparison(current, reference, history) {
       ? history.reason
       : compatibleHistory.length === historyLimit
         ? undefined
-        : `${compatibleHistory.length} of ${historyLimit} recent successful daily-main summaries match the current tool and runner versions.`
+        : `${compatibleHistory.length} of ${historyLimit} recent successful daily-main summaries match the current environment (Ruby and Node major.minor; other versions exact).`
   };
   comparisonHistory.summaries = compatibleHistory;
   const rolling = compatibleHistory.length === historyLimit
@@ -336,6 +422,7 @@ function buildComparison(current, reference, history) {
       : comparisonHistory.status === 'available'
         ? `${historyLimit}/${historyLimit} compatible successful daily-main runs; available`
         : `collecting (${compatibleHistory.length}/${historyLimit} compatible successful daily-main runs)`}.`,
+    '- **Environment compatibility:** runner, Lighthouse, Chrome, and Jekyll must match exactly; Ruby and Node must match by major.minor. Full versions remain in the summary artifact.',
     '- Deltas are descriptive only; they do not fail this workflow or establish a performance-quality verdict.'
   ];
   if (deltasAvailable) {
@@ -384,7 +471,7 @@ function buildComparison(current, reference, history) {
   if (differences.length) {
     lines.push(`- **Conditions to consider:** ${differences.join('; ')}.`);
   } else if (comparisons.length) {
-    lines.push('- **Conditions:** tool versions, runner and observed external-script load outcomes match available references.');
+    lines.push('- **Conditions:** compatible tool/runtime versions, runner and observed external-script load outcomes match available references.');
   } else {
     lines.push('- **Conditions:** no reference is available for environment or external-script comparison.');
   }
@@ -503,4 +590,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   });
 }
 
-export { buildComparison, isCompleteSummary, referenceIsReady };
+export {
+  buildComparison,
+  isCompleteSummary,
+  isDailyPerformanceEvidence,
+  loadDailyHistory,
+  referenceIsReady
+};

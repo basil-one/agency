@@ -3,15 +3,14 @@ name: Rendered Site Integrity
 on:
   pull_request:
     branches: [main]
-  schedule:
-    - cron: '53 6 * * *'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: rendered-site-integrity-${{ github.ref }}
+  group: rendered-site-integrity-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

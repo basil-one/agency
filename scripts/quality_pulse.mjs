@@ -37,6 +37,7 @@ function timestamp(value) {
 }
 
 function runTime(run) {
+  if (run.cycle) return 'Same-cycle job result';
   if (run.completionEvidence?.completedAt) {
     return `Completed ${timestamp(run.completionEvidence.completedAt)}`;
   }
@@ -366,7 +367,9 @@ function renderPerformanceTrends(result) {
 
   const measurement = trends.state === 'prior'
     ? `Prior successful measurement — ${trends.measurementDate}; not today's verification.`
-    : `Measurement — ${trends.measurementDate} UTC (fresh scheduled run).`;
+    : trends.eventName === 'workflow_dispatch'
+      ? `Measurement — ${trends.measurementDate} UTC (manually dispatched cycle).`
+      : `Measurement — ${trends.measurementDate} UTC (fresh scheduled run).`;
   lines.push(
     '',
     `**${measurement}**`,
@@ -400,6 +403,7 @@ async function fetchArtifactJson({
   runId,
   artifactName,
   fileName,
+  fileNames,
   fetchImpl,
   includeMetadata = false,
   unzipImpl = execFileSync
@@ -443,12 +447,20 @@ async function fetchArtifactJson({
   const archivePath = join(directory, `${artifactName}.zip`);
   try {
     writeFileSync(archivePath, archive);
-    const json = unzipImpl(
-      'unzip',
-      ['-p', archivePath, fileName],
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
-    );
-    const data = JSON.parse(json);
+    const data = fileNames
+      ? Object.fromEntries(fileNames.map((name) => [
+        name,
+        JSON.parse(unzipImpl(
+          'unzip',
+          ['-p', archivePath, name],
+          { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+        ))
+      ]))
+      : JSON.parse(unzipImpl(
+        'unzip',
+        ['-p', archivePath, fileName],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+      ));
     return includeMetadata ? { data, artifact } : data;
   } finally {
     rmSync(directory, { recursive: true, force: true });
@@ -481,17 +493,29 @@ function applyDependencyPosture(result, posture) {
   return result;
 }
 
-function renderPulse({ date, generatedAt, results, cutoff = cutoffTime }) {
+function renderPulse({
+  date,
+  generatedAt,
+  results,
+  cutoff = cutoffTime,
+  orchestrated = false
+}) {
   const needsReview = results.filter((item) => item.result.state !== 'fresh');
   const aggregate = needsReview.length
-    ? `Review required — ${needsReview.length} of ${results.length} dimensions are not freshly successful.`
-    : `All ${results.length} dimensions have fresh successful scheduled checks.`;
+    ? orchestrated
+      ? `Cycle incomplete — ${needsReview.length} of ${results.length} dimensions are not confirmed successful.`
+      : `Review required — ${needsReview.length} of ${results.length} dimensions are not freshly successful.`
+    : orchestrated
+      ? `All ${results.length} dimensions passed in this cycle.`
+      : `All ${results.length} dimensions have fresh successful scheduled checks.`;
   const lines = [
     '# Quality Pulse',
     '',
-    `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}  ·  **Cutoff:** ${date} ${cutoff}`,
+    `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}${orchestrated ? '' : `  ·  **Cutoff:** ${date} ${cutoff}`}`,
     '',
-    `**Outcome:** ${aggregate} This is an informational review summary, not a required PR check or remediation verdict.`,
+    `**Outcome:** ${aggregate} ${orchestrated
+      ? 'This summary reflects the same-cycle substantive job results and does not replace their check outcomes.'
+      : 'This is an informational review summary, not a required PR check or remediation verdict.'}`,
     '',
     '## Findings',
     ''
@@ -509,7 +533,9 @@ function renderPulse({ date, generatedAt, results, cutoff = cutoffTime }) {
                 ? "Check today's schedule; an earlier pass is not today's verification."
               : state === 'skipped'
                 ? 'Confirm the skip is expected and arrange a full verification if not.'
-              : 'Wait for completion or inspect the late run; rerun if it does not finish.';
+              : state === 'incomplete'
+                ? 'Inspect the cancelled or incomplete job and rerun the cycle if appropriate.'
+                : 'Wait for completion or inspect the late run; rerun if it does not finish.';
       lines.push(`- **${item.name} — ${item.result.label}:** ${item.result.detail} ${action}`);
     }
   } else {
@@ -526,9 +552,12 @@ function renderPulse({ date, generatedAt, results, cutoff = cutoffTime }) {
   );
   for (const item of results) {
     const result = item.result;
-    const source = result.run && runLink(result.run)
-      ? `[main scheduled run](${runLink(result.run)})`
-      : 'No run link available';
+    const sources = [];
+    if (result.run && runLink(result.run)) {
+      sources.push(`[${orchestrated ? 'same-cycle run' : 'main scheduled run'}](${runLink(result.run)})`);
+    }
+    if (result.artifactUrl) sources.push(`[evidence artifact](${result.artifactUrl})`);
+    const source = sources.length ? sources.join(' · ') : 'No run link available';
     const detail = item.name === 'Performance Integrity'
       ? performanceDetail(result)
       : result.detail;
@@ -536,11 +565,169 @@ function renderPulse({ date, generatedAt, results, cutoff = cutoffTime }) {
       `| ${item.name} | ${result.label} | ${result.run ? runTime(result.run) : 'not measured today'} | ${source} | ${detail.replace(/\|/g, '\\|')} |`
     );
   }
-  lines.push(
-    '',
-    `Daily workflow runs are queried from \`main\` with \`schedule\` provenance. Runs must complete by ${cutoff} UTC to count as fresh; late or missing runs are not replaced with prior green results.`
-  );
+  lines.push('');
+  lines.push(orchestrated
+    ? 'Each outcome below comes from the corresponding reusable workflow job in this run. No fixed wall-clock completion cutoff is applied.'
+    : `Daily workflow runs are queried from \`main\` with \`schedule\` provenance. Runs must complete by ${cutoff} UTC to count as fresh; late or missing runs are not replaced with prior green results.`);
   return `${lines.join('\n')}\n`;
+}
+
+function orchestratedJobResult(needs, jobId, name, run) {
+  if (!needs || !Object.hasOwn(needs, jobId)) {
+    return {
+      name,
+      result: {
+        state: 'missing',
+        label: 'Missing',
+        run,
+        detail: `The orchestration did not provide a result for the ${jobId} job.`
+      }
+    };
+  }
+  const outcome = needs[jobId]?.result;
+  const outcomes = {
+    success: ['fresh', 'Passed', 'The substantive check completed successfully in this cycle.'],
+    failure: ['failed', 'Failed', 'The substantive check failed in this cycle; inspect its job logs and artifacts.'],
+    skipped: ['skipped', 'Skipped', 'The substantive check was skipped; confirm whether the skip was intentional.'],
+    cancelled: ['incomplete', 'Incomplete / cancelled', 'The substantive check was cancelled before a result was established.']
+  };
+  const mapped = outcomes[outcome];
+  if (!mapped) {
+    return {
+      name,
+      result: {
+        state: 'unknown',
+        label: 'Unknown outcome',
+        run,
+        detail: `The orchestration reported an unavailable or unrecognized ${jobId} result; no pass is inferred.`
+      }
+    };
+  }
+  return {
+    name,
+    result: { state: mapped[0], label: mapped[1], run, detail: mapped[2] }
+  };
+}
+
+async function buildOrchestratedPulse({
+  apiUrl,
+  repository,
+  token,
+  needs,
+  runId,
+  runUrl,
+  eventName = 'schedule',
+  branch = 'main',
+  date,
+  generatedAt = new Date().toISOString(),
+  fetchImpl = fetch,
+  unzipImpl = execFileSync
+}) {
+  const run = {
+    id: runId,
+    html_url: runUrl,
+    cycle: true
+  };
+  const jobMap = [
+    ['site-build', 'Site Build Integrity'],
+    ['link', 'Link Integrity'],
+    ['seo', 'SEO Integrity'],
+    ['source-quality', 'Source Quality'],
+    ['dependency-security', 'Dependency Security'],
+    ['rendered-site', 'Rendered Site Integrity'],
+    ['performance', 'Performance Integrity']
+  ];
+  const results = jobMap.map(([jobId, name]) =>
+    orchestratedJobResult(needs, jobId, name, run)
+  );
+  const artifactOptions = { apiUrl, repository, token, runId, fetchImpl, unzipImpl };
+  const performance = results.find((item) => item.name === 'Performance Integrity');
+  if (['fresh', 'failed'].includes(performance.result.state)) {
+    try {
+      const { data: files, artifact } = await fetchArtifactJson({
+        ...artifactOptions,
+        artifactName: 'performance-summary',
+        fileNames: ['performance-comparison.json', 'performance-summary.json'],
+        includeMetadata: true
+      });
+      const comparison = files['performance-comparison.json'];
+      const summary = files['performance-summary.json'];
+      if (
+        !isPerformanceComparison(comparison) ||
+        summary?.complete !== true ||
+        summary.source?.eventName !== eventName ||
+        summary.source?.branch !== branch ||
+        String(summary.source?.runId) !== String(runId)
+      ) {
+        throw new Error('performance artifacts have incomplete or mismatched cycle provenance');
+      }
+      const measurementDate = summary.capturedAt?.slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(measurementDate ?? '')) {
+        throw new Error('Performance Integrity summary has no valid measurement date');
+      }
+      performance.result.baseline = describePerformanceComparison(comparison);
+      performance.result.trends = {
+        state: performance.result.state,
+        measurementDate,
+        eventName: summary.source.eventName,
+        comparison,
+        runUrl,
+        artifactUrl: `https://github.com/${repository}/actions/runs/${runId}/artifacts/${artifact.id}`
+      };
+      performance.result.artifactUrl = performance.result.trends.artifactUrl;
+    } catch (error) {
+      if (performance.result.state === 'fresh') {
+        performance.result.state = 'unknown';
+        performance.result.label = 'Unknown / performance evidence unavailable';
+      }
+      performance.result.detail += ` Performance evidence unavailable or invalid (${error.message}); no comparison is inferred.`;
+      performance.result.baseline = 'fixed reference: unknown; rolling baseline: unknown';
+      performance.result.trends = {
+        reason: `comparison artifact unavailable or invalid (${error.message})`,
+        baseline: performance.result.baseline,
+        runUrl
+      };
+    }
+  } else {
+    performance.result.trends = {
+      reason: `this cycle's Performance Integrity result is ${performance.result.label.toLowerCase()}; no successful current trend is shown`,
+      runUrl
+    };
+  }
+
+  const dependency = results.find((item) => item.name === 'Dependency Security');
+  if (['fresh', 'failed'].includes(dependency.result.state)) {
+    try {
+      const { data: posture, artifact } = await fetchArtifactJson({
+        ...artifactOptions,
+        artifactName: 'dependency-posture',
+        fileName: 'dependency-posture.json',
+        includeMetadata: true
+      });
+      if (!['passed', 'review', 'unknown'].includes(posture?.status)) {
+        throw new Error('dependency posture artifact has an invalid outcome');
+      }
+      dependency.result = applyDependencyPosture(dependency.result, posture);
+      dependency.result.artifactUrl = `https://github.com/${repository}/actions/runs/${runId}/artifacts/${artifact.id}`;
+    } catch (error) {
+      if (dependency.result.state === 'fresh') {
+        dependency.result.state = 'unknown';
+        dependency.result.label = 'Unknown / posture artifact unavailable';
+      }
+      dependency.result.detail += ` Dependency posture evidence unavailable or invalid (${error.message}); no clean result is inferred.`;
+    }
+  }
+
+  const markdown = renderPulse({
+    date,
+    generatedAt,
+    results,
+    orchestrated: true
+  });
+  return {
+    markdown,
+    successful: results.every((item) => item.result.state === 'fresh')
+  };
 }
 
 async function buildPulse({
@@ -685,17 +872,23 @@ async function buildPulse({
 
 async function main() {
   const date = process.env.PULSE_DATE ?? utcDate(new Date());
-  const markdown = await buildPulse({
+  const pulse = await buildOrchestratedPulse({
     apiUrl: process.env.GITHUB_API_URL ?? 'https://api.github.com',
     repository: process.env.GITHUB_REPOSITORY,
     token: process.env.GITHUB_TOKEN,
+    needs: JSON.parse(process.env.PULSE_RESULTS_JSON ?? '{}'),
+    runId: process.env.PULSE_RUN_ID,
+    runUrl: process.env.PULSE_RUN_URL,
+    eventName: process.env.PULSE_EVENT_NAME ?? 'schedule',
+    branch: process.env.PULSE_RUN_BRANCH ?? 'main',
     date,
     generatedAt: process.env.PULSE_GENERATED_AT ?? new Date().toISOString()
   });
   if (process.env.GITHUB_STEP_SUMMARY) {
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown);
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, pulse.markdown);
   }
-  process.stdout.write(markdown);
+  process.stdout.write(pulse.markdown);
+  if (!pulse.successful) process.exitCode = 1;
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
@@ -704,6 +897,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
 
 export {
   applyDependencyPosture,
+  buildOrchestratedPulse,
   buildPulse,
   completionEvidenceFromJobs,
   describePerformanceComparison,
