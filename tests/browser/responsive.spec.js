@@ -66,6 +66,7 @@ for (const route of routes) {
         route === '/'
           ? [
               ['coaching action', page.locator('#coaching a[href="/know-your-patterns/"]')],
+              ['consulting action', page.locator('#coaching a[href="/consulting/"]')],
               ['reflections action', page.locator('#writing a[href="/reflections/"]')]
             ]
           : route === '/know-your-patterns/'
