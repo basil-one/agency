@@ -101,6 +101,21 @@ test('local and external calls to action are visible without leaving the local s
   expect(new URL(await reservationLink.getAttribute('href')).origin).not.toBe(localOrigin);
 });
 
+test('consulting is discoverable from the homepage and offers a conversation', async ({ page }) => {
+  await page.goto('/');
+
+  const consultingLink = page.locator('#coaching a[href="/consulting/"]');
+  await expect(consultingLink).toBeVisible();
+  await consultingLink.click();
+
+  await expect(page).toHaveURL(`${localOrigin}/consulting/`);
+  await expect(page.locator('main h1')).toHaveText('Pattern-Level Consulting');
+
+  const connectLink = page.locator('#invitation a[data-ga-label="consulting_connect"]');
+  await expect(connectLink).toHaveText('Connect to Discuss');
+  expect(new URL(await connectLink.getAttribute('href')).origin).not.toBe(localOrigin);
+});
+
 test('new generated reflection pages enter route discovery and date-based smoke selection', async ({ page }) => {
   const fixtureDirectory = mkdtempSync(resolve(tmpdir(), 'agency-rendered-fixture-'));
   const fixtureRoutes = [
