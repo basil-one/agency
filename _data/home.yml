@@ -52,16 +52,16 @@ ways:
     - heading: Pattern-Level Consulting
       label: Available by request
       body: >
-        For recurring organizational challenges, draw on independent
-        pattern-level practice to recognize what keeps showing up,
-        develop transferable approaches, and apply them in context.
+        For organizational challenges that keep returning, I help teams
+        recognize underlying patterns, bring perspectives together, and
+        develop approaches that fit their context. We can begin with a conversation.
       cta:
-        destination: /consulting/
-        destination_type: path
+        destination: connect
+        destination_type: action_link
         class: ""
-        event: offer_detail_click
-        analytics_label: pattern_level_consulting
-        label: Explore Consulting
+        event: conversion
+        analytics_label: pattern_level_consulting_connect
+        label: Connect to Discuss
 
 reflections:
   heading: Reflections
