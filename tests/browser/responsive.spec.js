@@ -12,7 +12,6 @@ const latestReflection = reflections.at(-1);
 const routes = [
   '/',
   '/know-your-patterns/',
-  '/consulting/',
   '/reflections/',
   ...(latestReflection ? [latestReflection.route] : []),
   '/origin/'
@@ -66,7 +65,7 @@ for (const route of routes) {
         route === '/'
           ? [
               ['coaching action', page.locator('#coaching a[href="/know-your-patterns/"]')],
-              ['consulting action', page.locator('#coaching a[href="/consulting/"]')],
+              ['consulting contact', page.locator('#coaching a[data-ga-label="pattern_level_consulting_connect"]')],
               ['reflections action', page.locator('#writing a[href="/reflections/"]')]
             ]
           : route === '/know-your-patterns/'
@@ -74,10 +73,8 @@ for (const route of routes) {
                 ['booking action', page.locator('.hero-offer .reserve-button')],
                 ['contact action', page.locator('#booking a[href]').last()]
               ]
-            : route === '/consulting/'
-              ? [['connect action', page.locator('#invitation a[href]')]]
-              : route === '/reflections/'
-                ? [['reflection article link', page.locator('#reflections-list a').first()]]
+            : route === '/reflections/'
+              ? [['reflection article link', page.locator('#reflections-list a').first()]]
               : [['contact action', footer.getByRole('link', { name: 'Email' })]];
       for (const [label, action] of actions) {
         await assertResponsiveTarget(
