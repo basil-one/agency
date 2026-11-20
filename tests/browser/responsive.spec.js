@@ -12,6 +12,7 @@ const latestReflection = reflections.at(-1);
 const routes = [
   '/',
   '/know-your-patterns/',
+  '/consulting/',
   '/reflections/',
   ...(latestReflection ? [latestReflection.route] : []),
   '/origin/'
