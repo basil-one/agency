@@ -36,7 +36,7 @@
         <span class="site-name-secondary">Michael Basil</span>
       </a>
       <nav aria-label="Main navigation">
-        <a href="{{ '/#coaching' | relative_url }}"{% if page.url == '/know-your-patterns/' %} class="active"{% endif %}>Coaching</a>
+        <a href="{{ '/#coaching' | relative_url }}"{% if page.url == '/know-your-patterns/' %} class="active"{% endif %}>Work Together</a>
         <a href="{{ '/reflections/' | relative_url }}"{% if page.url contains '/reflections/' %} class="active"{% endif %}{% if page.url == '/reflections/' %} aria-current="page"{% endif %}>Reflections</a>
       </nav>
     </div>
@@ -46,7 +46,7 @@
   </main>
   <footer>
     <span>{{ site.footer.copyright | default: '' }}</span>
-    <a href="{{ '/#coaching' | relative_url }}">Coaching</a>
+    <a href="{{ '/#coaching' | relative_url }}">Work Together</a>
     <a href="{{ '/origin/' | relative_url }}">Origin</a>
     <a href="{{ '/reflections/' | relative_url }}">Reflections</a>
     <a href="{{ site.action_links.email | escape }}" data-ga-event="contact_click" data-ga-label="footer_email">Email</a>
