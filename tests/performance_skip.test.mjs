@@ -13,7 +13,8 @@ title: ${slug}
 subtitle: An editorial subtitle.
 description: >-
   An editorial description.
-date: 2026-11-16
+published: 2026-11-16
+revised: null
 permalink: /reflections/${slug}/
 css_id: reflection-${slug}
 ---
@@ -70,6 +71,16 @@ test('skips an editorial text and metadata edit to an existing reflection', () =
   const updated = original
     .replace('title: existing', 'title: Updated title')
     .replace('Editorial reflection text.', 'Revised editorial reflection text.');
+  const result = scenario({
+    base: { '_reflections/existing.md': original },
+    head: { '_reflections/existing.md': updated }
+  });
+  assert.equal(result.skip, true);
+});
+
+test('skips a revised date metadata edit to an existing reflection', () => {
+  const original = reflection('existing');
+  const updated = original.replace('revised: null', 'revised: 2026-11-17');
   const result = scenario({
     base: { '_reflections/existing.md': original },
     head: { '_reflections/existing.md': updated }
@@ -146,7 +157,7 @@ test('runs the full baseline when a Markdown image reference target changes', ()
 
 test('runs the full baseline for behavior-affecting or unknown front matter edits', () => {
   for (const [before, after] of [
-    ['date: 2026-11-16', 'date: 2026-11-17'],
+    ['published: 2026-11-16', 'published: 2026-11-17'],
     ['permalink: /reflections/existing/', 'permalink: /reflections/changed/'],
     ['css_id: reflection-existing', 'css_id: reflection-changed'],
     ['layout: reflection', 'layout: page'],

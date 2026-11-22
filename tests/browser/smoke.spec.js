@@ -70,6 +70,61 @@ test('the reflections index links to a selected article', async ({ page }) => {
   await expect(page.locator('main h1')).toHaveText(/\S/);
 });
 
+test('reflection details label publication and conditional revision dates and retain reading time', async ({ page }) => {
+  const revisedReflection = reflections.find(({ revisedAt }) => revisedAt !== null);
+  const unrevisedReflection = reflections.find(({ revisedAt }) => revisedAt === null);
+  expect(revisedReflection, 'A revised reflection is needed for this regression test.').toBeDefined();
+  expect(unrevisedReflection, 'An unrevised reflection is needed for this regression test.').toBeDefined();
+
+  for (const reflection of [revisedReflection, unrevisedReflection]) {
+    await page.goto(reflection.route);
+    const dateAndReadingTime = page.locator('#hero .publish-date');
+    await expect(dateAndReadingTime).toContainText('Published');
+    await expect(dateAndReadingTime).toContainText(/\d+ min read/);
+    const dates = dateAndReadingTime.locator('time');
+    await expect(dates).toHaveCount(reflection.revisedAt === null ? 1 : 2);
+    expect(Date.parse(await dates.nth(0).getAttribute('datetime'))).toBe(reflection.publishedAt);
+
+    if (reflection.revisedAt === null) {
+      await expect(dateAndReadingTime).not.toContainText('Revised');
+    } else {
+      await expect(dateAndReadingTime).toContainText('Revised');
+      expect(Date.parse(await dates.nth(1).getAttribute('datetime'))).toBe(reflection.revisedAt);
+    }
+  }
+});
+
+test('the reflections index shows publication dates and sorts by publication, not revision date', async ({ page }) => {
+  const olderWithLaterRevision = reflections.find((reflection) =>
+    reflection.revisedAt !== null &&
+    reflections.some((other) =>
+      other.publishedAt > reflection.publishedAt && other.publishedAt < reflection.revisedAt
+    )
+  );
+  expect(olderWithLaterRevision, 'A reflection revised after a newer publication is needed for this regression test.').toBeDefined();
+
+  await page.goto('/reflections/');
+  const entries = await page.locator('#reflections-list article').evaluateAll((articles) =>
+    articles.map((article) => ({
+      href: article.querySelector('h2 a')?.getAttribute('href'),
+      date: article.querySelector('.publish-date time')?.getAttribute('datetime'),
+      metadata: article.querySelector('.publish-date')?.textContent ?? ''
+    }))
+  );
+  const expectedOrder = [...reflections]
+    .sort((left, right) => right.publishedAt - left.publishedAt || right.route.localeCompare(left.route))
+    .map(({ route }) => route);
+
+  expect(entries.map(({ href }) => href)).toEqual(expectedOrder);
+  for (const entry of entries) {
+    const reflection = reflections.find(({ route }) => route === entry.href);
+    expect(reflection, `Unexpected reflection in index: ${entry.href}`).toBeDefined();
+    expect(Date.parse(entry.date)).toBe(reflection.publishedAt);
+    expect(entry.metadata).not.toMatch(/Published|Revised/);
+    expect(entry.metadata).toMatch(/\d+ min read/);
+  }
+});
+
 test('primary navigation reaches the local reflections page', async ({ page }) => {
   await page.goto('/');
 
