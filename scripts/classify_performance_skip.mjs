@@ -65,6 +65,7 @@ function fieldAt(lines, index, range) {
 function safeMetadataChange(change, versionLines, versionFrontMatter, isNewFile) {
   const location = fieldAt(versionLines, change.lineNumber - 1, versionFrontMatter);
   if (!location) return false;
+  if (location.field === 'revised' && /^revised:\s*(?:null|\d{4}-\d{2}-\d{2})\s*$/.test(change.line)) return true;
   if (editorialFields.has(location.field)) {
     if (location.continuation) return location.blockScalar;
     return !/^\s*(?:[&*!{}\[\]]|<<:)/.test(location.value);

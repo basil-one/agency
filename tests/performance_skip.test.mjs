@@ -78,6 +78,16 @@ test('skips an editorial text and metadata edit to an existing reflection', () =
   assert.equal(result.skip, true);
 });
 
+test('skips a revised date metadata edit to an existing reflection', () => {
+  const original = reflection('existing');
+  const updated = original.replace('revised: null', 'revised: 2026-11-17');
+  const result = scenario({
+    base: { '_reflections/existing.md': original },
+    head: { '_reflections/existing.md': updated }
+  });
+  assert.equal(result.skip, true);
+});
+
 test('skips multiple added and edited text-only reflections', () => {
   const result = scenario({
     base: { '_reflections/existing.md': reflection('existing') },
