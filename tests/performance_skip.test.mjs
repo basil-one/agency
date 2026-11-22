@@ -13,7 +13,8 @@ title: ${slug}
 subtitle: An editorial subtitle.
 description: >-
   An editorial description.
-date: 2026-11-16
+published: 2026-11-16
+revised: null
 permalink: /reflections/${slug}/
 css_id: reflection-${slug}
 ---
@@ -146,7 +147,7 @@ test('runs the full baseline when a Markdown image reference target changes', ()
 
 test('runs the full baseline for behavior-affecting or unknown front matter edits', () => {
   for (const [before, after] of [
-    ['date: 2026-11-16', 'date: 2026-11-17'],
+    ['published: 2026-11-16', 'published: 2026-11-17'],
     ['permalink: /reflections/existing/', 'permalink: /reflections/changed/'],
     ['css_id: reflection-existing', 'css_id: reflection-changed'],
     ['layout: reflection', 'layout: page'],

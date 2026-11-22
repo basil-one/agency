@@ -72,7 +72,8 @@ function safeMetadataChange(change, versionLines, versionFrontMatter, isNewFile)
   if (!isNewFile || location.continuation) return false;
   const line = change.line;
   return (location.field === 'layout' && /^layout:\s*reflection\s*$/.test(line)) ||
-    (location.field === 'date' && /^date:\s*\d{4}-\d{2}-\d{2}\s*$/.test(line)) ||
+    (location.field === 'published' && /^published:\s*\d{4}-\d{2}-\d{2}\s*$/.test(line)) ||
+    (location.field === 'revised' && /^revised:\s*(?:null|\d{4}-\d{2}-\d{2})\s*$/.test(line)) ||
     (location.field === 'permalink' && /^permalink:\s*\/reflections\/[a-z0-9-]+\/\s*$/.test(line)) ||
     (location.field === 'css_id' && /^css_id:\s*reflection-[a-z0-9-]+\s*$/.test(line));
 }
