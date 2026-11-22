@@ -43,12 +43,14 @@ export function discoverReflections(siteDirectory) {
     .map(({ route, filePath, html }) => {
       const dateTime = html.match(/<time\b[^>]*\bdatetime=["']([^"']+)["']/i)?.[1];
       const publishedAt = dateTime ? Date.parse(dateTime) : Number.NaN;
+      const revisedDateTime = html.match(/<span>Revised\s*<time\b[^>]*\bdatetime=["']([^"']+)["']/i)?.[1];
+      const revisedAt = revisedDateTime ? Date.parse(revisedDateTime) : null;
 
       if (!Number.isFinite(publishedAt)) {
         throw new Error(`Could not read the publication date for generated reflection ${route}.`);
       }
 
-      return { route, filePath, publishedAt };
+      return { route, filePath, publishedAt, revisedAt };
     })
     .sort((left, right) => left.publishedAt - right.publishedAt || left.route.localeCompare(right.route));
 }

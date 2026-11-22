@@ -19,7 +19,7 @@ layout: default
       {% if reading_minutes < 1 %}{% assign reading_minutes = 1 %}{% endif %}
       {% if item.published %}
         <p class="publish-date">
-          <span>Published <time datetime="{{ item.published | date_to_xmlschema }}">{{ item.published | date: "%B %-d, %Y" }}</time></span>
+          <time datetime="{{ item.published | date_to_xmlschema }}">{{ item.published | date: "%B %-d, %Y" }}</time>
           &middot; {{ reading_minutes }} min read
         </p>
       {% endif %}
