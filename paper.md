@@ -14,4 +14,3 @@ Agency2™ is under development. Pattern mining is underway, and a paper is not 
 
 This page will evolve as the work takes shape.
 
-The planned Agency2 paper will be shared under [Creative Commons Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/) (CC BY-SA 4.0) when published.
