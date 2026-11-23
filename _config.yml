@@ -19,3 +19,7 @@ analytics:
   ga_measurement_id: G-EEW23EJSSR
 footer:
   copyright: "© 2026 Michael Basil"
+
+# Legal texts are repository references, not generated site pages.
+exclude:
+  - LICENSES
