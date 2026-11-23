@@ -26,5 +26,4 @@ The Pattern-Level Consultant approach offers considerations for designing relati
 
 <p class="consulting-actions">
   <a href="{{ '/consulting/models/pattern-level-consultant/' | relative_url }}">Explore Pattern-Level Consultant</a>
-  <a href="{{ site.action_links.connect }}">Connect to Discuss</a>
 </p>
