@@ -25,9 +25,16 @@ It is useful when conventional engagement terms do not fully account for the val
 
 **Why it matters:** Community participation refines approaches and gives clients and providers access to specialized knowledge, relationships, and emerging talent.
 
-**In practice:** Independent publishing, open-source work, meetups, and community participation are upstream sources of value. Examples include [Basil One's published repositories](https://github.com/basil-one), including the [Circle3 source](https://github.com/basil-one/circle) and [Agency source](https://github.com/basil-one/agency); participation in communities such as the [InnerSource Commons Foundation](https://innersourcecommons.org) and [PLoP](https://plopcon.org); and openly published practice models such as [Circle3](https://circle.basil.one).
+**In practice:** Independent publishing, open-source work, and professional communities are upstream sources of value. For example:
 
-These examples illustrate contributions and connections, not endorsement, ownership, or authorship of others' work. Applicable licenses and third-party rights remain in force.
+- **Published practice and source**
+  - [Circle3™](https://circle.basil.one), a published practice model, and its [source repository](https://github.com/basil-one/circle).
+  - [Agency](https://agency.basil.one) and its [source repository](https://github.com/basil-one/agency), alongside other [Basil One GitHub work](https://github.com/basil-one).
+- **Communities and collaborative development**
+  - [InnerSource Commons Foundation](https://innersourcecommons.org) and the [InnerSource Commons GitHub organization](https://github.com/InnerSourceCommons).
+  - [PLoP](https://plopcon.org), where practitioners develop and refine patterns together.
+
+These are examples of participation, published work, and relevant communities—not claims of endorsement, ownership, or authorship of others' contributions. Applicable licenses and third-party rights remain in force.
 
 ## 03 Independent professional activity
 
