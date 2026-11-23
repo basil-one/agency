@@ -8,7 +8,7 @@ css_id: pattern-level-consultant
 
 # Pattern-Level Consultant
 
-**Mutual Advantage Model | Prototypical Practitioner: Michael Basil**
+**Mutual Advantage Model**
 
 Pattern-Level Consultants recognize recurring problems, develop transferable approaches, and help organizations apply them. Their independent practice, communities, and relationships create value beyond any single engagement. This model explores how clients, providers, and consultants can each realize greater value by considering their interests together and strengthening the engagement as a whole.
 
@@ -16,17 +16,15 @@ Pattern-Level Consultants recognize recurring problems, develop transferable app
 
 **Why it matters:** Clients gain access to expertise developed across contexts without needing to own the independent practice behind it.
 
-**In practice:** Client-commissioned deliverables and code belong to the client as contracted; pre-existing works and generalizable improvements developed outside scope remain with their rights holders. Independently developed or mined patterns may be published openly under applicable licenses, benefiting everyone—including those who recognize their influence. Michael’s authorship, open-source work, teaching, and leadership development illustrate the practice. Protect confidentiality and third-party rights.
+**In practice:** Client-commissioned deliverables and code belong to the client as contracted; pre-existing works and generalizable improvements developed outside scope remain with their rights holders. Independently developed or mined patterns may be published openly under applicable licenses, benefiting everyone—including those who recognize their influence. Independent authorship, open-source work, teaching, and leadership development can all be part of that practice. Protect confidentiality and third-party rights.
 
 ## 02 Upstream contributions and communities
 
 **Why it matters:** Community participation refines approaches and gives clients and providers access to specialized knowledge, relationships, and emerging talent.
 
-**In practice:** Independent publishing, open-source work, meetups, and community participation are upstream sources of value. Illustrative sources informing Michael’s practice:
+**In practice:** Independent publishing, open-source work, meetups, and community participation are upstream sources of value. Examples of communities and published work:
 
-GitHub.com: [basil-one](https://github.com/basil-one) · [mindset-dojo](https://github.com/mindset-dojo) · [innersourcecommons](https://github.com/InnerSourceCommons) · [CloudSecurityOfficeHours](https://github.com/CloudSecurityOfficeHours)
-
-Patterns: [circle3](https://circle.basil.one) · [agency2](https://agency.basil.one) · [plopcon.org](https://plopcon.org) · [hillside.net](https://hillside.net) · [dl.acm.org](https://dl.acm.org)
+Open-source communities, pattern-writing conferences, professional networks, and openly published practice models can all contribute. [Circle3](https://circle.basil.one) is one example of a published practice model; [PLoP](https://plopcon.org) is one example of a community where patterns are developed and refined.
 
 Participation does not imply code authorship or ownership; licenses and third-party rights apply.
 
@@ -34,7 +32,7 @@ Participation does not imply code authorship or ownership; licenses and third-pa
 
 **Why it matters:** Publishing, podcast and conference appearances, coaching, and community work bring new problems and perspectives into practice—giving clients broader insight and providers greater capability and reach.
 
-**In practice:** Consultants remain free to pursue these activities outside client duties without routine approval, while respecting confidentiality, resource use, conflicts, and endorsement boundaries. For purchased services, agree scope, fees, schedule, rights, and provider economics separately—for example, Michael’s [Know Your Patterns](/know-your-patterns/) coaching. Awareness alone grants no free access or exclusivity.
+**In practice:** Consultants remain free to pursue these activities outside client duties without routine approval, while respecting confidentiality, resource use, conflicts, and endorsement boundaries. For purchased services, agree scope, fees, schedule, rights, and provider economics separately—for example, an independently offered coaching service. Awareness alone grants no free access or exclusivity.
 
 ## 04 Quarterly practice exchanges
 
@@ -46,7 +44,7 @@ Participation does not imply code authorship or ownership; licenses and third-pa
 
 **Why it matters:** [Pattern Languages of Programs, People & Practices](https://plopcon.org) (PLoP) is a foundational gathering where practitioners across disciplines develop, challenge, and refine reusable knowledge.
 
-**In practice:** Sponsor annual PLoP participation or an agreed alternative of similar cost. Michael’s 2026 all-in PLoP cost was under $3,000 (planning reference). Interested clients and providers may attend as guests at reduced rates. Fund approved registration, travel, and lodging separately from consulting rates. Sponsorship may bring acknowledgment, but not authorship, editorial control, or independent IP.
+**In practice:** Sponsor annual PLoP participation or an agreed alternative of similar cost. Conference costs vary; agree an appropriate budget in advance. Interested clients and providers may attend as guests at reduced rates. Fund approved registration, travel, and lodging separately from consulting rates. Sponsorship may bring acknowledgment, but not authorship, editorial control, or independent IP.
 
 ## 06 Transparent engagement-model choices
 
