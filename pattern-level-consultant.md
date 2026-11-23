@@ -8,9 +8,9 @@ css_id: pattern-level-consultant
 
 # Pattern-Level Consultant
 
-**Mutual Advantage Model**
-
 Pattern-Level Consultants recognize recurring problems, develop transferable approaches, and help organizations apply them. Their independent practice, communities, and relationships create value beyond any single engagement. This model explores how clients, providers, and consultants can each realize greater value by considering their interests together and strengthening the engagement as a whole.
+
+It is useful when conventional engagement terms do not fully account for the value of an independent professional practice. The considerations below are starting points for discussion, not a fixed package of terms or a substitute for applicable contracts and policies.
 
 ## 01 The practice and IP boundary
 
@@ -38,13 +38,13 @@ Participation does not imply code authorship or ownership; licenses and third-pa
 
 **Why it matters:** In-person exchanges deepen relationships, accelerate learning, and connect practitioners with new ideas and opportunities.
 
-**In practice:** Plan up to four exchanges annually, approximately quarterly, with one to two days each as agreed. Activities include practice, collaboration, and networking. Benefiting sponsors fund approved participation and reasonable travel; agree time, expenses, and approvals in advance as a visible program investment.
+**In practice:** One possible arrangement is up to four exchanges annually, approximately quarterly, with one to two days each as agreed. Activities include practice, collaboration, and networking. Benefiting sponsors fund approved participation and reasonable travel; agree time, expenses, and approvals in advance as a visible program investment.
 
 ## 05 PLoP sponsorship: an illustrative investment
 
 **Why it matters:** [Pattern Languages of Programs, People & Practices](https://plopcon.org) (PLoP) is a foundational gathering where practitioners across disciplines develop, challenge, and refine reusable knowledge.
 
-**In practice:** Sponsor annual PLoP participation or an agreed alternative of similar cost. Conference costs vary; agree an appropriate budget in advance. Interested clients and providers may attend as guests at reduced rates. Fund approved registration, travel, and lodging separately from consulting rates. Sponsorship may bring acknowledgment, but not authorship, editorial control, or independent IP.
+**In practice:** Consider sponsoring annual PLoP participation or an agreed alternative of similar cost. For scale, one practitioner's 2026 all-in PLoP participation cost was under $3,000; this is an illustrative planning reference, not a standard fee. Agree an appropriate budget in advance. Interested clients and providers may attend as guests at reduced rates. Fund approved registration, travel, and lodging separately from consulting rates. Sponsorship may bring acknowledgment, but not authorship, editorial control, or independent IP.
 
 ## 06 Transparent engagement-model choices
 
@@ -70,4 +70,4 @@ Participation does not imply code authorship or ownership; licenses and third-pa
 
 ---
 
-**Authorship and reuse:** © 2026 Michael Basil. This model is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/) (CC BY-SA 4.0). Attribution to Michael Basil and a link to this page are requested when sharing or adapting this work, consistent with the license. The license does not grant rights to third-party material linked here.
+**Authorship and reuse:** Original model text © 2026 Michael Basil. That text is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/) (CC BY-SA 4.0). Attribution to Michael Basil and a link to this page are requested when sharing or adapting this work, consistent with the license. The license does not grant rights to third-party material linked here.
