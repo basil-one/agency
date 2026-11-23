@@ -78,8 +78,7 @@ for (const route of routes) {
             : route === '/consulting/'
               ? [
                   ['Circle3 paper', page.getByRole('link', { name: 'Read the Circle3 paper' })],
-                  ['pattern-level consultant', page.getByRole('link', { name: 'Explore Pattern-Level Consultant' })],
-                  ['consulting contact', page.getByRole('link', { name: 'Connect to Discuss' })]
+                  ['pattern-level consultant', page.getByRole('link', { name: 'Explore Pattern-Level Consultant' })]
                 ]
               : route === '/consulting/models/pattern-level-consultant/'
                 ? [

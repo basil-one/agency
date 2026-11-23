@@ -170,7 +170,7 @@ test('consulting is available by request from the homepage', async ({ page }) =>
   await expect(paperLink).toHaveAttribute('href', 'https://circle.basil.one/paper/');
   const modelLink = page.getByRole('link', { name: 'Explore Pattern-Level Consultant' });
   await expect(modelLink).toHaveAttribute('href', '/consulting/models/pattern-level-consultant/');
-  await expect(page.getByRole('link', { name: 'Connect to Discuss' })).toHaveAttribute('href', 'https://connect.michael.basil.one');
+  await expect(page.getByRole('link', { name: 'Connect to Discuss' })).toHaveCount(0);
   await modelLink.click();
   await expect(page).toHaveURL(`${localOrigin}/consulting/models/pattern-level-consultant/`);
   await expect(page.locator('main h1')).toHaveText('Pattern-Level Consultant');
