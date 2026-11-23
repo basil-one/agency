@@ -1,5 +1,5 @@
 ---
-layout: consulting
+layout: default
 title: Change Leadership Consulting
 description: How I work with organizations at the pattern level, a published example in Circle3, and considerations for working together.
 permalink: /consulting/
