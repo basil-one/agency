@@ -67,7 +67,6 @@ for (const route of routes) {
         route === '/'
           ? [
               ['coaching action', page.locator('#work-together a[href="/know-your-patterns/"]')],
-              ['consulting contact', page.locator('#work-together a[data-ga-label="change_leadership_consulting_connect"]')],
               ['consulting overview', page.locator('#work-together a[data-ga-label="consulting_approach_from_change_leadership_consulting"]')],
               ['reflections action', page.locator('#writing a[href="/reflections/"]')]
             ]
@@ -79,12 +78,13 @@ for (const route of routes) {
             : route === '/consulting/'
               ? [
                   ['Circle3 paper', page.getByRole('link', { name: 'Read the Circle3 paper' })],
-                  ['Mutual Advantage Model', page.getByRole('link', { name: 'Pattern-Level Consultant — Mutual Advantage Model' })]
+                  ['pattern-level consultant', page.getByRole('link', { name: 'Explore Pattern-Level Consultant' })],
+                  ['consulting contact', page.getByRole('link', { name: 'Connect to Discuss' })]
                 ]
               : route === '/consulting/models/pattern-level-consultant/'
                 ? [
                     ['independent coaching', page.getByRole('link', { name: 'Know Your Patterns' })],
-                    ['return to consulting', page.getByRole('link', { name: 'return to Change Leadership Consulting' })]
+                    ['model contact', page.locator('.consulting-close .primary-link')]
                   ]
                 : route === '/reflections/'
                   ? [['reflection article link', page.locator('#reflections-list a').first()]]

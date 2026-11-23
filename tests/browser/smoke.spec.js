@@ -158,10 +158,7 @@ test('local and external calls to action are visible without leaving the local s
 test('consulting is available by request from the homepage', async ({ page }) => {
   await page.goto('/');
 
-  const consultingLink = page.locator('#work-together a[data-ga-label="change_leadership_consulting_connect"]');
-  await expect(consultingLink).toBeVisible();
-  await expect(consultingLink).toHaveText('Connect to Discuss');
-  expect(new URL(await consultingLink.getAttribute('href')).origin).not.toBe(localOrigin);
+  await expect(page.locator('#work-together a[data-ga-label="change_leadership_consulting_connect"]')).toHaveCount(0);
 
   const overviewLink = page.locator('#work-together a[data-ga-label="consulting_approach_from_change_leadership_consulting"]');
   await expect(overviewLink).toHaveText('Explore Change Leadership Consulting');
@@ -171,12 +168,17 @@ test('consulting is available by request from the homepage', async ({ page }) =>
   await expect(page.locator('main h1')).toHaveText('Change Leadership Consulting');
   const paperLink = page.getByRole('link', { name: 'Read the Circle3 paper' });
   await expect(paperLink).toHaveAttribute('href', 'https://circle.basil.one/paper/');
-  const modelLink = page.getByRole('link', { name: 'Pattern-Level Consultant — Mutual Advantage Model' });
+  const modelLink = page.getByRole('link', { name: 'Explore Pattern-Level Consultant' });
   await expect(modelLink).toHaveAttribute('href', '/consulting/models/pattern-level-consultant/');
+  await expect(page.getByRole('link', { name: 'Connect to Discuss' })).toHaveAttribute('href', 'https://connect.michael.basil.one');
   await modelLink.click();
   await expect(page).toHaveURL(`${localOrigin}/consulting/models/pattern-level-consultant/`);
   await expect(page.locator('main h1')).toHaveText('Pattern-Level Consultant');
-  await expect(page.locator('main h2')).toHaveCount(8);
+  await expect(page.locator('main h2')).toHaveCount(9);
+  await expect(page.locator('main h2').last()).toHaveText('Start a conversation');
+  await expect(page.locator('.consulting-close .primary-link')).toHaveText('Connect to Discuss');
+  await expect(page.locator('.consulting-breadcrumb')).toContainText('Pattern-Level Consultant');
+  await expect(page.locator('footer .footer-fine-print')).toContainText('CC BY-SA 4.0');
   await expect(page.getByRole('link', { name: 'Know Your Patterns' })).toHaveAttribute('href', '/know-your-patterns/');
   const workTogetherLink = page.getByRole('navigation', { name: 'Main navigation' })
     .getByRole('link', { name: 'Work Together' });

@@ -58,18 +58,12 @@ ways:
         understanding that leads to coordinated action. Circle3™ is one
         published example of this approach.
       cta:
-        destination: connect
-        destination_type: action_link
+        destination: /consulting/
+        destination_type: path
         class: ""
-        event: conversion
-        analytics_label: change_leadership_consulting_connect
-        label: Connect to Discuss
-      related_links:
-        - destination: /consulting/
-          destination_type: path
-          label: Explore Change Leadership Consulting
-          event: resource_click
-          analytics_label: consulting_approach_from_change_leadership_consulting
+        event: resource_click
+        analytics_label: consulting_approach_from_change_leadership_consulting
+        label: Explore Change Leadership Consulting
 
 reflections:
   heading: Reflections

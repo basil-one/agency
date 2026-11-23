@@ -20,8 +20,11 @@ I work at the pattern level: recognizing recurring problems across contexts, hel
 
 ## Working together
 
-A useful engagement needs to work for the organization, any sourcing partner, and the practitioner. Specialized consultants often bring independent research, published approaches, and professional communities that extend beyond a single contract.
+A useful engagement considers the interests of the organization, any sourcing partner, and the consultant. Independent research, published approaches, and professional communities can create value beyond a single contract.
 
-The [Pattern-Level Consultant — Mutual Advantage Model]({{ '/consulting/models/pattern-level-consultant/' | relative_url }}) offers considerations for discussing those relationships, including intellectual property, independent practice, sponsorship, and engagement structures. It is a resource for conversations about fit and terms, not a required package.
+The Pattern-Level Consultant approach offers considerations for designing relationships that work for everyone involved.
 
-If you're navigating a difficult change or exploring how we might work together, [connect to discuss]({{ site.action_links.connect }}).
+<p class="consulting-actions">
+  <a href="{{ '/consulting/models/pattern-level-consultant/' | relative_url }}">Explore Pattern-Level Consultant</a>
+  <a href="{{ site.action_links.connect }}">Connect to Discuss</a>
+</p>
