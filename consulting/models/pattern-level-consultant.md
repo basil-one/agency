@@ -1,19 +1,17 @@
 ---
 layout: consulting
 is_model: true
-title: Pattern-Level Consultant — Mutual Advantage Model
-description: A mutual advantage model for clients, sourcing providers, and pattern-level consultants.
+title: Pattern-Level Consultant
+description: Eight considerations for working with a pattern-level consultant and designing for mutual advantage.
 permalink: /consulting/models/pattern-level-consultant/
 css_id: pattern-level-consultant
 ---
 
 # Pattern-Level Consultant
 
-<p class="consulting-subtitle">Mutual Advantage Model</p>
+Pattern-Level Consultants recognize recurring problems, develop transferable approaches, and help organizations apply them. Their independent practice, communities, and relationships create value beyond any single engagement.
 
-Pattern-Level Consultants recognize recurring problems, develop transferable approaches, and help organizations apply them. Their independent practice, communities, and relationships create value beyond any single engagement. This model explores how clients, providers, and consultants can each realize greater value by considering their interests together and strengthening the engagement as a whole.
-
-It is useful when conventional engagement terms do not fully account for the value of an independent professional practice. The considerations below are starting points for discussion, not a fixed package of terms or a substitute for applicable contracts and policies.
+Working with a Pattern-Level Consultant creates an opportunity to design for mutual advantage—considering the interests of clients, sourcing partners, and consultants together. The eight considerations below offer a starting point for that conversation, not a fixed package of terms or a substitute for applicable contracts and policies.
 
 ## 01 The practice and IP boundary
 
@@ -77,14 +75,8 @@ These examples illustrate a range of contributions, publications, and communitie
 
 **In practice:** Examine the arrangement through each party’s goals and constraints. Explore terms that increase mutual value. When unfamiliarity or tension arises, stay curious rather than bypassing it; those moments can reveal better possibilities.
 
----
-
-**Reciprocity Threshold:** Would each party endorse these terms if it occupied the other party’s position?
-
----
-
-If this model is useful for a conversation about working together, [connect to discuss]({{ site.action_links.connect }}). Or [return to Change Leadership Consulting]({{ '/consulting/' | relative_url }}).
-
----
-
-**Authorship and reuse:** Original model text © 2026 Michael Basil. That text is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/) (CC BY-SA 4.0). Attribution to Michael Basil and a link to this page are requested when sharing or adapting this work, consistent with the license. The license does not grant rights to third-party material linked here.
+<div class="consulting-close">
+  <h2>Start a conversation</h2>
+  <p>Every engagement has its own circumstances. These considerations offer a starting point for exploring what could work together.</p>
+  <p><a class="primary-link" href="{{ site.action_links.connect }}">Connect to Discuss</a></p>
+</div>
