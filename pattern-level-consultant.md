@@ -70,4 +70,8 @@ Participation does not imply code authorship or ownership; licenses and third-pa
 
 ---
 
+If this model is useful for a conversation about working together, [connect to discuss]({{ site.action_links.connect }}).
+
+---
+
 **Authorship and reuse:** Original model text © 2026 Michael Basil. That text is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/) (CC BY-SA 4.0). Attribution to Michael Basil and a link to this page are requested when sharing or adapting this work, consistent with the license. The license does not grant rights to third-party material linked here.
