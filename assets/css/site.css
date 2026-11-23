@@ -400,12 +400,46 @@ footer a {
   color: #5b5b5b;
   margin-bottom: 28px;
 }
-.consulting-page .consulting-breadcrumb a { color: var(--accent-muted); }
-.consulting-page h1 { margin-bottom: 20px; }
-.consulting-page h2 { margin-top: 40px; }
-.consulting-page h2:first-of-type { margin-top: 32px; }
-.consulting-model h2 { padding-top: 24px; border-top: 1px solid var(--rule-muted); }
-.consulting-model h2::after { display: none; }
-.consulting-page .consulting-subtitle { color: #5b5b5b; font-size: 19px; margin-top: -10px; margin-bottom: 28px; }
-.consulting-page .consulting-close { border-top: 1px solid var(--rule-muted); padding-top: 24px; margin-top: 40px; }
-.consulting-page .consulting-license { font-size: 14px; color: #5b5b5b; }
+
+.consulting-page .consulting-breadcrumb a {
+  color: var(--accent-muted);
+}
+
+.consulting-page h1 {
+  margin-bottom: 20px;
+}
+
+.consulting-page h2 {
+  margin-top: 40px;
+}
+
+.consulting-page h2:first-of-type {
+  margin-top: 32px;
+}
+
+.consulting-model h2 {
+  padding-top: 24px;
+  border-top: 1px solid var(--rule-muted);
+}
+
+.consulting-model h2::after {
+  display: none;
+}
+
+.consulting-page .consulting-subtitle {
+  color: #5b5b5b;
+  font-size: 19px;
+  margin-top: -10px;
+  margin-bottom: 28px;
+}
+
+.consulting-page .consulting-close {
+  border-top: 1px solid var(--rule-muted);
+  padding-top: 24px;
+  margin-top: 40px;
+}
+
+.consulting-page .consulting-license {
+  font-size: 14px;
+  color: #5b5b5b;
+}
