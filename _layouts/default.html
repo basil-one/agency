@@ -51,6 +51,9 @@
     <a href="{{ '/reflections/' | relative_url }}">Reflections</a>
     <a href="{{ site.action_links.email | escape }}" data-ga-event="contact_click" data-ga-label="footer_email">Email</a>
     <a href="{{ '/privacy/' | relative_url }}">Privacy</a>
+    {% if page.is_model %}
+      <span class="footer-fine-print">Model text © 2026 Michael Basil · <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a></span>
+    {% endif %}
     {% assign page_data = site.data[page.data_key] %}
     {% assign fine_print = page.fine_print | default: page_data.fine_print.body %}
     {% if fine_print %}
