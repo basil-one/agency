@@ -23,9 +23,4 @@ The local site is available at http://localhost:4000.
 
 ## License
 
-The HTML structure and site code in this repository are licensed under the MIT License.
-
-The written content and copy are © Michael Basil.  
-All rights reserved unless otherwise noted.
-
-Exception: [Pattern-Level Consultant — Mutual Advantage Model](consulting/models/pattern-level-consultant.md) is © 2026 Michael Basil and licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/) (CC BY-SA 4.0). This exception applies to that model's original written content, not to the rest of Agency's written content or to third-party materials.
+See the [licensing policy](LICENSE.md) for scope and terms. Original website software is MIT-licensed; published original models in `consulting/models/` are CC BY-SA 4.0; other writing and site copy are all rights reserved unless otherwise noted. Third-party rights are preserved.
