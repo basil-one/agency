@@ -442,3 +442,24 @@ footer a {
   font-size: 14px;
   color: #5b5b5b;
 }
+
+/* Consulting: distinct, low-pressure choices and a single strong model close */
+.consulting-page .consulting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  margin-top: 22px;
+}
+
+.consulting-page .consulting-actions a {
+  display: inline-block;
+  padding: 8px 0;
+}
+
+.consulting-page .consulting-close h2 {
+  margin-top: 0;
+}
+
+.consulting-page .consulting-close .primary-link {
+  margin-top: 6px;
+}
