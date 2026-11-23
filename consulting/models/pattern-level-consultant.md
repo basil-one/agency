@@ -76,7 +76,7 @@ These examples illustrate a range of contributions, publications, and communitie
 **In practice:** Examine the arrangement through each party’s goals and constraints. Explore terms that increase mutual value. When unfamiliarity or tension arises, stay curious rather than bypassing it; those moments can reveal better possibilities.
 
 <div class="consulting-close">
-  <h2>Start a conversation</h2>
-  <p>Every engagement has its own circumstances. These considerations offer a starting point for exploring what could work together.</p>
+  <h2>Working together</h2>
+  <p>These considerations provide a foundation for shaping and revisiting working relationships as circumstances evolve.</p>
   <p><a class="primary-link" href="{{ site.action_links.connect }}">Connect to Discuss</a></p>
 </div>
