@@ -21,11 +21,11 @@ bundle exec jekyll serve
 
 The local site is available at http://localhost:4000.
 
-## License
+## Licensing
 
-The HTML structure and site code in this repository are licensed under the MIT License.
+- **Site code and HTML structure:** [MIT License](LICENSE).
+- **Personal reflections, coaching and service copy, and other original writing:** © Michael Basil; all rights reserved unless otherwise noted.
+- **[Pattern-Level Consultant](consulting/models/pattern-level-consultant.md):** original model text © 2026 Michael Basil, licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- **[Agency Moves](moves/index.md) and [Agency2 paper](paper.md):** in development; original published moves and the paper are intended to be licensed under CC BY-SA 4.0 when released.
 
-The written content and copy are © Michael Basil.  
-All rights reserved unless otherwise noted.
-
-Exception: [Pattern-Level Consultant — Mutual Advantage Model](consulting/models/pattern-level-consultant.md) is © 2026 Michael Basil and licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/) (CC BY-SA 4.0). This exception applies to that model's original written content, not to the rest of Agency's written content or to third-party materials.
+Third-party materials retain their respective rights. The MIT license does not apply to Agency's original writing unless explicitly stated.
