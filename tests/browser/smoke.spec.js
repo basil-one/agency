@@ -177,7 +177,7 @@ test('consulting is available by request from the homepage', async ({ page }) =>
   await expect(page.locator('main h2')).toHaveCount(9);
   await expect(page.locator('main h2').last()).toHaveText('Working together');
   await expect(page.locator('.consulting-close .primary-link')).toHaveText('Connect to Discuss');
-  await expect(page.locator('.consulting-breadcrumb')).toContainText('Pattern-Level Consultant');
+  await expect(page.locator('.consulting-breadcrumb')).toHaveCount(0);
   await expect(page.locator('footer .footer-fine-print')).toContainText('Pattern-Level Consultant © 2026 Michael Basil');
   await expect(page.locator('footer .footer-fine-print')).toContainText('CC BY-SA 4.0');
   await expect(page.getByRole('link', { name: 'Know Your Patterns' })).toHaveAttribute('href', '/know-your-patterns/');
