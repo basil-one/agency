@@ -12,6 +12,8 @@ const latestReflection = reflections.at(-1);
 const routes = [
   '/',
   '/know-your-patterns/',
+  '/consulting/',
+  '/consulting/models/pattern-level-consultant/',
   '/reflections/',
   ...(latestReflection ? [latestReflection.route] : []),
   '/origin/'
@@ -66,7 +68,7 @@ for (const route of routes) {
           ? [
               ['coaching action', page.locator('#work-together a[href="/know-your-patterns/"]')],
               ['consulting contact', page.locator('#work-together a[data-ga-label="change_leadership_consulting_connect"]')],
-              ['Circle3 paper', page.locator('#work-together a[data-ga-label="circle3_paper_from_change_leadership_consulting"]')],
+              ['consulting overview', page.locator('#work-together a[data-ga-label="consulting_approach_from_change_leadership_consulting"]')],
               ['reflections action', page.locator('#writing a[href="/reflections/"]')]
             ]
           : route === '/know-your-patterns/'
@@ -74,9 +76,19 @@ for (const route of routes) {
                 ['booking action', page.locator('.hero-offer .reserve-button')],
                 ['contact action', page.locator('#booking a[href]').last()]
               ]
-            : route === '/reflections/'
-              ? [['reflection article link', page.locator('#reflections-list a').first()]]
-              : [['contact action', footer.getByRole('link', { name: 'Email' })]];
+            : route === '/consulting/'
+              ? [
+                  ['Circle3 paper', page.getByRole('link', { name: 'Read the Circle3 paper' })],
+                  ['Mutual Advantage Model', page.getByRole('link', { name: 'Pattern-Level Consultant — Mutual Advantage Model' })]
+                ]
+              : route === '/consulting/models/pattern-level-consultant/'
+                ? [
+                    ['independent coaching', page.getByRole('link', { name: 'Know Your Patterns' })],
+                    ['return to consulting', page.getByRole('link', { name: 'return to Change Leadership Consulting' })]
+                  ]
+                : route === '/reflections/'
+                  ? [['reflection article link', page.locator('#reflections-list a').first()]]
+                  : [['contact action', footer.getByRole('link', { name: 'Email' })]];
       for (const [label, action] of actions) {
         await assertResponsiveTarget(
           page,
