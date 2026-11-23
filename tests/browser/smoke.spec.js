@@ -163,9 +163,21 @@ test('consulting is available by request from the homepage', async ({ page }) =>
   await expect(consultingLink).toHaveText('Connect to Discuss');
   expect(new URL(await consultingLink.getAttribute('href')).origin).not.toBe(localOrigin);
 
-  const paperLink = page.locator('#work-together a[data-ga-label="circle3_paper_from_change_leadership_consulting"]');
-  await expect(paperLink).toHaveText('Read the Circle3 paper');
+  const overviewLink = page.locator('#work-together a[data-ga-label="consulting_approach_from_change_leadership_consulting"]');
+  await expect(overviewLink).toHaveText('Learn more about my consulting approach');
+  await expect(overviewLink).toHaveAttribute('href', '/consulting/');
+  await overviewLink.click();
+  await expect(page).toHaveURL(`${localOrigin}/consulting/`);
+  await expect(page.locator('main h1')).toHaveText('Change Leadership Consulting');
+  const paperLink = page.getByRole('link', { name: 'Read the Circle3 paper' });
   await expect(paperLink).toHaveAttribute('href', 'https://circle.basil.one/paper/');
+  const modelLink = page.getByRole('link', { name: 'Pattern-Level Consultant — Mutual Advantage Model' });
+  await expect(modelLink).toHaveAttribute('href', '/consulting/models/pattern-level-consultant/');
+  await modelLink.click();
+  await expect(page).toHaveURL(`${localOrigin}/consulting/models/pattern-level-consultant/`);
+  await expect(page.locator('main h1')).toHaveText('Pattern-Level Consultant');
+  await expect(page.locator('main h2')).toHaveCount(8);
+  await expect(page.getByRole('link', { name: 'Know Your Patterns' })).toHaveAttribute('href', '/know-your-patterns/');
   const workTogetherLink = page.getByRole('navigation', { name: 'Main navigation' })
     .getByRole('link', { name: 'Work Together' });
   await expect(workTogetherLink).toHaveAttribute('href', '/#work-together');
