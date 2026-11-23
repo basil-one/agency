@@ -11,7 +11,7 @@ css_id: pattern-level-consultant
 
 Pattern-Level Consultants recognize recurring problems, develop transferable approaches, and help organizations apply them. Their independent practice, communities, and relationships create value beyond any single engagement.
 
-Working with a Pattern-Level Consultant creates an opportunity to design for mutual advantage—considering the interests of clients, sourcing partners, and consultants together. The eight considerations below offer a starting point for that conversation, not a fixed package of terms or a substitute for applicable contracts and policies.
+Working with a Pattern-Level Consultant creates an opportunity to design for mutual advantage—considering the interests of clients, sourcing partners, and consultants together. The eight considerations below provide a foundation for shaping and revisiting working relationships as circumstances evolve. They are not a fixed package of terms or a substitute for applicable contracts and policies.
 
 ## 01 The practice and IP boundary
 
@@ -76,7 +76,7 @@ These examples illustrate a range of contributions, publications, and communitie
 **In practice:** Examine the arrangement through each party’s goals and constraints. Explore terms that increase mutual value. When unfamiliarity or tension arises, stay curious rather than bypassing it; those moments can reveal better possibilities.
 
 <div class="consulting-close">
-  <h2>Start a conversation</h2>
-  <p>Every engagement has its own circumstances. These considerations offer a starting point for exploring what could work together.</p>
+  <h2>Working together</h2>
+  <p>These considerations provide a foundation for shaping and revisiting working relationships as circumstances evolve.</p>
   <p><a class="primary-link" href="{{ site.action_links.connect }}">Connect to Discuss</a></p>
 </div>
