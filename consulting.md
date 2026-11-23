@@ -12,9 +12,9 @@ When organizational change stalls, the difficulty isn't always a missing plan or
 
 I work at the pattern level: recognizing recurring problems across contexts, helping people surface what is getting in the way, and creating conditions for shared understanding and coordinated action. The work starts with the situation people are actually navigating, rather than assuming a particular method is the answer.
 
-## An example: Circle3
+## An example: Circle3™
 
-[Circle3](https://circle.basil.one) is one published example of this approach. It offers three guiding moves for leading difficult change through a small group and recurring, facilitated conversations. It is an illustration of the kind of pattern-based work I develop and apply—not the only form an engagement can take.
+[Circle3™](https://circle.basil.one) is one published example of this approach. It offers three guiding moves for leading difficult change through a small group and recurring, facilitated conversations. It is an illustration of the kind of pattern-based work I develop and apply—not the only form an engagement can take.
 
 [Read the Circle3 paper](https://circle.basil.one/paper/)
 
