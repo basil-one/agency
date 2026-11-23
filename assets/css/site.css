@@ -433,8 +433,6 @@ footer a {
 }
 
 .consulting-page .consulting-close {
-  border-top: 1px solid var(--rule-muted);
-  padding-top: 24px;
   margin-top: 40px;
 }
 
