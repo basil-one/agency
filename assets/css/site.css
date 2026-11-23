@@ -392,72 +392,48 @@ footer a {
   color: #676767;
 }
 
-/* Consulting: shared editorial hierarchy and contextual navigation */
-.consulting-page .consulting-breadcrumb {
-  font-size: 14px;
-  line-height: 1.5;
-  color: #5b5b5b;
-  margin-bottom: 28px;
-}
-
-.consulting-page .consulting-breadcrumb a {
-  color: var(--accent-muted);
-}
-
-.consulting-page h1 {
+/* Consulting pages: preserve hierarchy without a dedicated layout wrapper */
+#consulting main h1,
+#pattern-level-consultant main h1 {
   margin-bottom: 20px;
 }
 
-.consulting-page h2 {
+#consulting main h2,
+#pattern-level-consultant main h2 {
   margin-top: 40px;
 }
 
-.consulting-page h2:first-of-type {
+#consulting main h2:first-of-type,
+#pattern-level-consultant main h2:first-of-type {
   margin-top: 32px;
 }
 
-.consulting-model h2 {
+#pattern-level-consultant main h2 {
   padding-top: 24px;
   border-top: 1px solid var(--rule-muted);
 }
 
-.consulting-model h2::after {
+#pattern-level-consultant main h2::after {
   display: none;
 }
 
-.consulting-page .consulting-subtitle {
-  color: #5b5b5b;
-  font-size: 19px;
-  margin-top: -10px;
-  margin-bottom: 28px;
-}
-
-.consulting-page .consulting-close {
+#pattern-level-consultant .consulting-close {
   margin-top: 40px;
 }
 
-.consulting-page .consulting-license {
-  font-size: 14px;
-  color: #5b5b5b;
-}
-
-/* Consulting: distinct, low-pressure choices and a single strong model close */
-.consulting-page .consulting-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 28px;
+#consulting .consulting-actions {
   margin-top: 22px;
 }
 
-.consulting-page .consulting-actions a {
+#consulting .consulting-actions a {
   display: inline-block;
   padding: 8px 0;
 }
 
-.consulting-page .consulting-close h2 {
+#pattern-level-consultant .consulting-close h2 {
   margin-top: 0;
 }
 
-.consulting-page .consulting-close .primary-link {
+#pattern-level-consultant .consulting-close .primary-link {
   margin-top: 6px;
 }
