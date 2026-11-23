@@ -27,3 +27,5 @@ The HTML structure and site code in this repository are licensed under the MIT L
 
 The written content and copy are © Michael Basil.  
 All rights reserved unless otherwise noted.
+
+Exception: [Pattern-Level Consultant — Mutual Advantage Model](pattern-level-consultant.md) is © 2026 Michael Basil and licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/) (CC BY-SA 4.0). This exception applies to that model's original written content, not to the rest of Agency's written content or to third-party materials.
