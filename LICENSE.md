@@ -8,15 +8,15 @@ css_id: license
 
 # Licensing
 
-Agency includes software, original writing, and published practice materials. Different rights apply to each.
+Agency, including the developing Agency2™ work, contains website software, original writing, and practice materials. Different rights apply to each.
 
 ## Website software
 
-Original site code, templates, styles, scripts, and build tooling are licensed under the [MIT License](https://opensource.org/license/mit). The complete terms are in `LICENSES/MIT.txt`. This grant does not cover the site's written content, photographs, or third-party materials.
+Original site code, templates, styles, scripts, and build tooling are licensed under the [MIT License](https://opensource.org/license/mit). The complete terms are in `LICENSES/MIT.txt`. This grant does not cover creative content or third-party materials.
 
 ## Published practice materials
 
-Original models published in `consulting/models/`, including [Pattern-Level Consultant]({{ '/consulting/models/pattern-level-consultant/' | relative_url }}), are licensed under [Creative Commons Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/) (CC BY-SA 4.0). Original Agency Moves, when published, are intended to use the same license. The complete terms are in `LICENSES/CC-BY-SA-4.0.md`.
+Original models published in `consulting/models/`, including [Pattern-Level Consultant]({{ '/consulting/models/pattern-level-consultant/' | relative_url }}), are licensed under [Creative Commons Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/) (CC BY-SA 4.0). Agency2 Moves, when published, are intended to use the same license. The complete terms are in `LICENSES/CC-BY-SA-4.0.md`.
 
 A separately published paper is governed by the license notice on that paper and any applicable publication agreement; do not infer a license from the website alone.
 
