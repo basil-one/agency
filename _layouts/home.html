@@ -34,9 +34,14 @@ layout: default
         {% assign destination = item.cta.destination | relative_url %}
       {% endif %}
       <p><a{% if item.cta.class != empty %} class="{{ item.cta.class | escape }}"{% endif %} href="{{ destination | escape }}" data-ga-event="{{ item.cta.event | escape }}" data-ga-label="{{ item.cta.analytics_label | escape }}">{{ item.cta.label }}</a></p>
-      {% if item.related_link %}
-        <p><a href="{{ item.related_link.destination | escape }}" data-ga-event="{{ item.related_link.event | escape }}" data-ga-label="{{ item.related_link.analytics_label | escape }}">{{ item.related_link.label | escape }}</a></p>
-      {% endif %}
+      {% for related_link in item.related_links %}
+        {% if related_link.destination_type == 'path' %}
+          {% assign related_destination = related_link.destination | relative_url %}
+        {% else %}
+          {% assign related_destination = related_link.destination %}
+        {% endif %}
+        <p><a href="{{ related_destination | escape }}" data-ga-event="{{ related_link.event | escape }}" data-ga-label="{{ related_link.analytics_label | escape }}">{{ related_link.label | escape }}</a></p>
+      {% endfor %}
     </div>
   {% endfor %}
 </section>
