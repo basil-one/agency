@@ -65,7 +65,7 @@ ways:
         analytics_label: change_leadership_consulting_connect
         label: Connect to Discuss
       related_links:
-        - destination: /organizational-consulting/
+        - destination: /consulting/
           destination_type: path
           label: Learn more about my consulting approach
           event: resource_click
