@@ -23,4 +23,4 @@ The local site is available at http://localhost:4000.
 
 ## License
 
-See the [licensing policy](LICENSE.md) for scope and terms. Original website software is MIT-licensed; published original models in `consulting/models/` are CC BY-SA 4.0; other writing and site copy are all rights reserved unless otherwise noted. Third-party rights are preserved.
+See the [licensing policy](LICENSE.md) for scope and terms. Original website software is MIT-licensed; designated original practice materials are CC BY-SA 4.0; other writing and site copy are all rights reserved unless otherwise noted. Paper licenses follow their own notices and publication terms. Third-party rights are preserved.
