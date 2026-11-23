@@ -64,11 +64,16 @@ ways:
         event: conversion
         analytics_label: change_leadership_consulting_connect
         label: Connect to Discuss
-      related_link:
-        destination: https://circle.basil.one/paper/
-        label: Read the Circle3 paper
-        event: resource_click
-        analytics_label: circle3_paper_from_change_leadership_consulting
+      related_links:
+        - destination: https://circle.basil.one/paper/
+          label: Read the Circle3 paper
+          event: resource_click
+          analytics_label: circle3_paper_from_change_leadership_consulting
+        - destination: /pattern-level-consultant/
+          destination_type: path
+          label: Explore the Pattern-Level Consultant model
+          event: resource_click
+          analytics_label: pattern_level_consultant_from_change_leadership_consulting
 
 reflections:
   heading: Reflections
