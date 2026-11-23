@@ -164,7 +164,7 @@ test('consulting is available by request from the homepage', async ({ page }) =>
   expect(new URL(await consultingLink.getAttribute('href')).origin).not.toBe(localOrigin);
 
   const overviewLink = page.locator('#work-together a[data-ga-label="consulting_approach_from_change_leadership_consulting"]');
-  await expect(overviewLink).toHaveText('Learn more about my consulting approach');
+  await expect(overviewLink).toHaveText('Explore Change Leadership Consulting');
   await expect(overviewLink).toHaveAttribute('href', '/consulting/');
   await overviewLink.click();
   await expect(page).toHaveURL(`${localOrigin}/consulting/`);
