@@ -25,22 +25,27 @@ It is useful when conventional engagement terms do not fully account for the val
 
 **Why it matters:** Community participation refines approaches and gives clients and providers access to specialized knowledge, relationships, and emerging talent.
 
-**In practice:** Independent publishing, open-source work, and professional communities are upstream sources of value. For example:
+**In practice:** Independent publishing, open-source work, meetups, and community participation are upstream sources of value. Examples informing the author's practice include:
 
-- **Published practice and source**
-  - [Circle3™](https://circle.basil.one), a published practice model, and its [source repository](https://github.com/basil-one/circle).
-  - [Agency](https://agency.basil.one) and its [source repository](https://github.com/basil-one/agency), alongside other [Basil One GitHub work](https://github.com/basil-one).
-- **Communities and collaborative development**
-  - [InnerSource Commons Foundation](https://innersourcecommons.org) and the [InnerSource Commons GitHub organization](https://github.com/InnerSourceCommons).
-  - [PLoP](https://plopcon.org), where practitioners develop and refine patterns together.
+- **Open-source and GitHub communities**
+  - [Basil One](https://github.com/basil-one)
+  - [Mindset Dojo](https://github.com/mindset-dojo)
+  - [InnerSource Commons](https://github.com/InnerSourceCommons)
+  - [Cloud Security Office Hours](https://github.com/CloudSecurityOfficeHours)
+- **Published patterns and professional communities**
+  - [Circle3™](https://circle.basil.one) and its [source](https://github.com/basil-one/circle)
+  - [Agency](https://agency.basil.one) and its [source](https://github.com/basil-one/agency)
+  - [PLoP](https://plopcon.org)
+  - [Hillside Group](https://hillside.net)
+  - [ACM Digital Library](https://dl.acm.org)
 
-These are examples of participation, published work, and relevant communities—not claims of endorsement, ownership, or authorship of others' contributions. Applicable licenses and third-party rights remain in force.
+These examples illustrate a range of contributions, publications, and communities—not claims of endorsement, ownership, or authorship of others' work. Applicable licenses and third-party rights remain in force.
 
 ## 03 Independent professional activity
 
 **Why it matters:** Publishing, podcast and conference appearances, coaching, and community work bring new problems and perspectives into practice—giving clients broader insight and providers greater capability and reach.
 
-**In practice:** Consultants remain free to pursue these activities outside client duties without routine approval, while respecting confidentiality, resource use, conflicts, and endorsement boundaries. For purchased services, agree scope, fees, schedule, rights, and provider economics separately—for example, an independently offered coaching service. Awareness alone grants no free access or exclusivity.
+**In practice:** Consultants remain free to pursue these activities outside client duties without routine approval, while respecting confidentiality, resource use, conflicts, and endorsement boundaries. For purchased services, agree scope, fees, schedule, rights, and provider economics separately—for example, the author's [Know Your Patterns]({{ '/know-your-patterns/' | relative_url }}) coaching. Independent services remain distinct from client engagements; any purchased services require their own agreed terms. Awareness alone grants no free access or exclusivity.
 
 ## 04 Quarterly practice exchanges
 
