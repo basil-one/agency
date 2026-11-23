@@ -1,5 +1,5 @@
 ---
-layout: consulting
+layout: default
 is_model: true
 title: Pattern-Level Consultant
 description: Eight considerations for working with a pattern-level consultant and designing for mutual advantage.
