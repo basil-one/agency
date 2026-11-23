@@ -67,7 +67,7 @@ ways:
       related_links:
         - destination: /consulting/
           destination_type: path
-          label: Learn more about my consulting approach
+          label: Explore Change Leadership Consulting
           event: resource_click
           analytics_label: consulting_approach_from_change_leadership_consulting
 
