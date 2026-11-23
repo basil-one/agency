@@ -23,3 +23,10 @@ footer:
 # Legal texts are repository references, not generated site pages.
 exclude:
   - LICENSES
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle
+  - vendor/cache
+  - vendor/gems
+  - vendor/ruby
