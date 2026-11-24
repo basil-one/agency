@@ -8,7 +8,7 @@ css_id: license
 
 # Licensing
 
-Agency, including the developing Agency2™ work, contains website software, original writing, and practice materials. Different rights apply to each.
+Agency, including the Agency2™ work, contains website software, original writing, and practice materials. Different rights apply to each.
 
 ## Website software
 
