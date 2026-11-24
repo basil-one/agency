@@ -18,4 +18,15 @@ action_links:
 analytics:
   ga_measurement_id: G-EEW23EJSSR
 footer:
-  copyright: "© 2026 Michael Basil"
+  copyright: "© 2026 Michael Basil · Selected content CC BY-SA 4.0"
+
+# Legal texts are repository references, not generated site pages.
+exclude:
+  - LICENSES
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle
+  - vendor/cache
+  - vendor/gems
+  - vendor/ruby

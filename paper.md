@@ -10,6 +10,7 @@ css_id: agency2-paper
 
 ## Pattern mining in progress
 
-Agency2 is under development. Pattern mining is underway, and a paper is not yet available.
+Agency2™ is under development. Pattern mining is underway, and a paper is not yet available.
 
 This page will evolve as the work takes shape.
+
