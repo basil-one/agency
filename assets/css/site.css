@@ -437,3 +437,31 @@ footer a {
 #pattern-level-consultant .consulting-close .primary-link {
   margin-top: 6px;
 }
+
+/* Footer groups keep navigation separate from licensing information. */
+.footer-links,
+.footer-copyright,
+.footer-policy-links {
+  text-align: center;
+}
+
+.footer-copyright {
+  margin-top: 12px;
+}
+
+.footer-policy-links {
+  margin-top: 4px;
+}
+
+.footer-links,
+.footer-policy-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+}
+
+.footer-links a,
+.footer-policy-links a {
+  margin-right: 0;
+}
