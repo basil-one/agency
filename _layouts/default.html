@@ -55,6 +55,7 @@
     <div class="footer-policy-links">
     <a href="{{ '/privacy/' | relative_url }}">Privacy</a>
     <a href="{{ '/license/' | relative_url }}">Licensing</a>
+      <a href="{{ site.repository_url | escape }}">Source</a>
     </div>
     {% assign page_data = site.data[page.data_key] %}
     {% assign fine_print = page.fine_print | default: page_data.fine_print.body %}
