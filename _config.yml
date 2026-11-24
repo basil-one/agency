@@ -2,6 +2,7 @@ title: Michael Basil — Adaptive Leadership, Applied
 description: Individual coaching, change leadership consulting, and reflections on agency, relationships, and navigating complexity.
 url: https://agency.basil.one
 baseurl: ""
+repository_url: https://github.com/basil-one/agency
 # Keep plugins list explicit so GitHub Pages matches local builds.
 plugins: []
 collections:
