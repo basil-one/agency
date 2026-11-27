@@ -14,5 +14,6 @@ For licensing, see `LICENSE.md`.
 - Established a reviewed performance reference and confirmation of potential regressions.
 
 ### Changed
+- Moved website publication to a repository-controlled GitHub Actions workflow.
 - Strengthened site accessibility, link integrity, SEO, and dependency security checks.
 - Organized workflows, supporting scripts, and tests around consistent ownership boundaries.
