@@ -143,9 +143,12 @@ def check_identity(run, head):
     if run.get("head_sha") != head or not isinstance(app, dict) or app.get("id") != APP_ID:
         raise ReleaseError(f"Wrong revision or app for {name}.")
     stamp = run.get("started_at") or run.get("created_at")
-    if not isinstance(stamp, str) or not re.fullmatch(
-        r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", stamp
-    ) or type(run.get("id")) is not int or run["id"] < 1:
+    if (
+        not isinstance(stamp, str)
+        or not re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", stamp)
+        or type(run.get("id")) is not int
+        or run["id"] < 1
+    ):
         raise ReleaseError(f"Malformed check identity for {name}.")
     if run.get("status") not in ("queued", "in_progress", "completed"):
         raise ReleaseError(f"Malformed check status for {name}.")
@@ -170,7 +173,11 @@ def validate_history(version, day, text, tags):
         raise ReleaseError("Invalid release date.") from error
     matches = list(HEADING.finditer(text))
     prior = [version_tuple(m.group(1)) for m in matches]
-    tag_versions = [version_tuple(t[1:]) for t in tags if VERSION.fullmatch(t.removeprefix("v")) and t.startswith("v")]
+    tag_versions = [
+        version_tuple(t[1:])
+        for t in tags
+        if VERSION.fullmatch(t.removeprefix("v")) and t.startswith("v")
+    ]
     if sorted(prior, reverse=True) != prior or len(set(prior)) != len(prior):
         raise ReleaseError("Changelog versions are out of order or duplicated.")
     if set(prior) != set(tag_versions):
@@ -190,7 +197,11 @@ def promote(version, day, text, tags):
     body = "".join(lines[start:end]).strip()
     if not re.search(r"^\s*[-*]\s+\S", body, re.M):
         raise ReleaseError("Unreleased has no entries.")
-    promoted = "".join(lines[:start]) + f"\n## [{version}] - {day}\n\n{body}\n\n" + "".join(lines[end:]).lstrip("\n")
+    promoted = (
+        "".join(lines[:start])
+        + f"\n## [{version}] - {day}\n\n{body}\n\n"
+        + "".join(lines[end:]).lstrip("\n")
+    )
     url = f"https://github.com/{REPOSITORY}"
     links = list(re.finditer(r"^\[Unreleased\]: .*$", promoted, re.M))
     if len(links) > 1 or re.search(rf"^\[{re.escape(version)}\]:", promoted, re.M):
@@ -200,7 +211,7 @@ def promote(version, day, text, tags):
         previous = matches[0].group(1)
         replacement += f"\n[{version}]: {url}/compare/v{previous}...v{version}"
     if links:
-        promoted = promoted[:links[0].start()] + replacement + promoted[links[0].end():]
+        promoted = promoted[: links[0].start()] + replacement + promoted[links[0].end() :]
     else:
         promoted = promoted.rstrip() + "\n\n" + replacement + "\n"
     return promoted
@@ -211,7 +222,7 @@ def notes(version, text):
     if not matches or matches[0].group(1) != version:
         raise ReleaseError("Requested version is not the latest changelog entry.")
     end = matches[1].start() if len(matches) > 1 else len(text)
-    section = text[matches[0].end():end]
+    section = text[matches[0].end() : end]
     section = re.split(r"^\[[^]]+\]: ", section, maxsplit=1, flags=re.M)[0].strip()
     if not section:
         raise ReleaseError("Release notes are empty.")
@@ -233,7 +244,10 @@ class Publisher:
     def __init__(self):
         if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
             raise ReleaseError("Unexpected repository.")
-        if os.environ.get("GITHUB_EVENT_NAME") != "workflow_dispatch" or os.environ.get("GITHUB_REF") != "refs/heads/main":
+        if (
+            os.environ.get("GITHUB_EVENT_NAME") != "workflow_dispatch"
+            or os.environ.get("GITHUB_REF") != "refs/heads/main"
+        ):
             raise ReleaseError("Only manual main dispatch can publish.")
         self.repo = REPOSITORY
 
@@ -264,15 +278,23 @@ class Publisher:
         if not isinstance(pr, dict):
             raise ReleaseError("Malformed PR.")
         head, base = pr.get("head") or {}, pr.get("base") or {}
-        if (type(pr.get("number")) is not int or pr["number"] < 1
-                or pr.get("title") != f"Prepare Agency release v{version}"
-                or head.get("ref") != branch or base.get("ref") != "main"
-                or (head.get("repo") or {}).get("full_name") != self.repo
-                or (base.get("repo") or {}).get("full_name") != self.repo):
+        if (
+            type(pr.get("number")) is not int
+            or pr["number"] < 1
+            or pr.get("title") != f"Prepare Agency release v{version}"
+            or head.get("ref") != branch
+            or base.get("ref") != "main"
+            or (head.get("repo") or {}).get("full_name") != self.repo
+            or (base.get("repo") or {}).get("full_name") != self.repo
+        ):
             raise ReleaseError("Release PR identity does not match.")
         safe_sha(head.get("sha"))
         files = pages(f"repos/{self.repo}/pulls/{pr['number']}/files")
-        if len(files) != 1 or files[0].get("filename") != "CHANGELOG.md" or files[0].get("status") != "modified":
+        if (
+            len(files) != 1
+            or files[0].get("filename") != "CHANGELOG.md"
+            or files[0].get("status") != "modified"
+        ):
             raise ReleaseError("Release PR must modify only CHANGELOG.md.")
         if pr.get("state") == "closed" and not pr.get("merged_at"):
             raise ReleaseError("Release PR closed without merging.")
@@ -348,7 +370,9 @@ class Publisher:
             head = self.verify_pr(pr, version)
             if pr.get("state") == "open":
                 git("fetch", "origin", f"+refs/heads/{branch}:refs/remotes/release-branch")
-                if git("rev-parse", "refs/remotes/release-branch") != head or not ancestor(main, head):
+                if git("rev-parse", "refs/remotes/release-branch") != head or not ancestor(
+                    main, head
+                ):
                     raise ReleaseError("Release branch is stale or differs from the PR.")
                 self.verify_promotion(head, main, version)
             return pr
@@ -361,20 +385,35 @@ class Publisher:
             self.verify_promotion(head, main, version)
             return self.create_pr(version, branch)
         self.validate_previous_releases()
-        promoted = promote(version, datetime.now(timezone.utc).date().isoformat(), changelog(main), self.tags())
+        promoted = promote(
+            version, datetime.now(timezone.utc).date().isoformat(), changelog(main), self.tags()
+        )
         git("switch", "--create", branch, main)
         Path("CHANGELOG.md").write_text(promoted, encoding="utf-8")
         git("add", "--", "CHANGELOG.md")
-        git("-c", "user.name=github-actions[bot]", "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
-            "commit", "-m", f"Prepare Agency release v{version}")
+        git(
+            "-c",
+            "user.name=github-actions[bot]",
+            "-c",
+            "user.email=41898282+github-actions[bot]@users.noreply.github.com",
+            "commit",
+            "-m",
+            f"Prepare Agency release v{version}",
+        )
         git("push", "origin", f"HEAD:refs/heads/{branch}")
         return self.create_pr(version, branch)
 
     def create_pr(self, version, branch):
-        pr = api(f"repos/{self.repo}/pulls", "POST", {
-            "title": f"Prepare Agency release v{version}", "head": branch, "base": "main",
-            "body": "Review and merge this changelog-only release PR through the Quality Gate. Approve requested workflow runs if necessary. Rerun Release Publish with the same version to resume.",
-        })
+        pr = api(
+            f"repos/{self.repo}/pulls",
+            "POST",
+            {
+                "title": f"Prepare Agency release v{version}",
+                "head": branch,
+                "base": "main",
+                "body": "Review and merge this changelog-only release PR through the Quality Gate. Approve requested workflow runs if necessary. Rerun Release Publish with the same version to resume.",
+            },
+        )
         self.verify_pr(pr, version)
         return pr
 
@@ -388,7 +427,10 @@ class Publisher:
         return found[0] if found else None
 
     def tag_provenance(self, tag, merge, head, number, version):
-        if git("rev-parse", f"refs/tags/{tag}^{{commit}}") != merge or git("cat-file", "-t", f"refs/tags/{tag}") != "tag":
+        if (
+            git("rev-parse", f"refs/tags/{tag}^{{commit}}") != merge
+            or git("cat-file", "-t", f"refs/tags/{tag}") != "tag"
+        ):
             raise ReleaseError("Existing tag does not match verified source.")
         existing = git("for-each-ref", "--format=%(contents)", f"refs/tags/{tag}")
         try:
@@ -397,26 +439,41 @@ class Publisher:
             check_ids = recorded["checks"]
         except (ValueError, IndexError, KeyError, TypeError) as error:
             raise ReleaseError("Existing tag lacks release provenance.") from error
-        if (title != "Agency Release Publish provenance" or not isinstance(recorded, dict)
-                or set(recorded) != {"version", "pr", "head", "source", "checks"}
-                or recorded["version"] != version or recorded["pr"] != number
-                or recorded["head"] != head or recorded["source"] != merge
-                or not isinstance(check_ids, dict) or set(check_ids) != set(CHECKS)
-                or any(type(value) is not int or value < 1 for value in check_ids.values())
-                or len(set(check_ids.values())) != len(CHECKS)):
+        if (
+            title != "Agency Release Publish provenance"
+            or not isinstance(recorded, dict)
+            or set(recorded) != {"version", "pr", "head", "source", "checks"}
+            or recorded["version"] != version
+            or recorded["pr"] != number
+            or recorded["head"] != head
+            or recorded["source"] != merge
+            or not isinstance(check_ids, dict)
+            or set(check_ids) != set(CHECKS)
+            or any(type(value) is not int or value < 1 for value in check_ids.values())
+            or len(set(check_ids.values())) != len(CHECKS)
+        ):
             raise ReleaseError("Existing tag provenance does not match release PR.")
         return check_ids
 
     def validate_release(self, item, tag, body):
-        if (not isinstance(item, dict) or item.get("tag_name") != tag or item.get("name") != tag
-                or item.get("body") != body or item.get("prerelease") is not False
-                or item.get("assets") != [] or type(item.get("draft")) is not bool
-                or type(item.get("id")) is not int or item["id"] < 1):
+        if (
+            not isinstance(item, dict)
+            or item.get("tag_name") != tag
+            or item.get("name") != tag
+            or item.get("body") != body
+            or item.get("prerelease") is not False
+            or item.get("assets") != []
+            or type(item.get("draft")) is not bool
+            or type(item.get("id")) is not int
+            or item["id"] < 1
+        ):
             raise ReleaseError("Existing release differs from approved publication.")
 
     def ensure_tag(self, version, pr, merge, head, check_ids, item, completed):
         tag = f"v{version}"
-        source = command(["git", "rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}"], allow_failure=True)
+        source = command(
+            ["git", "rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}"], allow_failure=True
+        )
         if source.returncode == 0:
             recorded = self.tag_provenance(tag, merge, head, pr["number"], version)
             if not completed and recorded != check_ids:
@@ -424,10 +481,26 @@ class Publisher:
         else:
             if completed or item is not None:
                 raise ReleaseError("Release exists without its verified tag.")
-            provenance = {"version": version, "pr": pr["number"], "head": head, "source": merge, "checks": check_ids}
+            provenance = {
+                "version": version,
+                "pr": pr["number"],
+                "head": head,
+                "source": merge,
+                "checks": check_ids,
+            }
             message = "Agency Release Publish provenance\n" + json.dumps(provenance, sort_keys=True)
-            git("-c", "user.name=github-actions[bot]", "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
-                "tag", "-a", tag, merge, "-m", message)
+            git(
+                "-c",
+                "user.name=github-actions[bot]",
+                "-c",
+                "user.email=41898282+github-actions[bot]@users.noreply.github.com",
+                "tag",
+                "-a",
+                tag,
+                merge,
+                "-m",
+                message,
+            )
             git("push", "origin", f"refs/tags/{tag}")
 
     def release(self, version, pr):
@@ -440,15 +513,27 @@ class Publisher:
         approved = changelog(merge)
         if notes(version, current) != notes(version, approved):
             raise ReleaseError("Current main changed the release entry.")
-        stable = [version_tuple(t[1:]) for t in self.tags() if t.startswith("v") and VERSION.fullmatch(t[1:])]
+        stable = [
+            version_tuple(t[1:])
+            for t in self.tags()
+            if t.startswith("v") and VERSION.fullmatch(t[1:])
+        ]
         if stable and max(stable) > version_tuple(version):
             raise ReleaseError("A newer stable tag exists.")
         self.ensure_tag(version, pr, merge, head, check_ids, item, completed)
         body = notes(version, approved)
         if item is None:
-            item = api(f"repos/{self.repo}/releases", "POST", {
-                "tag_name": tag, "name": tag, "body": body, "draft": True, "prerelease": False,
-            })
+            item = api(
+                f"repos/{self.repo}/releases",
+                "POST",
+                {
+                    "tag_name": tag,
+                    "name": tag,
+                    "body": body,
+                    "draft": True,
+                    "prerelease": False,
+                },
+            )
         self.validate_release(item, tag, body)
         if item["draft"]:
             item = api(f"repos/{self.repo}/releases/{item['id']}", "PATCH", {"draft": False})
