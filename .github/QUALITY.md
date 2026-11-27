@@ -43,6 +43,7 @@ Domain-specific workflows follow the naming convention `Domain: Capability`. Cro
 | [Site: SEO Integrity](workflows/site-seo-integrity.yml) | Page titles, canonical URLs, and indexing directives. |
 | [Site: Rendering Integrity](workflows/site-rendering-integrity.yml) | Browser verification, accessibility, and responsive usability at 320px, 768px, and 1280px. |
 | [Site: Performance Integrity](workflows/site-performance-integrity.yml) | Loading performance, responsiveness, and visual stability across representative pages. |
+| [Release Publish](workflows/release-publish.yml) | Human-initiated, reviewed publication of a versioned milestone. |
 
 ## Quality Gate
 
@@ -57,6 +58,8 @@ Sustain conceptual integrity across workflows, code, tests, and documentation. E
 ## Publication
 
 The website is published through the existing GitHub Pages mechanism following an approved merge.
+
+An intentional versioned milestone is published separately by human-initiated [Release Publish](workflows/release-publish.yml). A human reviews and merges its changelog-only PR through the Quality Gate; the workflow verifies the reviewed revision before publishing. Release Publish is not an additional quality dimension.
 
 ## Quality Pulse
 

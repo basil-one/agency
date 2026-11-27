@@ -27,6 +27,12 @@ See the [repository conventions](.github/CONVENTIONS.md) for workflow, script, a
 
 The website is published through the existing GitHub Pages mechanism following an approved merge.
 
+## Releases
+
+The living site and a versioned release serve different purposes. To preserve an intentional milestone, a human runs [Release Publish](.github/workflows/release-publish.yml) from `main` with a stable version, reviews and merges the changelog-only release PR through the Quality Gate, and can rerun the same version to resume an interrupted publication. GitHub Actions may require repository permission to create pull requests and human approval of checks.
+
+Maintain notable outcomes under Unreleased in [CHANGELOG.md](CHANGELOG.md); release notes come from the reviewed changelog.
+
 ## Intellectual stewardship
 
 We develop original work while recognizing that knowledge emerges through practice, relationships, and the contributions of others.

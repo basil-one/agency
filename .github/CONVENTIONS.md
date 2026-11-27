@@ -8,9 +8,9 @@ Agency's shared quality practice covers the website. The domains are ordered **C
 | --- | --- | --- | --- |
 | Common | `.github/workflows/common-*.yml` | `scripts/common/` | `tests/common/` |
 | Site | `.github/workflows/site-*.yml` | `scripts/site/` | `tests/site/` |
-| Cross-domain orchestration | `quality-pulse.yml` | `scripts/orchestration/` | `tests/orchestration/` |
+| Cross-domain orchestration | `quality-pulse.yml`, `release-publish.yml` | `scripts/orchestration/` | `tests/orchestration/` |
 
-Use workflow filenames as capability IDs. A workflow with one substantive job uses its filename stem as that job ID; multi-job workflows qualify each role (`common-dependency-security-review` / `-posture`). Keep human-facing check names exactly `Domain: Capability`. Quality Pulse is the unqualified Common → Site coordinator.
+Use workflow filenames as capability IDs. A workflow with one substantive job uses its filename stem as that job ID; multi-job workflows qualify each role (`common-dependency-security-review` / `-posture`). Keep domain-facing check names exactly `Domain: Capability`. Quality Pulse coordinates Common → Site; Release Publish coordinates a human-reviewed milestone without adding a quality domain or check.
 
 Production helpers live under `scripts/{common,site,orchestration}/`; automated tests live under matching `tests/` domains. Browser test support stays under `tests/site/browser/`, while production route discovery and matrices live in `scripts/site/`.
 
@@ -30,7 +30,7 @@ Agency retains its reflection-text-only skip classification and missing-route di
 
 - `npm run test:quality-pulse` — Pulse outcomes, orchestration, and dependency posture.
 - `npm run test:coherence-integrity` — capability inventory/order, workflow IDs, repository boundaries, script/test placement, reference traceability, and negative fixtures.
-- `npm run test:required-checks` — canonical PR check identities and triggers.
+- `npm run test:required-checks` — canonical PR check identities, triggers, and release publication contracts.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
 - `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks.
 - `npm run test:site-routes` — generated-route discovery. The browser suite needs a built `_site` and the installed Playwright browser.
@@ -39,3 +39,5 @@ Agency retains its reflection-text-only skip classification and missing-route di
 ## Sustaining coherence
 
 Common: Coherence Integrity runs the architectural contracts on pull requests and in Quality Pulse. It checks the capability inventory/order and job IDs; resolves direct script, Python module, unittest discovery, and package-script references; enforces domain script/test placement; and rejects production imports from tests. Common: Code Quality retains workflow correctness, source lint/complexity, and operational regression tests. Site Build verifies that the generated `_site` excludes repository scripts and tests. When changing a capability, consider its relationship to the whole: follow the existing conventions, update affected references and contracts, and make intentional exceptions explicit. Reviewers still judge conceptual simplicity, teaching clarity, and whether a boundary or exception earns its maintenance cost; these are not reducible to a score.
+
+Keep notable outcomes in `CHANGELOG.md` under Unreleased as work is merged. A human selects a stable version and reviews its changelog-only release PR; rerun Release Publish with that same version to resume an interrupted release. Do not select versions, create releases, or bypass the Gate without authorization.
