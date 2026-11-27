@@ -27,7 +27,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 A single quality practice serves the website.
 
 - **Common:** Shared code quality, coherence integrity, and dependency security.
-- **Site:** Integrity of website development, generation, and the visitor's experience.
+- **Site:** Integrity of website development, generation, publication, and the visitor's experience.
 
 Domain-specific workflows follow the naming convention `Domain: Capability`. Cross-domain capabilities retain unqualified names.
 
@@ -57,7 +57,7 @@ Sustain conceptual integrity across workflows, code, tests, and documentation. E
 
 ## Publication
 
-The [Site: Publish workflow](workflows/site-publish.yml) is prepared to publish from `main`, with manual dispatch for recovery. Before it can deploy, the owner must set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. A successful main deployment and live-site verification remain pending; the workflow and setting alone do not establish publication.
+The website is published automatically following an approved merge.
 
 ## Quality Pulse
 

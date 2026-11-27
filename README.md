@@ -25,7 +25,7 @@ See the [repository conventions](.github/CONVENTIONS.md) for workflow, script, a
 
 ## Site Publication
 
-See [Publication](.github/QUALITY.md#publication) for the Site: Publish workflow and its pending owner transition and verification.
+The website is published automatically to GitHub Pages from `main` using the repository's verified build environment. [Site: Publish](.github/workflows/site-publish.yml) can also be run manually from `main` for recovery.
 
 ## Intellectual stewardship
 
