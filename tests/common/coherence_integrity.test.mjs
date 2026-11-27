@@ -129,6 +129,7 @@ function collectCoherenceFailures(repository) {
     'scripts/site/routes.js',
     'scripts/site/measure_performance.mjs',
     'scripts/orchestration/quality_pulse.mjs',
+    'tests/orchestration/test_release_publish.py',
     'tests/site/browser/smoke.spec.js'
   ]) {
     if (!existsSync(join(repository, path))) failures.push(`owned implementation path is missing: ${path}`);
@@ -335,6 +336,11 @@ test('rejects missing release identity, test wiring, or changelog exclusion', ()
     writeFileSync(file, readFileSync(file, 'utf8').replace('test_release_publish.py', 'missing.py'));
   });
   assert.ok(missingTests.includes('release publication tests are not wired to Common: Code Quality'));
+
+  const missingTestFile = fixture((directory) => {
+    rmSync(join(directory, 'tests/orchestration/test_release_publish.py'));
+  });
+  assert.ok(missingTestFile.includes('owned implementation path is missing: tests/orchestration/test_release_publish.py'));
 
   const missingExclusion = fixture((directory) => {
     const file = join(directory, '_config.yml');
