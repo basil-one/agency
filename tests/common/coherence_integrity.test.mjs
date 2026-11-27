@@ -42,7 +42,11 @@ function repositoryFiles(repository, directory) {
 function collectCoherenceFailures(repository) {
   const failures = [];
   const workflowDirectory = join(repository, '.github/workflows');
-  const expectedWorkflowFiles = [...capabilities.map(([, file]) => file), 'quality-pulse.yml'].sort();
+  const expectedWorkflowFiles = [
+    ...capabilities.map(([, file]) => file),
+    'quality-pulse.yml',
+    'site-publish.yml'
+  ].sort();
   const actualWorkflowFiles = readdirSync(workflowDirectory)
     .filter((file) => file.endsWith('.yml'))
     .sort();
@@ -51,13 +55,22 @@ function collectCoherenceFailures(repository) {
   }
 
   const stance = read(repository, '.github/QUALITY.md') ?? '';
-  const documentedCapabilities = [...stance.matchAll(
+  const verificationSection = stance.match(
+    /^### Required verification capabilities\n([\s\S]*?)(?=^### |\n## )/m
+  )?.[1] ?? '';
+  const documentedCapabilities = [...verificationSection.matchAll(
     /^\| \[((?:Common|Site): [^\]]+)\]\(workflows\/([a-z-]+\.yml)\)/gm
   )].map(([, name, file]) => [name, file]);
   if (JSON.stringify(documentedCapabilities) !== JSON.stringify(
     capabilities.map(([name, file]) => [name, file])
   )) {
     failures.push('quality capability table differs from the canonical order');
+  }
+  if (
+    !stance.includes('### Site publication (not a required check or Pulse dimension)') ||
+    !stance.includes('| [Site: Publish](workflows/site-publish.yml) |')
+  ) {
+    failures.push('Site publication is not documented separately from verification capabilities');
   }
   const orchestration = read(repository, '.github/workflows/quality-pulse.yml') ?? '';
   const childJobs = [...orchestration.matchAll(
@@ -166,6 +179,14 @@ function collectCoherenceFailures(repository) {
   if (!packageScripts['test:performance-policy']?.includes('tests/site/performance_policy.test.mjs')) {
     failures.push('performance policy tests are not wired to an npm command');
   }
+  if (!packageScripts['test:site-publication']?.includes('tests/site/publication_workflow.test.mjs')) {
+    failures.push('Site publication workflow tests are not wired to an npm command');
+  }
+  if (!read(repository, '.github/workflows/common-code-quality.yml')?.includes(
+    'run: npm run test:site-publication'
+  )) {
+    failures.push('Site publication workflow tests are not wired to Common: Code Quality');
+  }
   const performanceWorkflow = read(repository, '.github/workflows/site-performance-integrity.yml') ?? '';
   if (!performanceWorkflow.includes('PERFORMANCE_REFERENCE_PATH: .github/site-performance-reference.json')) {
     failures.push('performance workflow does not use the canonical domain reference');
@@ -195,7 +216,7 @@ function collectCoherenceFailures(repository) {
   ]);
   for (const [file, workflow] of workflowContents) {
     if (
-      file !== 'quality-pulse.yml' &&
+      !['quality-pulse.yml', 'site-publish.yml'].includes(file) &&
       /uses:\s+actions\/checkout@/.test(workflow) &&
       (!workflow.includes('git rev-parse HEAD') || !workflow.includes('Checked-out revision:'))
     ) {

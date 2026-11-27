@@ -33,6 +33,8 @@ Domain-specific workflows follow the naming convention `Domain: Capability`. Cro
 
 ## Capabilities in Operation
 
+### Required verification capabilities
+
 | Capability | Purpose |
 | --- | --- |
 | [Common: Code Quality](workflows/common-code-quality.yml) | Source quality, workflow correctness, and maintainability. Function complexity is capped at 10. |
@@ -44,9 +46,15 @@ Domain-specific workflows follow the naming convention `Domain: Capability`. Cro
 | [Site: Rendering Integrity](workflows/site-rendering-integrity.yml) | Browser verification, accessibility, and responsive usability at 320px, 768px, and 1280px. |
 | [Site: Performance Integrity](workflows/site-performance-integrity.yml) | Loading performance, responsiveness, and visual stability across representative pages. |
 
+### Site publication (not a required check or Pulse dimension)
+
+| Capability | Purpose |
+| --- | --- |
+| [Site: Publish](workflows/site-publish.yml) | Builds and deploys the same-run Pages artifact from the latest verified `main` revision. |
+
 ## Quality Gate
 
-Quality safeguards verify proposed changes before merging; safeguards that verify existing published experiences run over time. Required status checks are temporarily inactive during the approved migration; ordinary pull-request protection remains in place.
+Required checks protect against known defects before changes are merged. Quality safeguards that verify proposed changes are required; safeguards that verify existing published experiences run over time.
 
 Performance Integrity protects against confirmed budget violations and substantial loading regressions against a compatible reviewed reference. Rolling comparisons inform human judgment.
 
@@ -54,9 +62,9 @@ Performance Integrity protects against confirmed budget violations and substanti
 
 Sustain conceptual integrity across workflows, code, tests, and documentation. Executable [repository conventions](CONVENTIONS.md) protect against architectural drift as humans and agents evolve the system. Human judgment guides simplicity, consistency, and intentional differences.
 
-## Publication
+## Site Publication
 
-The website is published through the existing GitHub Pages mechanism following an approved merge.
+The [Site: Publish workflow](workflows/site-publish.yml) is prepared to publish from `main`, with manual dispatch for recovery. Before it can deploy, the owner must set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. A successful main deployment and live-site verification remain pending; the workflow and setting alone do not establish publication.
 
 ## Quality Pulse
 

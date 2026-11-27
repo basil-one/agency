@@ -10,7 +10,7 @@ Agency's shared quality practice covers the website. The domains are ordered **C
 | Site | `.github/workflows/site-*.yml` | `scripts/site/` | `tests/site/` |
 | Cross-domain orchestration | `quality-pulse.yml` | `scripts/orchestration/` | `tests/orchestration/` |
 
-Use workflow filenames as capability IDs. A workflow with one substantive job uses its filename stem as that job ID; multi-job workflows qualify each role (`common-dependency-security-review` / `-posture`). Keep human-facing check names exactly `Domain: Capability`. Quality Pulse is the unqualified Common → Site coordinator.
+Use workflow filenames as capability IDs. A workflow with one substantive job uses its filename stem as that job ID; multi-job workflows qualify each role (`common-dependency-security-review` / `-posture`, `site-publish-build` / `-deploy`). Keep human-facing check names exactly `Domain: Capability`. Quality Pulse is the unqualified Common → Site coordinator.
 
 Production helpers live under `scripts/{common,site,orchestration}/`; automated tests live under matching `tests/` domains. Browser test support stays under `tests/site/browser/`, while production route discovery and matrices live in `scripts/site/`.
 
@@ -20,7 +20,9 @@ Make the checked-out revision and task context clear; prepare only the needed en
 
 Use release version tags for external actions and one version of each shared dependency across workflows, unless a documented compatibility constraint requires otherwise. Agency currently pins jactionlint to the commit for v2.6.0.
 
-The order is purposeful, not a template: Dependency Security separates pull-request review from scheduled/manual alert posture. Performance keeps classification, initial measurement, confirmation, and artifact evidence distinct. Only Quality Pulse owns the daily schedule; proposed-change safeguards retain pull-request checks, and verification workflows support manual diagnostics. Keep permissions narrow and preserve ordinary pull-request protection.
+The order is purposeful, not a template: Dependency Security separates pull-request review from scheduled/manual alert posture. Performance keeps classification, initial measurement, confirmation, and artifact evidence distinct. Only Quality Pulse owns the daily schedule; proposed-change safeguards retain pull-request checks, and verification workflows support manual diagnostics. Site Publish is separate from the eight required verification checks and eight Pulse dimensions; it builds a same-run artifact from `main`, checks that `main` has not advanced before deployment, and supports manual recovery only from `main`. Keep permissions narrow and preserve ordinary pull-request protection.
+
+Before publication can operate, the owner must set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. A successful deployment from `main` and live-site verification remain pending.
 
 Site Link Integrity reports uncertain external responses as nonblocking advisories; known defects retain failure precedence. Site Performance Integrity measures four representative routes on mobile and desktop with three-run Lighthouse medians and confirms initial violations with three new measurements per affected route/profile. Incomplete confirmation is not a pass. The executable policy defines the budgets and substantial deterioration criteria; the canonical fixed reference is [site-performance-reference.json](site-performance-reference.json). Use complete, successful, compatible main evidence after human review; only successful scheduled-main evidence contributes to informational rolling history. Retain compatible historical readers.
 
@@ -31,6 +33,7 @@ Agency retains its reflection-text-only skip classification and missing-route di
 - `npm run test:quality-pulse` — Pulse outcomes, orchestration, and dependency posture.
 - `npm run test:coherence-integrity` — capability inventory/order, workflow IDs, repository boundaries, script/test placement, reference traceability, and negative fixtures.
 - `npm run test:required-checks` — canonical PR check identities and triggers.
+- `npm run test:site-publication` — main-only publication workflow, source/artifact integrity, scoped permissions, and recovery boundaries.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
 - `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks.
 - `npm run test:site-routes` — generated-route discovery. The browser suite needs a built `_site` and the installed Playwright browser.
