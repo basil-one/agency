@@ -18,11 +18,13 @@ Production helpers live under `scripts/{common,site,orchestration}/`; automated 
 
 Make the checked-out revision and task context clear; prepare only the needed environment; generate artifacts when required; run the check and focused tests; preserve named evidence; summarize passed, advisory, failed, incomplete, unknown, and skipped outcomes without inferring success from missing evidence.
 
-Use release version tags for external actions and one version of each shared dependency across workflows, unless a documented compatibility constraint requires otherwise. The existing jactionlint SHA pin identifies v2.6.0; retain it during this documentation reconciliation.
+Use release version tags for external actions and one version of each shared dependency across workflows, unless a documented compatibility constraint requires otherwise. Agency currently pins jactionlint to the commit for v2.6.0.
 
 The order is purposeful, not a template: Dependency Security separates pull-request review from scheduled/manual alert posture. Performance keeps classification, initial measurement, confirmation, and artifact evidence distinct. Only Quality Pulse owns the daily schedule; verification capabilities retain pull-request checks and manual diagnostics. Keep permissions narrow and preserve ordinary pull-request protection.
 
-Site Link Integrity reports uncertain external responses as nonblocking advisories; known defects retain failure precedence. Site Performance Integrity measures four representative routes on mobile and desktop with three-run Lighthouse medians, retains reflection-text-only skips and confirms initial violations with three new measurements per affected route/profile. Incomplete confirmation is not a pass. The executable policy defines the budgets and substantial deterioration criteria; the canonical fixed reference is [site-performance-reference.json](site-performance-reference.json). Use complete, successful, compatible main evidence after human review; only successful scheduled-main evidence contributes to informational rolling history. Retain compatible historical readers.
+Site Link Integrity reports uncertain external responses as nonblocking advisories; known defects retain failure precedence. Site Performance Integrity measures four representative routes on mobile and desktop with three-run Lighthouse medians and confirms initial violations with three new measurements per affected route/profile. Incomplete confirmation is not a pass. The executable policy defines the budgets and substantial deterioration criteria; the canonical fixed reference is [site-performance-reference.json](site-performance-reference.json). Use complete, successful, compatible main evidence after human review; only successful scheduled-main evidence contributes to informational rolling history. Retain compatible historical readers.
+
+Agency retains its reflection-text-only skip classification and missing-route diagnostic.
 
 ## Run and maintain checks
 

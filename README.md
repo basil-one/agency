@@ -8,11 +8,11 @@ Source for [Agency](https://agency.basil.one), a Jekyll site for individual coac
 
 We keep Agency dependable, accessible, and easy to use so the site supports meaningful human encounters. Automation carries repetitive checks and brings evidence and practical remedies to human judgment. The practice creates capacity rather than maintenance overhead.
 
-Our [quality stance and practice](.github/QUALITY.md) describes the safeguards in operation, the daily Quality Pulse, and how people review its evidence.
+Our [quality stance and practice](.github/QUALITY.md) describes the quality domains, safeguards in operation, and how people review their evidence.
 
 ## Development
 
-Use GitHub Codespaces or Ruby 3.2+ with Bundler locally (CI uses Ruby 3.3).
+Use GitHub Codespaces (the provided dev container uses Ruby 3.2) or Ruby 3.2+ with Bundler locally. CI uses Ruby 3.3.
 
 ```sh
 bundle install
@@ -20,6 +20,12 @@ bundle exec jekyll serve
 ```
 
 The local site is available at http://localhost:4000.
+
+See the [repository conventions](.github/CONVENTIONS.md) for workflow, script, and test locations and focused validation commands. Agents start with [AGENTS.md](AGENTS.md), including the linked automation guidance.
+
+## Site Publication
+
+The website is published through the existing GitHub Pages mechanism following an approved merge.
 
 ## Intellectual stewardship
 

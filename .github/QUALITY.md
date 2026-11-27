@@ -64,4 +64,4 @@ A [daily workflow](workflows/quality-pulse.yml) coordinates the Common and Site 
 
 Passed checks, nonblocking advisories, confirmed failures, incomplete checks, and unavailable evidence remain distinguishable. Findings bring actionable evidence to human judgment. A cycle with advisories may succeed, but is not reported as an unconditional pass.
 
-Performance measurements are compared against a reviewed reference and recent compatible measurements. The fixed reference is pending until complete, successful, compatible main evidence is reviewed.
+Performance measurements are compared against recent compatible measurements. Fixed-reference comparison remains pending until complete, successful, compatible main evidence is reviewed.
