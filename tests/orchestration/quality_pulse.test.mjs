@@ -304,6 +304,22 @@ test('dependency posture artifacts keep API denial, findings, and clean checks d
   const passed = applyDependencyPosture(run, { status: 'passed' });
   assert.equal(passed.state, 'fresh');
   assert.match(passed.detail, /none met the review threshold/);
+
+  const knownFinding = {
+    state: 'failed',
+    label: 'Fresh — review required',
+    detail: 'An open dependency review finding needs attention.'
+  };
+  const unavailableAfterFinding = applyDependencyPosture(knownFinding, {
+    status: 'unknown',
+    detail: 'Dependabot posture artifact could not be read'
+  });
+  assert.equal(unavailableAfterFinding.state, 'failed');
+  assert.match(unavailableAfterFinding.detail, /reported review finding remains failed/);
+
+  const contradictoryPass = applyDependencyPosture(knownFinding, { status: 'passed' });
+  assert.equal(contradictoryPass.state, 'failed');
+  assert.match(contradictoryPass.detail, /contradicting the failed check/);
 });
 
 test('performance baseline details distinguish pending and available comparisons', () => {
@@ -752,12 +768,14 @@ test('orchestrated Pulse reports same-cycle job results and requires valid evide
     runUrl,
     date,
     generatedAt: `${date}T06:40:00Z`,
+    sourceRevision: 'revision-123',
     fetchImpl,
     unzipImpl
   });
 
   assert.equal(pulse.successful, true);
   assert.match(pulse.markdown, /All 8 dimensions passed in this cycle/);
+  assert.match(pulse.markdown, /\*\*Validator\/source revision:\*\* `revision-123`/);
   assert.match(pulse.markdown, /\| Site: Build Integrity \| Passed \| Same-cycle job result \|/);
   assert.match(pulse.markdown, /\[same-cycle run\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/888\)/);
   assert.match(pulse.markdown, /actions\/runs\/888\/artifacts\/456/);

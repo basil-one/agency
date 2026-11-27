@@ -2,11 +2,11 @@
 
 **Quality is a continuous practice in service of human connection.**
 
-Technical quality protects people's ability to understand, trust, navigate, and engage with Agency. A sustainable quality practice also respects the time and attention of the people caring for the experience.
+Technical quality protects people's ability to understand, trust, navigate, and engage. A sustainable quality practice also respects the time and attention of the people caring for the experience.
 
 ## Our Stance
 
-- **Human connection is the purpose.** Reliability, accessibility, clarity, and performance serve the visitor's experience. A passing score is evidence, not a substitute for human judgment.
+- **Human connection is the purpose.** Reliability, accessibility, clarity, and performance serve the reader's experience. A passing score is evidence, not a substitute for human judgment.
 - **Quality is sustained.** Relevant changes are checked before merging; conditions that can deteriorate without a code change are revisited over time.
 - **Automation brings actionable work to human judgment.** When a problem has a safe, practical remedy, an agent or workflow brings a reviewable pull request. Otherwise it brings a focused finding with evidence, impact, and a recommended next action. Humans decide what matters, approve changes, and merge.
 - **Coherence creates capacity.** Consistent organization and clear relationships make the system easier to understand, maintain, and extend.
@@ -14,7 +14,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 ## How We Operate
 
-**On change:** Pull requests are checked against the safeguards in operation below. Failures require correction or an explicit authorized human decision.
+**On change:** Pull requests are checked against the applicable quality safeguards. Failures require correction or an explicit authorized human decision.
 
 **Over time:** Risks that can change without a code change are revisited. Meaningful findings or proposed remedies come to human judgment; healthy checks stay quiet.
 

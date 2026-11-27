@@ -470,11 +470,23 @@ async function fetchArtifactJson({
 
 function applyDependencyPosture(result, posture) {
   if (posture.status === 'unknown') {
+    if (result.state === 'failed') {
+      return {
+        ...result,
+        detail: `${result.detail} Dependency posture evidence is unavailable (${posture.detail ?? 'no detail'}); the reported review finding remains failed.`
+      };
+    }
     return {
       ...result,
       state: 'unknown',
       label: 'Unknown / API inaccessible',
       detail: `${posture.detail ?? 'Dependency posture could not be read'}; no result is inferred.`
+    };
+  }
+  if (posture.status === 'passed' && result.state === 'failed') {
+    return {
+      ...result,
+      detail: `${result.detail} Dependency posture reported passed, contradicting the failed check; the reported review finding remains failed.`
     };
   }
   if (posture.status === 'review') {
@@ -499,7 +511,8 @@ function renderPulse({
   generatedAt,
   results,
   cutoff = cutoffTime,
-  orchestrated = false
+  orchestrated = false,
+  sourceRevision = 'unavailable'
 }) {
   const needsReview = results.filter(
     (item) => !['fresh', 'advisory'].includes(item.result.state)
@@ -518,6 +531,7 @@ function renderPulse({
     '# Quality Pulse',
     '',
     `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}${orchestrated ? '' : `  ·  **Cutoff:** ${date} ${cutoff}`}`,
+    `**Validator/source revision:** \`${sourceRevision || 'unavailable'}\``,
     '',
     `**Outcome:** ${aggregate} ${orchestrated
       ? 'This summary reflects the same-cycle substantive job results and does not replace their check outcomes.'
@@ -653,6 +667,7 @@ async function buildOrchestratedPulse({
   branch = 'main',
   date,
   generatedAt = new Date().toISOString(),
+  sourceRevision = 'unavailable',
   fetchImpl = fetch,
   unzipImpl = execFileSync
 }) {
@@ -756,7 +771,8 @@ async function buildOrchestratedPulse({
     date,
     generatedAt,
     results,
-    orchestrated: true
+    orchestrated: true,
+    sourceRevision
   });
   return {
     markdown,
@@ -771,6 +787,7 @@ async function buildPulse({
   token,
   date,
   generatedAt = new Date().toISOString(),
+  sourceRevision = 'unavailable',
   fetchImpl = fetch,
   unzipImpl = execFileSync
 }) {
@@ -894,15 +911,20 @@ async function buildPulse({
       });
       dependency.result = applyDependencyPosture(dependency.result, posture);
     } catch (error) {
-      dependency.result = {
-        ...dependency.result,
-        state: 'unknown',
-        label: 'Unknown / posture artifact unavailable',
-        detail: `${error.message}; no clean dependency result is inferred.`
-      };
+      dependency.result = dependency.result.state === 'failed'
+        ? {
+          ...dependency.result,
+          detail: `${dependency.result.detail} Dependency posture artifact unavailable (${error.message}); the reported review finding remains failed.`
+        }
+        : {
+          ...dependency.result,
+          state: 'unknown',
+          label: 'Unknown / posture artifact unavailable',
+          detail: `${error.message}; no clean dependency result is inferred.`
+        };
     }
   }
-  return renderPulse({ date, generatedAt, results });
+  return renderPulse({ date, generatedAt, results, sourceRevision });
 }
 
 async function main() {
@@ -917,7 +939,8 @@ async function main() {
     eventName: process.env.PULSE_EVENT_NAME ?? 'schedule',
     branch: process.env.PULSE_RUN_BRANCH ?? 'main',
     date,
-    generatedAt: process.env.PULSE_GENERATED_AT ?? new Date().toISOString()
+    generatedAt: process.env.PULSE_GENERATED_AT ?? new Date().toISOString(),
+    sourceRevision: process.env.PULSE_SOURCE_REVISION ?? 'unavailable'
   });
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, pulse.markdown);

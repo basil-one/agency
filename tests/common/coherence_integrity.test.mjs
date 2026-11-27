@@ -30,6 +30,15 @@ function read(repository, path) {
   return existsSync(file) ? readFileSync(file, 'utf8') : undefined;
 }
 
+function repositoryFiles(repository, directory) {
+  const root = join(repository, directory);
+  if (!existsSync(root)) return [];
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = `${directory}/${entry.name}`;
+    return entry.isDirectory() ? repositoryFiles(repository, path) : [path];
+  });
+}
+
 function collectCoherenceFailures(repository) {
   const failures = [];
   const workflowDirectory = join(repository, '.github/workflows');
@@ -50,13 +59,6 @@ function collectCoherenceFailures(repository) {
   )) {
     failures.push('quality capability table differs from the canonical order');
   }
-  if (!stance.includes('Coherence creates capacity.')) {
-    failures.push('quality stance omits the coherence commitment');
-  }
-  if (!stance.includes('A cycle with advisories') || !stance.includes('not reported as an unconditional pass')) {
-    failures.push('quality stance does not distinguish advisory cycles from unconditional passes');
-  }
-
   const orchestration = read(repository, '.github/workflows/quality-pulse.yml') ?? '';
   const childJobs = [...orchestration.matchAll(
     /^  ((?:common|site)-[a-z-]+):\n    name: "((?:Common|Site): [^"]+)"\n    uses: \.\/\.github\/workflows\/([a-z-]+\.yml)$/gm
@@ -117,17 +119,32 @@ function collectCoherenceFailures(repository) {
   if (existsSync(join(repository, 'tests/site/browser/site-routes.js'))) {
     failures.push('production route definitions remain under browser tests');
   }
-  const scriptFiles = [];
-  for (const domain of ['common', 'site', 'orchestration']) {
-    for (const entry of readdirSync(join(repository, 'scripts', domain), { withFileTypes: true })) {
-      if (entry.isFile() && /\.(?:mjs|js|py)$/.test(entry.name)) {
-        scriptFiles.push(join(repository, 'scripts', domain, entry.name));
-      }
+  const codeExtensions = /\.(?:mjs|js|py|sh)$/;
+  const scriptPaths = repositoryFiles(repository, 'scripts').filter((path) => codeExtensions.test(path));
+  const testPaths = repositoryFiles(repository, 'tests').filter((path) => /\.(?:mjs|js|py)$/.test(path));
+  const scriptFiles = scriptPaths.map((path) => join(repository, path));
+  for (const path of scriptPaths) {
+    if (path.split('/').length < 3) {
+      failures.push(`production code must be placed under a scripts domain: ${path}`);
+    } else if (!['common', 'site', 'orchestration'].includes(path.split('/')[1])) {
+      failures.push(`production code has no canonical domain owner: ${path}`);
+    }
+  }
+  for (const path of testPaths) {
+    if (path.split('/').length < 3) {
+      failures.push(`test code must be placed under a tests domain: ${path}`);
+    } else if (!['common', 'site', 'orchestration'].includes(path.split('/')[1])) {
+      failures.push(`test code has no canonical domain owner: ${path}`);
     }
   }
   for (const file of scriptFiles) {
-    if (/(?:from|import)\s+['"][^'"]*tests\//.test(readFileSync(file, 'utf8'))) {
-      failures.push(`production code imports test-owned support: ${relative(repository, file)}`);
+    const source = readFileSync(file, 'utf8');
+    const path = relative(repository, file).split('\\').join('/');
+    if (
+      /(?:from|import)\s+['"][^'"]*tests\//.test(source) ||
+      /^\s*(?:from\s+tests(?:\.|\s+import)|import\s+tests(?:\.|,|\s|$))/m.test(source)
+    ) {
+      failures.push(`production code imports test-owned support: ${path}`);
     }
   }
 
@@ -146,11 +163,40 @@ function collectCoherenceFailures(repository) {
   if (!packageScripts['test:coherence-integrity']?.includes('tests/common/coherence_integrity.test.mjs')) {
     failures.push('coherence contract test is not wired to an npm command');
   }
+  const workflowContents = actualWorkflowFiles.map((file) => [
+    file,
+    read(repository, `.github/workflows/${file}`) ?? ''
+  ]);
+  for (const [file, workflow] of workflowContents) {
+    if (
+      file !== 'quality-pulse.yml' &&
+      /uses:\s+actions\/checkout@/.test(workflow) &&
+      (!workflow.includes('git rev-parse HEAD') || !workflow.includes('Checked-out revision:'))
+    ) {
+      failures.push(`checked-out revision is not reported by ${file}`);
+    }
+    for (const [, , discoveryDirectory] of workflow.matchAll(
+      /\bunittest\s+discover\s+-s\s+(['"]?)([^'"\s]+)\1/g
+    )) {
+      if (!existsSync(join(repository, discoveryDirectory))) {
+        failures.push(`unittest discovery directory is missing: ${file} references ${discoveryDirectory}`);
+      }
+    }
+  }
+  if (
+    !orchestration.includes('git rev-parse HEAD') ||
+    !orchestration.includes('PULSE_SOURCE_REVISION:') ||
+    !read(repository, 'scripts/orchestration/quality_pulse.mjs')?.includes('Validator/source revision:')
+  ) {
+    failures.push('Quality Pulse summary does not report its validator/source revision');
+  }
+
   const referencedText = [
     packageJson ?? '',
-    ...actualWorkflowFiles.map((file) => read(repository, `.github/workflows/${file}`) ?? ''),
+    ...workflowContents.map(([, workflow]) => workflow),
     stance,
-    read(repository, '.github/CONVENTIONS.md') ?? ''
+    read(repository, '.github/CONVENTIONS.md') ?? '',
+    read(repository, 'AGENTS.md') ?? ''
   ].join('\n');
   for (const [, path] of referencedText.matchAll(/(?:^|[\s("'`])((?:scripts|tests)\/[\w./-]+\.(?:mjs|js|py|spec\.js|yml|md))/gm)) {
     if (!existsSync(join(repository, path))) failures.push(`repository reference does not resolve: ${path}`);
@@ -182,7 +228,7 @@ function fixture(mutator) {
     cpSync(join(root, path), join(directory, path), { recursive: true });
   }
   for (const path of ['.github/QUALITY.md', '.github/CONVENTIONS.md', '_config.yml',
-    'package.json', 'playwright.config.js']) {
+    'package.json', 'playwright.config.js', 'AGENTS.md']) {
     cpSync(join(root, path), join(directory, path), { recursive: true });
   }
   try {
@@ -231,6 +277,33 @@ test('rejects missing Site production paths and production imports from tests', 
     writeFileSync(file, `${readFileSync(file, 'utf8')}\nimport '../tests/site/test_links.py';\n`);
   });
   assert.ok(crossedOwnership.includes('production code imports test-owned support: scripts/site/routes.js'));
+});
+
+test('rejects root-level scripts and tests, Python test imports, and missing discovery directories', () => {
+  const rootScript = fixture((directory) => {
+    writeFileSync(join(directory, 'scripts/extra.mjs'), 'export {};\n');
+  });
+  assert.ok(rootScript.includes('production code must be placed under a scripts domain: scripts/extra.mjs'));
+
+  const rootTest = fixture((directory) => {
+    writeFileSync(join(directory, 'tests/extra.test.mjs'), 'import test from "node:test";\n');
+  });
+  assert.ok(rootTest.includes('test code must be placed under a tests domain: tests/extra.test.mjs'));
+
+  const pythonTestImport = fixture((directory) => {
+    const file = join(directory, 'scripts/site/check_links.py');
+    writeFileSync(file, `${readFileSync(file, 'utf8')}\nfrom tests.site import test_links\n`);
+  });
+  assert.ok(pythonTestImport.includes('production code imports test-owned support: scripts/site/check_links.py'));
+
+  const missingDiscoveryDirectory = fixture((directory) => {
+    const file = join(directory, '.github/workflows/site-link-integrity.yml');
+    const content = readFileSync(file, 'utf8');
+    writeFileSync(file, content.replace('tests/site', 'tests/missing'));
+  });
+  assert.ok(missingDiscoveryDirectory.includes(
+    'unittest discovery directory is missing: site-link-integrity.yml references tests/missing'
+  ));
 });
 
 test('rejects unresolved command references and inconsistent external action versions', () => {

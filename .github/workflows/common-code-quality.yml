@@ -19,6 +19,9 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Record checked-out revision
+        run: |
+          printf 'Checked-out revision: `%s`\n\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
       - name: Load Super-Linter configuration
         run: cat .github/linters/super-linter.env >> "$GITHUB_ENV"
       - name: Check Gemfile syntax

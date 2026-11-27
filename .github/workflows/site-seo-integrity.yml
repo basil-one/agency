@@ -18,6 +18,9 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+      - name: Record checked-out revision
+        run: |
+          printf 'Checked-out revision: `%s`\n\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
