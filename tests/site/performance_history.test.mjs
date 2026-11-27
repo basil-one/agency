@@ -6,7 +6,7 @@ import {
   isDailyPerformanceEvidence,
   loadDailyHistory,
   referenceIsReady
-} from '../scripts/compare_performance.mjs';
+} from '../../scripts/site/compare_performance.mjs';
 
 const metricKeys = [
   'first-contentful-paint',
@@ -275,6 +275,10 @@ test('preserves legacy scheduled and new orchestrated Lighthouse history provena
     true
   );
   assert.equal(
+    isDailyPerformanceEvidence(summary, legacyRun, 'site-performance-integrity.yml'),
+    true
+  );
+  assert.equal(
     isDailyPerformanceEvidence(summary, legacyRun, 'quality-pulse.yml', true),
     true
   );
@@ -315,6 +319,10 @@ test('history loads prior standalone runs and successful performance jobs from o
       ...makeRun('legacy-run', '2026-11-16T06:17:00Z'),
       conclusion: 'success'
     }],
+    'site-performance-integrity.yml': [{
+      ...makeRun('renamed-run', '2026-11-17T06:17:00Z'),
+      conclusion: 'success'
+    }],
     'quality-pulse.yml': [
       { ...makeRun('orchestrated-run', '2026-11-18T06:17:00Z'), conclusion: 'failure' },
       { ...makeRun('failed-performance-run', '2026-11-17T06:17:00Z'), conclusion: 'success' },
@@ -335,12 +343,15 @@ test('history loads prior standalone runs and successful performance jobs from o
       conclusion: 'failure'
     }]
   };
-  const artifacts = { 'legacy-run': 901, 'orchestrated-run': 902 };
+  const artifacts = { 'legacy-run': 901, 'renamed-run': 903, 'orchestrated-run': 902 };
   let downloadedArtifact;
   const fetchImpl = async (input) => {
     const url = new URL(input);
     if (url.pathname.endsWith('/actions/workflows/performance-integrity.yml/runs')) {
       return { ok: true, json: async () => ({ workflow_runs: runs['performance-integrity.yml'] }) };
+    }
+    if (url.pathname.endsWith('/actions/workflows/site-performance-integrity.yml/runs')) {
+      return { ok: true, json: async () => ({ workflow_runs: runs['site-performance-integrity.yml'] }) };
     }
     if (url.pathname.endsWith('/actions/workflows/quality-pulse.yml/runs')) {
       return { ok: true, json: async () => ({ workflow_runs: runs['quality-pulse.yml'] }) };
@@ -377,7 +388,11 @@ test('history loads prior standalone runs and successful performance jobs from o
     throw new Error(`Unexpected request: ${url.pathname}`);
   };
   const unzipImpl = () => {
-    const runId = downloadedArtifact === 902 ? 'orchestrated-run' : 'legacy-run';
+    const runId = downloadedArtifact === 902
+      ? 'orchestrated-run'
+      : downloadedArtifact === 903
+        ? 'renamed-run'
+        : 'legacy-run';
     const summary = makeSummary({
       capturedAt: runId === 'orchestrated-run'
         ? '2026-11-18T06:30:00Z'
@@ -397,12 +412,63 @@ test('history loads prior standalone runs and successful performance jobs from o
   assert.equal(history.status, 'collecting_history');
   assert.deepEqual(history.summaries.map((summary) => summary.source.runId), [
     'orchestrated-run',
+    'renamed-run',
     'legacy-run'
   ]);
   assert.ok(history.skipped.some((item) => item.includes('failed-performance-run')));
   assert.equal(history.summaries.some((summary) => summary.source.runId === 'manual-run'), false);
   assert.equal(history.summaries.some((summary) => summary.source.runId === 'pull-request-run'), false);
   assert.equal(history.summaries.some((summary) => summary.source.runId === 'branch-run'), false);
+});
+
+test('a missing legacy workflow does not prevent renamed workflow history from loading', async () => {
+  const run = { ...makeRun('renamed-run', '2026-11-17T06:17:00Z'), conclusion: 'success' };
+  const summary = makeSummary();
+  summary.source.runId = run.id;
+  const requestedWorkflows = [];
+  const fetchImpl = async (input) => {
+    const url = new URL(input);
+    if (url.pathname.endsWith('/actions/workflows/performance-integrity.yml/runs')) {
+      requestedWorkflows.push('legacy');
+      return { ok: false, status: 404 };
+    }
+    if (url.pathname.endsWith('/actions/workflows/site-performance-integrity.yml/runs')) {
+      requestedWorkflows.push('renamed');
+      return { ok: true, json: async () => ({ workflow_runs: [run] }) };
+    }
+    if (url.pathname.endsWith('/actions/workflows/quality-pulse.yml/runs')) {
+      requestedWorkflows.push('pulse');
+      return { ok: true, json: async () => ({ workflow_runs: [] }) };
+    }
+    if (url.pathname.endsWith(`/actions/runs/${run.id}/artifacts`)) {
+      return {
+        ok: true,
+        json: async () => ({
+          artifacts: [{
+            name: 'performance-summary',
+            expired: false,
+            size_in_bytes: 10,
+            id: 901
+          }]
+        })
+      };
+    }
+    if (url.pathname.endsWith('/actions/artifacts/901/zip')) {
+      return { ok: true, arrayBuffer: async () => Buffer.from('archive') };
+    }
+    throw new Error(`Unexpected GitHub request: ${url.pathname}`);
+  };
+  const history = await loadDailyHistory({
+    fetchImpl,
+    unzipImpl: () => JSON.stringify(summary),
+    token: 'test-token',
+    repository: 'basil-one/agency'
+  });
+
+  assert.deepEqual(requestedWorkflows, ['legacy', 'renamed', 'pulse']);
+  assert.equal(history.summaries.length, 1);
+  assert.equal(history.summaries[0].source.runId, 'renamed-run');
+  assert.ok(history.skipped.some((item) => item.includes('legacy performance workflow lookup returned HTTP 404')));
 });
 
 test('does not compare with history collected under different tools', () => {

@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import test from 'node:test';
-import { classifyChanges } from '../scripts/classify_performance_skip.mjs';
+import { classifyChanges } from '../../scripts/site/classify_performance_skip.mjs';
 
 function reflection(slug, body = 'Editorial reflection text.') {
   return `---
@@ -133,6 +133,7 @@ test('runs the full baseline for changed media, embeds, HTML, and Liquid', () =>
     '[download](/assets/recording.mp3)',
     '[stylesheet](/assets/css/site.css)',
     '<iframe src="https://example.test/embed"></iframe>',
+    '--!>',
     '{% include callout.html %}',
     '{{ site.title }}'
   ];

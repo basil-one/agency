@@ -8,7 +8,7 @@ const editorialFields = new Set(['title', 'description', 'subtitle']);
 const mediaReference = /\.(?:avif|bmp|gif|jpe?g|png|svg|webp|mp4|webm|mov|mp3|wav|ogg|pdf|css|m?js)(?:[?#)\s]|$)/i;
 const markdownImage = /!\s*\[[^\]]*\](?:\s*(?:\([^)]*\)|\[[^\]]*\]))?/;
 const embeddedMedia = /\b(?:youtube(?:-nocookie)?\.com|youtu\.be|vimeo\.com|soundcloud\.com)\b/i;
-const markup = /<\s*\/?\s*[a-z][^>]*>|<!--|-->|{%|{{|}}|%}/i;
+const markup = /<\s*\/?\s*[a-z][^>]*>|<!--|--!?>|{%|{{|}}|%}/i;
 
 function git(args, cwd) {
   return execFileSync('git', args, {

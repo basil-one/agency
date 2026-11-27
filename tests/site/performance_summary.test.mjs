@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { renderPerformanceSummary } from '../scripts/render_performance_summary.mjs';
+import { renderPerformanceSummary } from '../../scripts/site/render_performance_summary.mjs';
 
 const routes = ['/', '/know-your-patterns/', '/reflections/', '/reflections/example/'];
 const metrics = [

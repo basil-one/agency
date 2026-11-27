@@ -104,7 +104,7 @@ function sameMeasurementEnvironment(current, baseline) {
     ['ruby', 'node'].every((key) => runtimeCompatibility(current, baseline, key) === 'compatible');
 }
 
-async function githubRequest(path, token, fetchImpl = fetch) {
+async function githubRequest(path, token, fetchImpl = fetch, { notFoundIsEmpty = false } = {}) {
   const response = await fetchImpl(`${process.env.GITHUB_API_URL ?? 'https://api.github.com'}${path}`, {
     headers: {
       Accept: 'application/vnd.github+json',
@@ -113,6 +113,7 @@ async function githubRequest(path, token, fetchImpl = fetch) {
     },
     signal: AbortSignal.timeout(10_000)
   });
+  if (notFoundIsEmpty && response.status === 404) return undefined;
   if (!response.ok) {
     throw new Error(`GitHub Actions API returned HTTP ${response.status} for ${path}.`);
   }
@@ -130,7 +131,7 @@ function isDailyPerformanceEvidence(summary, run, workflowFile, performanceJobSu
   ) {
     return false;
   }
-  if (workflowFile === 'performance-integrity.yml') {
+  if (['performance-integrity.yml', 'site-performance-integrity.yml'].includes(workflowFile)) {
     return run.conclusion === 'success';
   }
   return workflowFile === 'quality-pulse.yml' && performanceJobSucceeded;
@@ -158,20 +159,27 @@ async function loadDailyHistory({
   try {
     const sources = [
       { workflowFile: 'performance-integrity.yml' },
+      { workflowFile: 'site-performance-integrity.yml' },
       { workflowFile: 'quality-pulse.yml' }
     ];
     const candidates = [];
     for (const source of sources) {
       const workflowPath = encodeURIComponent(source.workflowFile);
       const runsPath = `/repos/${repoPath}/actions/workflows/${workflowPath}/runs?branch=main&event=schedule&status=completed&per_page=${runSearchLimit}`;
-      const runsResponse = await githubRequest(runsPath, token, fetchImpl);
+      const runsResponse = await githubRequest(runsPath, token, fetchImpl, {
+        notFoundIsEmpty: source.workflowFile === 'performance-integrity.yml'
+      });
+      if (!runsResponse) {
+        skipped.push('legacy performance workflow lookup returned HTTP 404; continuing with current workflow history');
+        continue;
+      }
       const runsData = await runsResponse.json();
       candidates.push(...(runsData.workflow_runs ?? [])
         .filter((run) =>
           run.status === 'completed' &&
           run.event === 'schedule' &&
           run.head_branch === 'main' &&
-          (source.workflowFile !== 'performance-integrity.yml' || run.conclusion === 'success')
+          (!['performance-integrity.yml', 'site-performance-integrity.yml'].includes(source.workflowFile) || run.conclusion === 'success')
         )
         .map((run) => ({ run, ...source })));
     }
@@ -181,7 +189,10 @@ async function loadDailyHistory({
 
     for (const { run, workflowFile } of candidates) {
       try {
-        let performanceJobSucceeded = workflowFile === 'performance-integrity.yml';
+        let performanceJobSucceeded = [
+          'performance-integrity.yml',
+          'site-performance-integrity.yml'
+        ].includes(workflowFile);
         if (workflowFile === 'quality-pulse.yml') {
           const jobsResponse = await githubRequest(
             `/repos/${repoPath}/actions/runs/${run.id}/jobs?per_page=100&page=1`,
@@ -199,7 +210,9 @@ async function loadDailyHistory({
           }
           performanceJobSucceeded = jobsData.jobs.some((job) =>
             typeof job.name === 'string' &&
-            job.name.split('/').at(-1).trim() === 'Performance Integrity' &&
+            ['Performance Integrity', 'Site: Performance Integrity'].includes(
+              job.name.split('/').at(-1).trim()
+            ) &&
             job.status === 'completed' &&
             job.conclusion === 'success'
           );

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { checkDependencyPosture } from '../scripts/check_dependency_posture.mjs';
+import { checkDependencyPosture } from '../../scripts/common/dependency_posture.mjs';
 
 const options = {
   apiUrl: 'https://api.github.com',
@@ -105,6 +105,28 @@ test('medium-or-higher and unknown severity alerts require review', async () => 
   assert.equal(result.status, 'review');
   assert.match(result.markdown, /example-package/);
   assert.match(result.markdown, /alert 7/);
+});
+
+test('dependency alert details escape backslashes before Markdown delimiters', async () => {
+  const packageName = String.raw`vulnerable\|package`;
+  const manifestPath = String.raw`path\|to/Gemfile.lock`;
+  const result = await checkDependencyPosture({
+    ...options,
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => [{
+        number: 12,
+        dependency: {
+          package: { name: packageName },
+          manifest_path: manifestPath
+        },
+        security_advisory: { severity: 'medium' }
+      }]
+    })
+  });
+
+  assert.ok(result.markdown.includes(String.raw`vulnerable\\\|package`));
+  assert.ok(result.markdown.includes(String.raw`path\\\|to/Gemfile.lock`));
 });
 
 test('API permission failures are unknown and never green', async () => {

@@ -1,4 +1,4 @@
-name: Dependency Security
+name: "Common: Dependency Security"
 
 on:
   pull_request:
@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  dependency-review:
-    name: Dependency Security
+  common-dependency-security-review:
+    name: "Common: Dependency Security"
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -27,30 +27,30 @@ jobs:
         env:
           REVIEW_OUTCOME: ${{ steps.dependency_review.outcome }}
         run: |
-          echo "# Dependency Security" >> "$GITHUB_STEP_SUMMARY"
-          echo >> "$GITHUB_STEP_SUMMARY"
+          {
+          echo "# Common: Dependency Security"
+          echo
+          printf 'Reviewed revision: %s\n\n' "$GITHUB_SHA"
           case "$REVIEW_OUTCOME" in
             success)
               printf '%s\n' \
                 "- Dependency review: **passed**." \
-                "  Threshold: moderate+; scopes: runtime/development/unknown." \
-                >> "$GITHUB_STEP_SUMMARY"
+                "  Threshold: moderate+; scopes: runtime/development/unknown."
               ;;
             failure)
               printf '%s\n' \
                 "- Dependency review: **failed**; see action findings/logs." \
-                "  Threshold: moderate+; scopes: runtime/development/unknown." \
-                >> "$GITHUB_STEP_SUMMARY"
+                "  Threshold: moderate+; scopes: runtime/development/unknown."
               ;;
             *)
               printf '%s\n' \
                 "- Dependency review: **not completed**; see earlier logs." \
-                "  Threshold: moderate+; scopes: runtime/development/unknown." \
-                >> "$GITHUB_STEP_SUMMARY"
+                "  Threshold: moderate+; scopes: runtime/development/unknown."
               ;;
           esac
+          } >> "$GITHUB_STEP_SUMMARY"
 
-  dependency-posture:
+  common-dependency-security-posture:
     name: Dependency posture
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call'
     runs-on: ubuntu-24.04
@@ -62,9 +62,12 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+      - name: Record checked-out revision
+        run: |
+          printf 'Checked-out revision: %s\n\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
       - name: Review open Dependabot alerts
         id: posture
-        run: node scripts/check_dependency_posture.mjs
+        run: node scripts/common/dependency_posture.mjs
         env:
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_REPOSITORY: ${{ github.repository }}

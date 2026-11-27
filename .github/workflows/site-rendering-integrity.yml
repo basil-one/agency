@@ -1,4 +1,4 @@
-name: Rendered Site Integrity
+name: "Site: Rendering Integrity"
 
 on:
   pull_request:
@@ -10,18 +10,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: rendered-site-integrity-${{ github.workflow }}-${{ github.ref }}
+  group: site-rendering-integrity-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  browser-smoke:
-    name: Rendered Site Integrity
+  site-rendering-integrity:
+    name: "Site: Rendering Integrity"
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+      - name: Record checked-out revision
+        run: |
+          printf 'Checked-out revision: %s\n\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
@@ -41,6 +44,8 @@ jobs:
         run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps --only-shell chromium
+      - name: Test SVG assets
+        run: python3 -m unittest discover -s tests/site -p 'test_svg_assets.py' -v
       - name: Run rendered-site smoke tests
         id: smoke
         run: npm run test:browser -- --reporter=json
@@ -214,7 +219,7 @@ jobs:
             scansCompleted === axeTests.length &&
             axeCounts.passed === axeTests.length;
           const lines = [
-            '# Rendered Site Integrity',
+            '# Site: Rendering Integrity',
             '',
             `- Production build (GitHub step \`Build site\`): **${outcome(process.env.BUILD_OUTCOME)}**.`,
             `- Browser suite (GitHub step \`Run rendered-site smoke tests\`): **${outcome(process.env.SMOKE_OUTCOME)}**.`,

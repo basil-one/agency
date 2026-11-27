@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { assertNoAccessibilityViolations } from './accessibility.js';
-import { discoverHtmlRoutes, discoverReflections, selectSmokeRoutes } from './site-routes.js';
+import { discoverHtmlRoutes, discoverReflections, selectSmokeRoutes } from '../../../scripts/site/routes.js';
 
 const siteDirectory = resolve(process.cwd(), '_site');
 const localOrigin = new URL('http://127.0.0.1:4173').origin;

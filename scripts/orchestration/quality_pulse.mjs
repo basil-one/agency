@@ -5,13 +5,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const dimensions = [
-  { name: 'Site Build Integrity', file: 'site-build-integrity.yml' },
-  { name: 'Link Integrity', file: 'link-integrity.yml' },
-  { name: 'SEO Integrity', file: 'seo-integrity.yml' },
-  { name: 'Source Quality', file: 'source-quality.yml' },
-  { name: 'Dependency Security', file: 'dependency-security.yml' },
-  { name: 'Rendered Site Integrity', file: 'rendered-site-integrity.yml' },
-  { name: 'Performance Integrity', file: 'performance-integrity.yml' }
+  { name: 'Common: Code Quality', file: 'common-code-quality.yml' },
+  { name: 'Common: Coherence Integrity', file: 'common-coherence-integrity.yml' },
+  { name: 'Common: Dependency Security', file: 'common-dependency-security.yml' },
+  { name: 'Site: Build Integrity', file: 'site-build-integrity.yml' },
+  { name: 'Site: Link Integrity', file: 'site-link-integrity.yml' },
+  { name: 'Site: SEO Integrity', file: 'site-seo-integrity.yml' },
+  { name: 'Site: Rendering Integrity', file: 'site-rendering-integrity.yml' },
+  { name: 'Site: Performance Integrity', file: 'site-performance-integrity.yml' }
 ];
 
 const cutoffTime = '18:00:00Z';
@@ -360,7 +361,7 @@ function renderPerformanceTrends(result) {
         ? 'the measurement is not a dated successful current or prior run'
         : 'no successful measurement evidence is available.');
     lines.push('', `Performance comparison unavailable: ${reason}`);
-    if (trends?.runUrl) lines.push(`Source: [Performance Integrity run](${trends.runUrl}).`);
+    if (trends?.runUrl) lines.push(`Source: [Site: Performance Integrity run](${trends.runUrl}).`);
     if (trends?.baseline) lines.push(`Baselines: ${trends.baseline}.`);
     return lines;
   }
@@ -376,7 +377,7 @@ function renderPerformanceTrends(result) {
     `**Baselines:** ${describePerformanceComparison(trends.comparison)}.`
   );
   const sources = [];
-  if (trends.runUrl) sources.push(`[Performance Integrity run](${trends.runUrl})`);
+  if (trends.runUrl) sources.push(`[Site: Performance Integrity run](${trends.runUrl})`);
   if (trends.artifactUrl) sources.push(`[comparison artifact](${trends.artifactUrl})`);
   const fixedRunUrl = trends.comparison.fixedReference?.runUrl;
   if (fixedRunUrl) sources.push(`[fixed reference run](${fixedRunUrl})`);
@@ -392,7 +393,7 @@ function renderPerformanceTrends(result) {
   } else {
     lines.push('| Homepage metrics | — | — |');
   }
-  lines.push('', 'Other pages and full metric details are in the linked Performance Integrity summary.');
+  lines.push('', 'Other pages and full metric details are in the linked Site: Performance Integrity summary.');
   return lines;
 }
 
@@ -469,11 +470,23 @@ async function fetchArtifactJson({
 
 function applyDependencyPosture(result, posture) {
   if (posture.status === 'unknown') {
+    if (result.state === 'failed') {
+      return {
+        ...result,
+        detail: `${result.detail} Dependency posture evidence is unavailable (${posture.detail ?? 'no detail'}); the reported review finding remains failed.`
+      };
+    }
     return {
       ...result,
       state: 'unknown',
       label: 'Unknown / API inaccessible',
       detail: `${posture.detail ?? 'Dependency posture could not be read'}; no result is inferred.`
+    };
+  }
+  if (posture.status === 'passed' && result.state === 'failed') {
+    return {
+      ...result,
+      detail: `${result.detail} Dependency posture reported passed, contradicting the failed check; the reported review finding remains failed.`
     };
   }
   if (posture.status === 'review') {
@@ -498,20 +511,27 @@ function renderPulse({
   generatedAt,
   results,
   cutoff = cutoffTime,
-  orchestrated = false
+  orchestrated = false,
+  sourceRevision = 'unavailable'
 }) {
-  const needsReview = results.filter((item) => item.result.state !== 'fresh');
+  const needsReview = results.filter(
+    (item) => !['fresh', 'advisory'].includes(item.result.state)
+  );
+  const advisories = results.filter((item) => item.result.state === 'advisory');
   const aggregate = needsReview.length
     ? orchestrated
-      ? `Cycle incomplete — ${needsReview.length} of ${results.length} dimensions are not confirmed successful.`
+      ? `Cycle incomplete — ${needsReview.length} of ${results.length} dimensions are not confirmed successful${advisories.length ? `; ${advisories.length} additional advisory` : ''}.`
       : `Review required — ${needsReview.length} of ${results.length} dimensions are not freshly successful.`
-    : orchestrated
-      ? `All ${results.length} dimensions passed in this cycle.`
-      : `All ${results.length} dimensions have fresh successful scheduled checks.`;
+    : advisories.length
+      ? `Cycle completed with advisories — ${results.length - advisories.length} dimensions passed and ${advisories.length} ${advisories.length === 1 ? 'is' : 'are'} advisory.`
+      : orchestrated
+        ? `All ${results.length} dimensions passed in this cycle.`
+        : `All ${results.length} dimensions have fresh successful scheduled checks.`;
   const lines = [
     '# Quality Pulse',
     '',
     `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}${orchestrated ? '' : `  ·  **Cutoff:** ${date} ${cutoff}`}`,
+    `**Validator/source revision:** \`${sourceRevision || 'unavailable'}\``,
     '',
     `**Outcome:** ${aggregate} ${orchestrated
       ? 'This summary reflects the same-cycle substantive job results and does not replace their check outcomes.'
@@ -520,11 +540,13 @@ function renderPulse({
     '## Findings',
     ''
   ];
-  if (needsReview.length) {
-    for (const item of needsReview) {
+  if (needsReview.length || advisories.length) {
+    for (const item of [...needsReview, ...advisories]) {
       const state = item.result.state;
       const action = state === 'failed'
         ? 'Open the run and address the reported failure.'
+        : state === 'advisory'
+          ? 'Review the reported uncertainty; it is not evidence of a confirmed broken destination.'
         : state === 'unknown'
           ? 'Check Actions/API access and inspect the last available workflow run.'
           : state === 'missing' || state === 'stale'
@@ -541,7 +563,7 @@ function renderPulse({
   } else {
     lines.push('No material failures or missing coverage were reported.');
   }
-  const performance = results.find((item) => item.name === 'Performance Integrity');
+  const performance = results.find((item) => item.name === 'Site: Performance Integrity');
   lines.push('', ...renderPerformanceTrends(performance?.result), '');
   lines.push(
     '',
@@ -558,11 +580,11 @@ function renderPulse({
     }
     if (result.artifactUrl) sources.push(`[evidence artifact](${result.artifactUrl})`);
     const source = sources.length ? sources.join(' · ') : 'No run link available';
-    const detail = item.name === 'Performance Integrity'
+    const detail = item.name === 'Site: Performance Integrity'
       ? performanceDetail(result)
       : result.detail;
     lines.push(
-      `| ${item.name} | ${result.label} | ${result.run ? runTime(result.run) : 'not measured today'} | ${source} | ${detail.replace(/\|/g, '\\|')} |`
+      `| ${item.name} | ${result.label} | ${result.run ? runTime(result.run) : 'not measured today'} | ${source} | ${detail.replace(/[\\|`<>]/g, '\\$&')} |`
     );
   }
   lines.push('');
@@ -603,6 +625,31 @@ function orchestratedJobResult(needs, jobId, name, run) {
       }
     };
   }
+  if (jobId === 'site-link-integrity' && outcome === 'success') {
+    const linkStatus = needs[jobId]?.outputs?.status;
+    if (linkStatus === 'advisory') {
+      return {
+        name,
+        result: {
+          state: 'advisory',
+          label: 'Advisory — uncertain external responses',
+          run,
+          detail: 'Internal links passed; uncertain external responses are listed in the linked audit evidence.'
+        }
+      };
+    }
+    if (linkStatus !== 'success') {
+      return {
+        name,
+        result: {
+          state: 'unknown',
+          label: 'Unknown / link evidence unavailable',
+          run,
+          detail: 'The link workflow succeeded without a recognized audit status; no clean result is inferred.'
+        }
+      };
+    }
+  }
   return {
     name,
     result: { state: mapped[0], label: mapped[1], run, detail: mapped[2] }
@@ -620,6 +667,7 @@ async function buildOrchestratedPulse({
   branch = 'main',
   date,
   generatedAt = new Date().toISOString(),
+  sourceRevision = 'unavailable',
   fetchImpl = fetch,
   unzipImpl = execFileSync
 }) {
@@ -629,19 +677,20 @@ async function buildOrchestratedPulse({
     cycle: true
   };
   const jobMap = [
-    ['site-build', 'Site Build Integrity'],
-    ['link', 'Link Integrity'],
-    ['seo', 'SEO Integrity'],
-    ['source-quality', 'Source Quality'],
-    ['dependency-security', 'Dependency Security'],
-    ['rendered-site', 'Rendered Site Integrity'],
-    ['performance', 'Performance Integrity']
+    ['common-code-quality', 'Common: Code Quality'],
+    ['common-coherence-integrity', 'Common: Coherence Integrity'],
+    ['common-dependency-security', 'Common: Dependency Security'],
+    ['site-build-integrity', 'Site: Build Integrity'],
+    ['site-link-integrity', 'Site: Link Integrity'],
+    ['site-seo-integrity', 'Site: SEO Integrity'],
+    ['site-rendering-integrity', 'Site: Rendering Integrity'],
+    ['site-performance-integrity', 'Site: Performance Integrity']
   ];
   const results = jobMap.map(([jobId, name]) =>
     orchestratedJobResult(needs, jobId, name, run)
   );
   const artifactOptions = { apiUrl, repository, token, runId, fetchImpl, unzipImpl };
-  const performance = results.find((item) => item.name === 'Performance Integrity');
+  const performance = results.find((item) => item.name === 'Site: Performance Integrity');
   if (['fresh', 'failed'].includes(performance.result.state)) {
     try {
       const { data: files, artifact } = await fetchArtifactJson({
@@ -695,7 +744,7 @@ async function buildOrchestratedPulse({
     };
   }
 
-  const dependency = results.find((item) => item.name === 'Dependency Security');
+  const dependency = results.find((item) => item.name === 'Common: Dependency Security');
   if (['fresh', 'failed'].includes(dependency.result.state)) {
     try {
       const { data: posture, artifact } = await fetchArtifactJson({
@@ -722,11 +771,13 @@ async function buildOrchestratedPulse({
     date,
     generatedAt,
     results,
-    orchestrated: true
+    orchestrated: true,
+    sourceRevision
   });
   return {
     markdown,
-    successful: results.every((item) => item.result.state === 'fresh')
+    successful: results.every((item) => item.result.state === 'fresh'),
+    completed: results.every((item) => ['fresh', 'advisory'].includes(item.result.state))
   };
 }
 
@@ -736,6 +787,7 @@ async function buildPulse({
   token,
   date,
   generatedAt = new Date().toISOString(),
+  sourceRevision = 'unavailable',
   fetchImpl = fetch,
   unzipImpl = execFileSync
 }) {
@@ -790,7 +842,7 @@ async function buildPulse({
       }
     })
   );
-  const performance = results.find((item) => item.name === 'Performance Integrity');
+  const performance = results.find((item) => item.name === 'Site: Performance Integrity');
   if (
     performance?.result.run?.id &&
     performance.result.run.status === 'completed' &&
@@ -841,7 +893,7 @@ async function buildPulse({
       runUrl: runLink(result.run)
     };
   }
-  const dependency = results.find((item) => item.name === 'Dependency Security');
+  const dependency = results.find((item) => item.name === 'Common: Dependency Security');
   if (
     dependency?.result.run?.id &&
     dependency.result.run.status === 'completed' &&
@@ -859,15 +911,20 @@ async function buildPulse({
       });
       dependency.result = applyDependencyPosture(dependency.result, posture);
     } catch (error) {
-      dependency.result = {
-        ...dependency.result,
-        state: 'unknown',
-        label: 'Unknown / posture artifact unavailable',
-        detail: `${error.message}; no clean dependency result is inferred.`
-      };
+      dependency.result = dependency.result.state === 'failed'
+        ? {
+          ...dependency.result,
+          detail: `${dependency.result.detail} Dependency posture artifact unavailable (${error.message}); the reported review finding remains failed.`
+        }
+        : {
+          ...dependency.result,
+          state: 'unknown',
+          label: 'Unknown / posture artifact unavailable',
+          detail: `${error.message}; no clean dependency result is inferred.`
+        };
     }
   }
-  return renderPulse({ date, generatedAt, results });
+  return renderPulse({ date, generatedAt, results, sourceRevision });
 }
 
 async function main() {
@@ -882,13 +939,14 @@ async function main() {
     eventName: process.env.PULSE_EVENT_NAME ?? 'schedule',
     branch: process.env.PULSE_RUN_BRANCH ?? 'main',
     date,
-    generatedAt: process.env.PULSE_GENERATED_AT ?? new Date().toISOString()
+    generatedAt: process.env.PULSE_GENERATED_AT ?? new Date().toISOString(),
+    sourceRevision: process.env.PULSE_SOURCE_REVISION ?? 'unavailable'
   });
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, pulse.markdown);
   }
   process.stdout.write(pulse.markdown);
-  if (!pulse.successful) process.exitCode = 1;
+  if (!pulse.completed) process.exitCode = 1;
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {

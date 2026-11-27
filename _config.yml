@@ -24,6 +24,8 @@ footer:
 # Legal texts are repository references, not generated site pages.
 exclude:
   - LICENSES
+  - scripts
+  - tests
   - Gemfile
   - Gemfile.lock
   - node_modules

@@ -12,6 +12,7 @@ Agency is a Jekyll website for individual coaching and reflections. Follow the a
 - Establish the intended outcome, what must stay true, and how to verify it before implementing. Surface unresolved editorial or operating decisions early rather than inventing a policy.
 - Inspect current `main`, the working branch, and affected consumers. Reconcile concurrent changes without undoing merged features, protections, or tests.
 - For automation work involving `.github/`, `scripts/`, or `tests/`, also consult [.github/AGENTS.md](.github/AGENTS.md) when the files support GitHub workflows.
+- Use [.github/CONVENTIONS.md](.github/CONVENTIONS.md) for Agency's quality workflow, script, test, and evidence conventions.
 
 ## Keep the change deliberate
 

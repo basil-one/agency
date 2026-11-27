@@ -1,7 +1,7 @@
 const severityRank = { low: 0, medium: 1, high: 2, critical: 3 };
 
 function escapeMarkdown(value) {
-  return String(value ?? 'unknown').replace(/[|`<>]/g, '\\$&');
+  return String(value ?? 'unknown').replace(/[\\|`<>]/g, '\\$&');
 }
 
 function sanitizeDiagnostic(value, token) {
@@ -129,7 +129,7 @@ async function checkDependencyPosture({
   token,
   fetchImpl = fetch
 }) {
-  const lines = ['# Dependency Security', '', '## Outcome', ''];
+  const lines = ['# Common: Dependency Security', '', '## Outcome', ''];
   if (!token || !/^[^/]+\/[^/]+$/.test(repository ?? '')) {
     lines.push('**Unknown — GitHub API credentials or repository are unavailable.**');
     return {
