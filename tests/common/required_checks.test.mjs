@@ -16,7 +16,10 @@ const workflows = [
 test('required PR checks are emitted by their substantive workflow jobs', async () => {
   for (const [file, jobId, displayName] of workflows) {
     const yaml = await readFile(new URL(`../../.github/workflows/${file}`, import.meta.url), 'utf8');
-    assert.match(yaml, /^on:\n  pull_request:\n    branches: \[main\]\n  workflow_dispatch:\n  workflow_call:/m, `${file} preserves its PR and callable entry points`);
+    const triggers = file === 'site-performance-integrity.yml'
+      ? /^on:\n  pull_request:\n    branches: \[main\]\n  workflow_dispatch:\n    inputs:\n      measurement_context:[\s\S]*?  workflow_call:/m
+      : /^on:\n  pull_request:\n    branches: \[main\]\n  workflow_dispatch:\n  workflow_call:/m;
+    assert.match(yaml, triggers, `${file} preserves its PR and callable entry points`);
 
     const jobsStart = yaml.indexOf('\njobs:\n') + '\njobs:\n'.length;
     const jobs = yaml.slice(jobsStart);

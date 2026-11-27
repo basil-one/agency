@@ -21,6 +21,7 @@ function makeSummary({
   branch = 'main',
   lcp = 1_000,
   capturedAt = '2026-11-16T00:00:00.000Z',
+  measurementContext = 'full-experience',
   reviewAssessment
 } = {}) {
   const routes = ['/', '/know-your-patterns/', '/reflections/', '/reflections/latest/'];
@@ -54,6 +55,7 @@ function makeSummary({
       successful: 8,
       medianTransferBytes: 180_000
     }],
+    conditions: { measurementContext },
     reviewAssessment,
     results: routes.flatMap((route) =>
       ['mobile', 'desktop'].map((formFactor) => ({
@@ -149,6 +151,49 @@ test('renders a comparison table when the fixed reference is available', () => {
   assert.match(lines.join('\n'), /^\| `\/` \| mobile \|/m);
   assert.equal(comparison.fixedReference.available, true);
   assert.equal(comparison.deltasAvailable, true);
+});
+
+test('separates controlled measurements from full-experience references and history', () => {
+  const current = makeSummary({
+    eventName: 'pull_request',
+    branch: 'copilot/change',
+    measurementContext: 'pr-controlled'
+  });
+  const fixed = makeSummary();
+  const history = makeHistory([makeSummary()]);
+  const { lines, comparison } = buildComparison(current, fixed, history);
+
+  assert.equal(comparison.measurementContext, 'pr-controlled');
+  assert.equal(comparison.fixedReference.available, false);
+  assert.match(comparison.fixedReference.reason, /different measurement context/);
+  assert.equal(comparison.history.availableDailySamples, 0);
+  assert.equal(comparison.deltasAvailable, false);
+  assert.equal(comparison.policy.referenceAvailable, false);
+  assert.ok(comparison.conditions.includes('measurement context differs'));
+  assert.match(lines.join('\n'), /pr-controlled context/);
+  assert.match(lines.join('\n'), /No comparison\/deltas available yet/);
+
+  const withoutReference = buildComparison(
+    current,
+    undefined,
+    makeHistory([])
+  ).comparison;
+  assert.match(withoutReference.fixedReference.reason, /pr-controlled context/);
+  assert.match(withoutReference.policy.referenceReason, /absolute budgets remain active/);
+  assert.equal(withoutReference.deltasAvailable, false);
+});
+
+test('keeps legacy summaries without a context field compatible as full-experience evidence', () => {
+  const current = makeSummary({ eventName: 'pull_request', branch: 'copilot/change' });
+  const reference = makeSummary();
+  delete current.conditions.measurementContext;
+  delete reference.conditions.measurementContext;
+
+  const { comparison } = buildComparison(current, reference, makeHistory([reference]));
+
+  assert.equal(comparison.fixedReference.available, true);
+  assert.equal(comparison.history.availableDailySamples, 1);
+  assert.equal(comparison.measurementContext, 'full-experience');
 });
 
 test('keeps 28-sample rolling history informational while the fixed-reference policy requires confirmation', () => {

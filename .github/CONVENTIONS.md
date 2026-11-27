@@ -24,6 +24,10 @@ The order is purposeful, not a template: Site Publish validates and deploys a sa
 
 Site Link Integrity reports uncertain external responses as nonblocking advisories; known defects retain failure precedence. Site Performance Integrity measures four representative routes on mobile and desktop with three-run Lighthouse medians and confirms initial violations with three new measurements per affected route/profile. Incomplete confirmation is not a pass. The executable policy defines the budgets and substantial deterioration criteria; the canonical fixed reference is [site-performance-reference.json](site-performance-reference.json). Use complete, successful, compatible main evidence after human review; only successful scheduled-main evidence contributes to informational rolling history. Retain compatible historical readers.
 
+Pull-request measurements use the `pr-controlled` context, which blocks Google Tag Manager, Google Analytics, and DoubleClick script execution while still measuring the generated site and first-party assets. Scheduled Pulse and manual diagnostics default to `full-experience`: external scripts remain enabled and analytics collection requests are blocked in both contexts. Contexts never share a fixed or rolling comparison. Summaries created before context recording are treated as full-experience evidence because the prior measurement allowed external scripts.
+
+The controlled fixed reference is `.github/site-performance-reference-controlled.json`; until a reviewed reference exists, controlled runs retain absolute budgets and report relative comparison as unavailable. To capture evidence for human review, dispatch **Site: Performance Integrity** from `main` with `measurement_context: pr-controlled`; after a complete successful run, review the `performance-summary` artifact and propose its summary as that reference in a later change. Do not copy partial, failed, or mismatched-context evidence. The ordinary `.github/site-performance-reference.json` remains the full-experience reference.
+
 Agency retains its reflection-text-only skip classification and missing-route diagnostic.
 
 ## Run and maintain checks
