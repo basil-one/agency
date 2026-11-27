@@ -24,42 +24,44 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 
 ## Quality Domains
 
-- **Common:** Shared source quality, repository coherence, and dependency security.
+A single quality practice serves the website.
+
+- **Common:** Shared code quality, coherence integrity, and dependency security.
 - **Site:** Integrity of website development, generation, and the visitor's experience.
 
-Capabilities follow `Domain: Capability` naming. Quality Pulse is the unqualified Common → Site coordinator.
+Domain-specific workflows follow the naming convention `Domain: Capability`. Cross-domain capabilities retain unqualified names.
 
 ## Capabilities in Operation
 
 | Capability | Purpose |
 | --- | --- |
-| [Common: Code Quality](workflows/common-code-quality.yml) | Source quality, workflow correctness, and maintainability. |
+| [Common: Code Quality](workflows/common-code-quality.yml) | Source quality, workflow correctness, and maintainability. Function complexity is capped at 10. |
 | [Common: Coherence Integrity](workflows/common-coherence-integrity.yml) | Conceptual integrity of repository organization, conventions, and architectural relationships. |
 | [Common: Dependency Security](workflows/common-dependency-security.yml) | Dependency changes and open vulnerability alerts at moderate severity or higher. |
 | [Site: Build Integrity](workflows/site-build-integrity.yml) | Successful production website generation. |
 | [Site: Link Integrity](workflows/site-link-integrity.yml) | Internal links, fragments, assets, and external destinations; uncertain external responses are reported as advisories. |
 | [Site: SEO Integrity](workflows/site-seo-integrity.yml) | Page titles, canonical URLs, and indexing directives. |
 | [Site: Rendering Integrity](workflows/site-rendering-integrity.yml) | Browser verification, accessibility, and responsive usability at 320px, 768px, and 1280px. |
-| [Site: Performance Integrity](workflows/site-performance-integrity.yml) | Loading performance, responsiveness, and visual stability against confirmed budgets and meaningful deterioration versus a compatible, reviewed reference. |
-
-These eight dimensions run in parallel in one same-cycle Quality Pulse. Each reusable workflow retains its pull-request check and manual diagnostic entry point; only Quality Pulse owns the daily schedule.
+| [Site: Performance Integrity](workflows/site-performance-integrity.yml) | Loading performance, responsiveness, and visual stability across representative pages. |
 
 ## Quality Gate
 
-Known defects fail their applicable checks. Unknown or incomplete evidence is never treated as clean. Repository required status checks remain intentionally empty during this check-name migration; ordinary pull-request review and existing protection remain in place.
+Quality safeguards verify proposed changes before merging; safeguards that verify existing published experiences run over time. Required status checks are temporarily inactive during the approved migration; ordinary pull-request protection remains in place.
 
 Performance Integrity protects against confirmed budget violations and substantial loading regressions against a compatible reviewed reference. Rolling comparisons inform human judgment.
 
 ## Coherence Integrity
 
-Executable [repository conventions](CONVENTIONS.md) help sustain conceptual integrity across workflows, code, tests, and documentation. Automation checks explicit relationships and path contracts; human judgment still guides simplicity, consistency, teaching clarity, and intentional differences.
+Sustain conceptual integrity across workflows, code, tests, and documentation. Executable [repository conventions](CONVENTIONS.md) protect against architectural drift as humans and agents evolve the system. Human judgment guides simplicity, consistency, and intentional differences.
 
 ## Publication
 
-The existing GitHub Pages deployment remains separately managed. This increment does not introduce a Site Publish workflow or change publication behavior.
+The website is published through the existing GitHub Pages mechanism following an approved merge.
 
 ## Quality Pulse
 
-The [daily workflow](workflows/quality-pulse.yml) coordinates the Common and Site safeguards in one cycle and provides a coherent view of quality. Passed checks, advisories, confirmed failures, incomplete checks, and unavailable evidence remain distinguishable. A cycle with advisories may succeed, but is not reported as an unconditional pass.
+A [daily workflow](workflows/quality-pulse.yml) coordinates the Common and Site safeguards in a single verification cycle and provides a coherent view of quality. It can also be run on demand.
 
-The fixed performance reference remains pending until complete, successful `main` evidence is compatible with the policy and reviewed. Rolling comparisons inform judgment but do not replace the fixed-reference safeguard.
+Passed checks, nonblocking advisories, confirmed failures, incomplete checks, and unavailable evidence remain distinguishable. Findings bring actionable evidence to human judgment. A cycle with advisories may succeed, but is not reported as an unconditional pass.
+
+Performance measurements are compared against a reviewed reference and recent compatible measurements. The fixed reference is pending until complete, successful, compatible main evidence is reviewed.
