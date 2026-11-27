@@ -608,12 +608,13 @@ function renderPulse({
     (item) => !['fresh', 'advisory'].includes(item.result.state)
   );
   const advisories = results.filter((item) => item.result.state === 'advisory');
+  const findings = [...needsReview, ...advisories];
   const aggregate = needsReview.length
     ? orchestrated
-      ? `Cycle incomplete — ${needsReview.length} of ${results.length} dimensions are not confirmed successful${advisories.length ? `; ${advisories.length} additional advisory` : ''}.`
+      ? `Cycle incomplete — ${needsReview.length} of ${results.length} dimensions are not confirmed successful.`
       : `Review required — ${needsReview.length} of ${results.length} dimensions are not freshly successful.`
-    : advisories.length
-      ? `Cycle completed with advisories — ${results.length - advisories.length} dimensions passed and ${advisories.length} ${advisories.length === 1 ? 'is' : 'are'} advisory.`
+    : orchestrated && advisories.length
+      ? `Cycle successful with advisories — ${advisories.length} of ${results.length} dimensions require attention.`
       : orchestrated
         ? `All ${results.length} dimensions passed in this cycle.`
         : `All ${results.length} dimensions have fresh successful scheduled checks.`;
@@ -621,7 +622,9 @@ function renderPulse({
     '# Quality Pulse',
     '',
     `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}${orchestrated ? '' : `  ·  **Cutoff:** ${date} ${cutoff}`}`,
-    `**Validator/source revision:** \`${sourceRevision || 'unavailable'}\``,
+    ...(orchestrated
+      ? ['', `**Validator revision:** \`${sourceRevision || 'unavailable'}\``]
+      : []),
     '',
     `**Outcome:** ${aggregate} ${orchestrated
       ? 'This summary reflects the same-cycle substantive job results and does not replace their check outcomes.'
@@ -630,24 +633,26 @@ function renderPulse({
     '## Findings',
     ''
   ];
-  if (needsReview.length || advisories.length) {
-    for (const item of [...needsReview, ...advisories]) {
+  if (findings.length) {
+    for (const item of findings) {
       const state = item.result.state;
       const action = state === 'failed'
-        ? 'Open the run and address the reported failure.'
+        ? item.name === 'Site: Performance Integrity' && item.result.run?.cycle
+          ? ''
+          : 'Open the run and address the reported failure.'
         : state === 'advisory'
-          ? 'Review the reported uncertainty; it is not evidence of a confirmed broken destination.'
-        : state === 'unknown'
-          ? 'Check Actions/API access and inspect the last available workflow run.'
-          : state === 'missing' || state === 'stale'
-            ? 'Check whether the scheduled workflow ran; dispatch it manually if needed.'
+          ? 'Review the reported external uncertainty.'
+          : state === 'unknown'
+            ? 'Check Actions/API access and inspect the last available workflow run.'
+            : state === 'missing' || state === 'stale'
+              ? 'Check whether the scheduled workflow ran; dispatch it manually if needed.'
               : state === 'prior'
                 ? "Check today's schedule; an earlier pass is not today's verification."
-              : state === 'skipped'
-                ? 'Confirm the skip is expected and arrange a full verification if not.'
-              : state === 'incomplete'
-                ? 'Inspect the cancelled or incomplete job and rerun the cycle if appropriate.'
-                : 'Wait for completion or inspect the late run; rerun if it does not finish.';
+                : state === 'skipped'
+                  ? 'Confirm the skip is expected and arrange a full verification if not.'
+                  : state === 'incomplete'
+                    ? 'Inspect the cancelled or incomplete job and rerun the cycle if appropriate.'
+                    : 'Wait for completion or inspect the late run; rerun if it does not finish.';
       const detail = item.name === 'Site: Performance Integrity'
         ? performanceDetail(item.result)
         : item.result.detail;
@@ -682,7 +687,7 @@ function renderPulse({
   }
   lines.push('');
   lines.push(orchestrated
-    ? 'Each outcome below comes from the corresponding reusable workflow job in this run. No fixed wall-clock completion cutoff is applied.'
+    ? 'Each outcome below comes from the corresponding job in this run. No fixed wall-clock completion cutoff is applied.'
     : `Daily workflow runs are queried from \`main\` with \`schedule\` provenance. Runs must complete by ${cutoff} UTC to count as fresh; late or missing runs are not replaced with prior green results.`);
   return `${lines.join('\n')}\n`;
 }

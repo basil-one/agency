@@ -275,7 +275,7 @@ test('partial pulse highlights missing coverage and exact run evidence', () => {
   assert.match(summary, /late or missing runs are not replaced with prior green results/);
 });
 
-test('rendered Quality Pulse keeps shared headings, revision label, outcomes, findings, trends, and evidence order', () => {
+test('rendered Quality Pulse follows shared heading, outcome, finding, action, trend, and evidence contracts', () => {
   const summary = renderPulse({
     date,
     generatedAt: `${date}T10:17:00Z`,
@@ -287,6 +287,18 @@ test('rendered Quality Pulse keeps shared headings, revision label, outcomes, fi
         result: { state: 'fresh', label: 'Passed', detail: 'The check passed.' }
       },
       {
+        name: 'Common: Coherence Integrity',
+        result: { state: 'failed', label: 'Failed', detail: 'A coherence contract failed.' }
+      },
+      {
+        name: 'Common: Dependency Security',
+        result: { state: 'unknown', label: 'Unknown / API inaccessible', detail: 'The API returned HTTP 403.' }
+      },
+      {
+        name: 'Site: Build Integrity',
+        result: { state: 'missing', label: 'Missing', detail: 'No scheduled run was found.' }
+      },
+      {
         name: 'Site: Link Integrity',
         result: {
           state: 'advisory',
@@ -295,11 +307,20 @@ test('rendered Quality Pulse keeps shared headings, revision label, outcomes, fi
         }
       },
       {
+        name: 'Site: SEO Integrity',
+        result: { state: 'prior', label: 'Prior successful verification', detail: 'Yesterday passed.' }
+      },
+      {
+        name: 'Site: Rendering Integrity',
+        result: { state: 'incomplete', label: 'Incomplete', detail: 'The job was cancelled.' }
+      },
+      {
         name: 'Site: Performance Integrity',
         result: {
           state: 'failed',
           label: 'Failed',
           detail: 'The check failed.',
+          run: { cycle: true },
           policy: {
             status: 'failed',
             confirmedViolations: [{
@@ -319,14 +340,23 @@ test('rendered Quality Pulse keeps shared headings, revision label, outcomes, fi
 
   assert.match(summary, /^# Quality Pulse\n/);
   assert.match(summary, /\*\*Reporting date:\*\* 2026-11-16 UTC/);
-  assert.match(summary, /\*\*Validator\/source revision:\*\* `revision-123`/);
+  assert.match(summary, /\*\*Validator revision:\*\* `revision-123`/);
+  assert.doesNotMatch(summary, /Validator\/source revision/);
+  assert.match(summary, /\*\*Outcome:\*\* Cycle incomplete — 6 of 8 dimensions are not confirmed successful\./);
   assert.ok(summary.indexOf('## Findings') < summary.indexOf('## Performance Trends'));
   assert.ok(summary.indexOf('## Performance Trends') < summary.indexOf('## Evidence'));
   assert.match(summary, /\| Dimension \| Outcome \| Measurement \/ run time \(UTC\) \| Source \/ run \| Useful detail or next action \|/);
   assert.match(summary, /\| Common: Code Quality \| Passed \|/);
   assert.match(summary, /Site: Link Integrity — Advisory — uncertain external responses/);
+  assert.match(summary, /A coherence contract failed\. Open the run and address the reported failure\./);
+  assert.match(summary, /The API returned HTTP 403\. Check Actions\/API access and inspect the last available workflow run\./);
+  assert.match(summary, /No scheduled run was found\. Check whether the scheduled workflow ran; dispatch it manually if needed\./);
+  assert.match(summary, /External responses need review\. Review the reported external uncertainty\./);
+  assert.match(summary, /Yesterday passed\. Check today's schedule; an earlier pass is not today's verification\./);
+  assert.match(summary, /The job was cancelled\. Inspect the cancelled or incomplete job and rerun the cycle if appropriate\./);
   assert.match(summary, /`\/know-your-patterns\/`\/mobile total-blocking-time: 337 ms initially, 321 ms confirmed vs 300 ms limit/);
   assert.match(summary, /Next step: correct the affected route\/profile and rerun Performance Integrity/);
+  assert.doesNotMatch(summary, /Next step: correct the affected route\/profile and rerun Performance Integrity\. Open the run and address the reported failure/);
 });
 
 test('permission-denied Actions API is reported as unknown, not passed', async () => {
@@ -898,7 +928,7 @@ test('orchestrated Pulse reports same-cycle job results and requires valid evide
 
   assert.equal(pulse.successful, true);
   assert.match(pulse.markdown, /All 8 dimensions passed in this cycle/);
-  assert.match(pulse.markdown, /\*\*Validator\/source revision:\*\* `revision-123`/);
+  assert.match(pulse.markdown, /\*\*Validator revision:\*\* `revision-123`/);
   assert.match(pulse.markdown, /\| Site: Build Integrity \| Passed \| Same-cycle job result \|/);
   assert.match(pulse.markdown, /\[same-cycle run\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/888\)/);
   assert.match(pulse.markdown, /actions\/runs\/888\/artifacts\/456/);
@@ -947,9 +977,9 @@ test('orchestrated Pulse reports same-cycle job results and requires valid evide
   });
   assert.equal(advisoryPulse.successful, false);
   assert.equal(advisoryPulse.completed, true);
-  assert.match(advisoryPulse.markdown, /Cycle completed with advisories — 7 dimensions passed and 1 is advisory/);
+  assert.match(advisoryPulse.markdown, /Cycle successful with advisories — 1 of 8 dimensions require attention/);
   assert.match(advisoryPulse.markdown, /\| Site: Link Integrity \| Advisory — uncertain external responses \|/);
-  assert.match(advisoryPulse.markdown, /not evidence of a confirmed broken destination/);
+  assert.match(advisoryPulse.markdown, /Review the reported external uncertainty/);
 
   const successfulPolicy = performanceComparison.policy;
   performanceComparison.policy = {

@@ -212,9 +212,9 @@ function collectCoherenceFailures(repository) {
   if (
     !orchestration.includes('git rev-parse HEAD') ||
     !orchestration.includes('PULSE_SOURCE_REVISION:') ||
-    !read(repository, 'scripts/orchestration/quality_pulse.mjs')?.includes('Validator/source revision:')
+    !read(repository, 'scripts/orchestration/quality_pulse.mjs')?.includes('Validator revision:')
   ) {
-    failures.push('Quality Pulse summary does not report its validator/source revision');
+    failures.push('Quality Pulse summary does not report its validator revision');
   }
 
   const referencedText = [

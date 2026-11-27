@@ -31,22 +31,24 @@ Capabilities follow `Domain: Capability` naming. Quality Pulse is the unqualifie
 
 ## Capabilities in Operation
 
-| Capability | Pull request and daily operation |
+| Capability | Purpose |
 | --- | --- |
-| [Common: Code Quality](workflows/common-code-quality.yml) | Workflow correctness, Ruby syntax, Super-Linter (including Ruff C901), and focused quality regression tests. |
-| [Common: Coherence Integrity](workflows/common-coherence-integrity.yml) | Positive and negative contracts for capability inventory/order, workflow identities, ownership, paths, references, and external action versions. |
-| [Common: Dependency Security](workflows/common-dependency-security.yml) | Proposed dependency changes and open Dependabot alerts at moderate severity or higher; unavailable alert evidence remains unknown. |
-| [Site: Build Integrity](workflows/site-build-integrity.yml) | Production Jekyll generation and exclusion of repository scripts and tests from generated output. |
-| [Site: Link Integrity](workflows/site-link-integrity.yml) | Generated-site links, fragments, and assets; confirmed defects fail while uncertain external responses are nonblocking advisories. |
-| [Site: SEO Integrity](workflows/site-seo-integrity.yml) | Generated page titles, canonical URLs, and indexing directives. |
-| [Site: Rendering Integrity](workflows/site-rendering-integrity.yml) | Chromium smoke routes, detectable accessibility violations, SVG validation, and responsive usability at 320px, 768px, and 1280px. |
-| [Site: Performance Integrity](workflows/site-performance-integrity.yml) | Four routes × mobile/desktop × three Lighthouse runs; mobile LCP/TBT/CLS budgets are 3000 ms/300 ms/0.1 and desktop budgets are 1500 ms/150 ms/0.1. Initial violations require three new measurements of each affected route/profile; fixed-reference LCP deterioration requires both >25% and >500 ms. Reflection-text-only changes intentionally skip measurement. |
+| [Common: Code Quality](workflows/common-code-quality.yml) | Source quality, workflow correctness, and maintainability. |
+| [Common: Coherence Integrity](workflows/common-coherence-integrity.yml) | Conceptual integrity of repository organization, conventions, and architectural relationships. |
+| [Common: Dependency Security](workflows/common-dependency-security.yml) | Dependency changes and open vulnerability alerts at moderate severity or higher. |
+| [Site: Build Integrity](workflows/site-build-integrity.yml) | Successful production website generation. |
+| [Site: Link Integrity](workflows/site-link-integrity.yml) | Internal links, fragments, assets, and external destinations; uncertain external responses are reported as advisories. |
+| [Site: SEO Integrity](workflows/site-seo-integrity.yml) | Page titles, canonical URLs, and indexing directives. |
+| [Site: Rendering Integrity](workflows/site-rendering-integrity.yml) | Browser verification, accessibility, and responsive usability at 320px, 768px, and 1280px. |
+| [Site: Performance Integrity](workflows/site-performance-integrity.yml) | Loading performance, responsiveness, and visual stability against confirmed budgets and meaningful deterioration versus a compatible, reviewed reference. |
 
 These eight dimensions run in parallel in one same-cycle Quality Pulse. Each reusable workflow retains its pull-request check and manual diagnostic entry point; only Quality Pulse owns the daily schedule.
 
 ## Quality Gate
 
 Known defects fail their applicable checks. Unknown or incomplete evidence is never treated as clean. Repository required status checks remain intentionally empty during this check-name migration; ordinary pull-request review and existing protection remain in place.
+
+Performance Integrity protects against confirmed budget violations and substantial loading regressions against a compatible reviewed reference. Rolling comparisons inform human judgment.
 
 ## Coherence Integrity
 
@@ -58,10 +60,6 @@ The existing GitHub Pages deployment remains separately managed. This increment 
 
 ## Quality Pulse
 
-The [daily workflow](workflows/quality-pulse.yml) coordinates Common checks followed by Site checks in the evidence table and publishes their same-cycle outcomes. Passed, advisory, failed, incomplete, skipped, and unavailable evidence remain distinguishable. A cycle with advisories may complete successfully, but is not reported as an unconditional pass. Dispatch Quality Pulse in GitHub Actions to run the full cycle on demand. GitHub may delay scheduled runs; the daily cadence is an operating goal, not a completion-time guarantee.
+The [daily workflow](workflows/quality-pulse.yml) coordinates the Common and Site safeguards in one cycle and provides a coherent view of quality. Passed checks, advisories, confirmed failures, incomplete checks, and unavailable evidence remain distinguishable. A cycle with advisories may succeed, but is not reported as an unconditional pass.
 
-Absolute budgets apply without a fixed reference. A compatible reviewed fixed reference additionally enforces substantial LCP deterioration; a violation is confirmed with three new measurements of that route/profile. Missing or incompatible confirmation is incomplete, not a pass. The 28-sample rolling history is informational and is never the enforcement baseline.
-
-The fixed reference is pending at [`site-performance-reference.json`](site-performance-reference.json). Its proposed source is scheduled `main` run [45996004222](https://github.com/basil-one/agency/actions/runs/45996004222), revision `4f1ea918a8630adfa2757b8d7d2dd878f4b6bf58`, captured 2026-11-27 12:12:51 UTC. The successful run includes all four routes, both profiles, and 24 Lighthouse samples on `ubuntu-24.04`, Lighthouse 13.6.0, Chrome 159.0.8154.6, Ruby 3.3.14, Jekyll 3.10.0, and Node 22.23.5. Review found mobile TBT medians above the 300 ms budget on `/know-your-patterns/` (337 ms), `/reflections/` (344 ms), and `/reflections/the-world-that-conflict-intelligence-opens/` (338 ms); confirmation is not present in this run. The candidate therefore remains explicitly pending, not an accepted baseline.
-
-After this policy is available on `main`, run **Actions → Quality Pulse → Run workflow → branch `main` → Run workflow**. Review the Performance Integrity findings and confirmation artifact; only a complete successful main measurement with compatible environment and resolved confirmation is eligible for human review as the fixed reference. Do not use a PR measurement or the current candidate as an accepted reference.
+The fixed performance reference remains pending until complete, successful `main` evidence is compatible with the policy and reviewed. Rolling comparisons inform judgment but do not replace the fixed-reference safeguard.
