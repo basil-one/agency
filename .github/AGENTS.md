@@ -5,6 +5,7 @@ Apply the repository's [root guidance](../AGENTS.md) as well. This file adds exp
 ## Map the existing contracts
 
 - Before editing, inspect the relevant workflow triggers (`pull_request`, `schedule`, `workflow_dispatch`, `workflow_call`), job names, required PR check contexts, permissions, concurrency, artifacts, and downstream consumers.
+- Use [CONVENTIONS.md](CONVENTIONS.md) for Agency's canonical Common/Site workflow, script, test, route, and browser-support boundaries.
 - Preserve substantive required checks and their identities unless an owner-approved migration includes a verified protection transition. Reconcile against the latest `main`; do not restore obsolete workflows.
 - Trace evidence end to end: producer, artifact name, run ID, branch/ref, event, and historical readers. Keep scheduled-`main` evidence distinct from PR and manual runs; retain compatible history across migrations.
 

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { resolve } from 'node:path';
-import { discoverReflections } from './site-routes.js';
+import { discoverReflections } from '../../../scripts/site/routes.js';
 import { assertResponsivePage, assertResponsiveTarget } from './responsive.js';
 
 test.use({ hasTouch: true });

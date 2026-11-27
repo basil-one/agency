@@ -129,7 +129,7 @@ async function checkDependencyPosture({
   token,
   fetchImpl = fetch
 }) {
-  const lines = ['# Dependency Security', '', '## Outcome', ''];
+  const lines = ['# Common: Dependency Security', '', '## Outcome', ''];
   if (!token || !/^[^/]+\/[^/]+$/.test(repository ?? '')) {
     lines.push('**Unknown — GitHub API credentials or repository are unavailable.**');
     return {

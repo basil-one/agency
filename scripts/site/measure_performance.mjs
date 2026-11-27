@@ -3,7 +3,7 @@ import { createServer } from 'node:net';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import { chromium } from 'playwright';
-import { discoverReflections } from '../tests/browser/site-routes.js';
+import { discoverReflections } from './routes.js';
 
 const root = process.cwd();
 const siteDirectory = resolve(root, '_site');

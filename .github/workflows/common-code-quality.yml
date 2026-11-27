@@ -1,4 +1,4 @@
-name: Source Quality
+name: "Common: Code Quality"
 
 on:
   pull_request:
@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: Source Quality
+  common-code-quality:
+    name: "Common: Code Quality"
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -60,6 +60,10 @@ jobs:
           fi
       - name: Test daily quality orchestration and Pulse
         run: npm run test:quality-pulse
+      - name: Test operational workflow contracts
+        run: npm run test:required-checks
+      - name: Test generated-site route discovery
+        run: npm run test:site-routes
       - name: Super-Linter
         id: super_linter
         uses: super-linter/super-linter/slim@v9.0.0
@@ -78,7 +82,7 @@ jobs:
             esac
           }
           {
-            echo "# Source Quality"
+            echo "# Common: Code Quality"
             echo
             summary_outcome "$RUBY_OUTCOME" "Ruby Gemfile syntax"
             summary_outcome "$ACTIONS_OUTCOME" "GitHub Actions validation (jactionlint)"

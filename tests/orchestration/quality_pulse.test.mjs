@@ -12,7 +12,7 @@ import {
   isPerformanceComparison,
   renderPerformanceTrends,
   renderPulse
-} from '../scripts/quality_pulse.mjs';
+} from '../../scripts/orchestration/quality_pulse.mjs';
 
 const date = '2026-11-16';
 const passingRun = {
@@ -181,7 +181,7 @@ test('Pulse uses actual job completion time, not workflow updated_at', async () 
   });
   assert.match(
     markdown,
-    /\| Site Build Integrity \| Fresh — passed \| Completed 2026-11-16 17:59:00\.000 UTC \|/
+    /\| Site: Build Integrity \| Fresh — passed \| Completed 2026-11-16 17:59:00\.000 UTC \|/
   );
 });
 
@@ -203,7 +203,7 @@ test('Pulse reports unknown when completion-time job metadata is inaccessible', 
       return { ok: true, json: async () => ({ workflow_runs: [] }) };
     }
   });
-  assert.match(markdown, /\| Site Build Integrity \| Unknown completion time \| Started 2026-11-16 06:24:05\.000 UTC \|/);
+  assert.match(markdown, /\| Site: Build Integrity \| Unknown completion time \| Started 2026-11-16 06:24:05\.000 UTC \|/);
   assert.match(markdown, /Jobs API returned HTTP 403/);
   assert.match(markdown, /Review required/);
 });
@@ -228,10 +228,10 @@ test('missing today reports prior verification separately from stale data', () =
 
 test('partial pulse highlights missing coverage and exact run evidence', () => {
   const results = [
-    { name: 'Site Build Integrity', result: evaluateRuns([passingRun], date, undefined, jobsCompletedBeforeCutoff) },
-    { name: 'Link Integrity', result: evaluateRuns([], date) },
+    { name: 'Site: Build Integrity', result: evaluateRuns([passingRun], date, undefined, jobsCompletedBeforeCutoff) },
+    { name: 'Site: Link Integrity', result: evaluateRuns([], date) },
     {
-      name: 'SEO Integrity',
+      name: 'Site: SEO Integrity',
       result: { state: 'unknown', label: 'Unknown / API inaccessible', detail: 'HTTP 403; no result is inferred.' }
     }
   ];
@@ -345,7 +345,7 @@ test('prior performance evidence can show its fixed and rolling state without cl
   const summary = renderPulse({
     date,
     generatedAt: `${date}T18:17:00Z`,
-    results: [{ name: 'Performance Integrity', result }]
+    results: [{ name: 'Site: Performance Integrity', result }]
   });
   assert.match(summary, /Prior verification/);
   assert.match(summary, /fixed reference: pending reviewed main anchor/);
@@ -370,7 +370,7 @@ test('homepage trends render only representative measures and linked source evid
   assert.match(markdown, /\| Desktop LCP \| -100 ms \(-4\.0%\) \| \+200 ms \(\+8\.0%\) \|/);
   assert.doesNotMatch(markdown, /999/);
   assert.match(markdown, /[Ll]ower is better/);
-  assert.match(markdown, /\[Performance Integrity run\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/123\)/);
+  assert.match(markdown, /\[Site: Performance Integrity run\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/123\)/);
   assert.match(markdown, /\[comparison artifact\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/123\/artifacts\/456\)/);
   assert.match(markdown, /\[fixed reference run\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/99\)/);
 });
@@ -478,7 +478,7 @@ test('prior trends are dated, while non-successful performance evidence has no d
       date,
       generatedAt: `${date}T18:17:00Z`,
       results: [{
-        name: 'Performance Integrity',
+        name: 'Site: Performance Integrity',
         result: {
           state,
           label,
@@ -521,7 +521,7 @@ test('Pulse loads a valid comparison artifact and keeps failed or unavailable ar
   }) => {
     const fetchImpl = async (url) => {
       const path = new URL(url).pathname;
-      if (path.endsWith('/actions/workflows/performance-integrity.yml/runs')) {
+      if (path.endsWith('/actions/workflows/site-performance-integrity.yml/runs')) {
         return { ok: true, json: async () => ({ workflow_runs: [{ ...successRun, conclusion }] }) };
       }
       if (path.endsWith('/actions/runs/700/jobs')) {
@@ -609,7 +609,7 @@ test('real comparison artifact history states render through source lookup with 
       generatedAt: `${date}T18:17:00Z`,
       fetchImpl: async (url) => {
         const path = new URL(url).pathname;
-        if (path.endsWith('/actions/workflows/performance-integrity.yml/runs')) {
+        if (path.endsWith('/actions/workflows/site-performance-integrity.yml/runs')) {
           return {
             ok: true,
             json: async () => ({ workflow_runs: [{ ...passingRun, id: 700 }] })
@@ -686,14 +686,18 @@ test('orchestrated Pulse reports same-cycle job results and requires valid evide
   const runId = '888';
   const runUrl = `https://github.com/basil-one/agency/actions/runs/${runId}`;
   const needs = Object.fromEntries([
-    'site-build',
-    'link',
-    'seo',
-    'source-quality',
-    'dependency-security',
-    'rendered-site',
-    'performance'
-  ].map((jobId) => [jobId, { result: 'success' }]));
+    'common-code-quality',
+    'common-coherence-integrity',
+    'common-dependency-security',
+    'site-build-integrity',
+    'site-link-integrity',
+    'site-seo-integrity',
+    'site-rendering-integrity',
+    'site-performance-integrity'
+  ].map((jobId) => [jobId, {
+    result: 'success',
+    ...(jobId === 'site-link-integrity' ? { outputs: { status: 'success' } } : {})
+  }]));
   const performanceSummary = {
     complete: true,
     capturedAt: `${date}T06:30:00.000Z`,
@@ -736,8 +740,8 @@ test('orchestrated Pulse reports same-cycle job results and requires valid evide
   });
 
   assert.equal(pulse.successful, true);
-  assert.match(pulse.markdown, /All 7 dimensions passed in this cycle/);
-  assert.match(pulse.markdown, /\| Site Build Integrity \| Passed \| Same-cycle job result \|/);
+  assert.match(pulse.markdown, /All 8 dimensions passed in this cycle/);
+  assert.match(pulse.markdown, /\| Site: Build Integrity \| Passed \| Same-cycle job result \|/);
   assert.match(pulse.markdown, /\[same-cycle run\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/888\)/);
   assert.match(pulse.markdown, /actions\/runs\/888\/artifacts\/456/);
   assert.match(pulse.markdown, /actions\/runs\/888\/artifacts\/457/);
@@ -760,6 +764,32 @@ test('orchestrated Pulse reports same-cycle job results and requires valid evide
   });
   assert.equal(manualPulse.successful, true);
   assert.match(manualPulse.markdown, /manually dispatched cycle/);
+
+  performanceSummary.source.eventName = 'schedule';
+  const advisoryNeeds = {
+    ...needs,
+    'site-link-integrity': {
+      result: 'success',
+      outputs: { status: 'advisory' }
+    }
+  };
+  const advisoryPulse = await buildOrchestratedPulse({
+    apiUrl: 'https://api.github.com',
+    repository: 'basil-one/agency',
+    token: 'test-token',
+    needs: advisoryNeeds,
+    runId,
+    runUrl,
+    date,
+    generatedAt: `${date}T06:40:00Z`,
+    fetchImpl,
+    unzipImpl
+  });
+  assert.equal(advisoryPulse.successful, false);
+  assert.equal(advisoryPulse.completed, true);
+  assert.match(advisoryPulse.markdown, /Cycle completed with advisories — 7 dimensions passed and 1 is advisory/);
+  assert.match(advisoryPulse.markdown, /\| Site: Link Integrity \| Advisory — uncertain external responses \|/);
+  assert.match(advisoryPulse.markdown, /not evidence of a confirmed broken destination/);
 });
 
 test('orchestrated Pulse never treats failed, skipped, cancelled, unknown, or missing jobs as passed', async () => {
@@ -768,13 +798,14 @@ test('orchestrated Pulse never treats failed, skipped, cancelled, unknown, or mi
     repository: 'basil-one/agency',
     token: 'test-token',
     needs: {
-      'site-build': { result: 'failure' },
-      link: { result: 'skipped' },
-      seo: { result: 'cancelled' },
-      'source-quality': { result: 'unexpected' },
-      'dependency-security': { result: 'skipped' },
-      'rendered-site': { result: 'skipped' },
-      performance: { result: 'skipped' }
+      'common-code-quality': { result: 'failure' },
+      'common-coherence-integrity': { result: 'skipped' },
+      'common-dependency-security': { result: 'skipped' },
+      'site-build-integrity': { result: 'failure' },
+      'site-link-integrity': { result: 'skipped' },
+      'site-seo-integrity': { result: 'cancelled' },
+      'site-rendering-integrity': { result: 'skipped' },
+      'site-performance-integrity': { result: 'skipped' }
     },
     runId: '889',
     runUrl: 'https://github.com/basil-one/agency/actions/runs/889',
@@ -785,12 +816,11 @@ test('orchestrated Pulse never treats failed, skipped, cancelled, unknown, or mi
     }
   });
   assert.equal(pulse.successful, false);
-  assert.match(pulse.markdown, /Cycle incomplete — 7 of 7 dimensions/);
-  assert.match(pulse.markdown, /\| Site Build Integrity \| Failed \|/);
-  assert.match(pulse.markdown, /\| Link Integrity \| Skipped \|/);
-  assert.match(pulse.markdown, /\| SEO Integrity \| Incomplete \/ cancelled \|/);
-  assert.match(pulse.markdown, /\| Source Quality \| Unknown outcome \|/);
-  assert.match(pulse.markdown, /\| Performance Integrity \| Skipped \|/);
+  assert.match(pulse.markdown, /Cycle incomplete — 8 of 8 dimensions/);
+  assert.match(pulse.markdown, /\| Common: Code Quality \| Failed \|/);
+  assert.match(pulse.markdown, /\| Site: Link Integrity \| Skipped \|/);
+  assert.match(pulse.markdown, /\| Site: SEO Integrity \| Incomplete \/ cancelled \|/);
+  assert.match(pulse.markdown, /\| Site: Performance Integrity \| Skipped \|/);
 
   const missing = await buildOrchestratedPulse({
     apiUrl: 'https://api.github.com',
@@ -802,7 +832,18 @@ test('orchestrated Pulse never treats failed, skipped, cancelled, unknown, or mi
     date
   });
   assert.equal(missing.successful, false);
-  assert.match(missing.markdown, /\| Site Build Integrity \| Missing \|/);
+  assert.match(missing.markdown, /\| Site: Build Integrity \| Missing \|/);
+
+  const unknownLinkEvidence = await buildOrchestratedPulse({
+    apiUrl: 'https://api.github.com',
+    repository: 'basil-one/agency',
+    token: 'test-token',
+    needs: { 'site-link-integrity': { result: 'success' } },
+    runId: '892',
+    runUrl: 'https://github.com/basil-one/agency/actions/runs/892',
+    date
+  });
+  assert.match(unknownLinkEvidence.markdown, /\| Site: Link Integrity \| Unknown \/ link evidence unavailable \|/);
 });
 
 test('orchestrated Pulse marks missing same-cycle artifacts unknown rather than successful', async () => {
@@ -811,13 +852,14 @@ test('orchestrated Pulse marks missing same-cycle artifacts unknown rather than 
     repository: 'basil-one/agency',
     token: 'test-token',
     needs: {
-      'site-build': { result: 'success' },
-      link: { result: 'success' },
-      seo: { result: 'success' },
-      'source-quality': { result: 'success' },
-      'dependency-security': { result: 'success' },
-      'rendered-site': { result: 'success' },
-      performance: { result: 'success' }
+      'common-code-quality': { result: 'success' },
+      'common-coherence-integrity': { result: 'success' },
+      'common-dependency-security': { result: 'success' },
+      'site-build-integrity': { result: 'success' },
+      'site-link-integrity': { result: 'success', outputs: { status: 'success' } },
+      'site-seo-integrity': { result: 'success' },
+      'site-rendering-integrity': { result: 'success' },
+      'site-performance-integrity': { result: 'success' }
     },
     runId: '891',
     runUrl: 'https://github.com/basil-one/agency/actions/runs/891',
@@ -825,8 +867,8 @@ test('orchestrated Pulse marks missing same-cycle artifacts unknown rather than 
     fetchImpl: async () => ({ ok: true, json: async () => ({ artifacts: [] }) })
   });
   assert.equal(pulse.successful, false);
-  assert.match(pulse.markdown, /\| Dependency Security \| Unknown \/ posture artifact unavailable \|/);
-  assert.match(pulse.markdown, /\| Performance Integrity \| Unknown \/ performance evidence unavailable \|/);
+  assert.match(pulse.markdown, /\| Common: Dependency Security \| Unknown \/ posture artifact unavailable \|/);
+  assert.match(pulse.markdown, /\| Site: Performance Integrity \| Unknown \/ performance evidence unavailable \|/);
   assert.match(pulse.markdown, /no clean result is inferred/);
   assert.match(pulse.markdown, /no comparison is inferred/);
 });

@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import test from 'node:test';
-import { classifyChanges } from '../scripts/classify_performance_skip.mjs';
+import { classifyChanges } from '../../scripts/site/classify_performance_skip.mjs';
 
 function reflection(slug, body = 'Editorial reflection text.') {
   return `---
