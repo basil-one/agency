@@ -86,6 +86,7 @@ function makeRun(id, created_at) {
     created_at,
     event: 'schedule',
     head_branch: 'main',
+    head_sha: 'abc123',
     status: 'completed'
   };
 }
@@ -107,7 +108,7 @@ test('reports unavailable fixed and rolling baselines without fabricating deltas
   );
   const report = lines.join('\n');
 
-  assert.match(report, /\*\*Fixed reference:\*\* pending first reviewed successful main measurement/);
+  assert.match(report, /\*\*Fixed reference:\*\* pending review of a complete successful main measurement/);
   assert.match(report, /\*\*Rolling daily-main baseline:\*\* collecting \(0\/28 compatible successful daily-main runs\)/);
   assert.match(report, /No comparison\/deltas available yet/);
   assert.doesNotMatch(report, /^\| `\//m);
@@ -150,7 +151,7 @@ test('renders a comparison table when the fixed reference is available', () => {
   assert.equal(comparison.deltasAvailable, true);
 });
 
-test('compares against 28 matching daily-main summaries without applying a performance threshold', () => {
+test('keeps 28-sample rolling history informational while the fixed-reference policy requires confirmation', () => {
   const prior = Array.from({ length: 28 }, (_, index) =>
     makeSummary({
       lcp: 1_000 + index,
@@ -166,8 +167,10 @@ test('compares against 28 matching daily-main summaries without applying a perfo
   assert.equal(comparison.history.requiredDailySamples, 28);
   assert.match(report, /28\/28 compatible successful daily-main runs; available/);
   assert.match(report, /\+587 ms \(\+57\.9%\)/);
-  assert.match(report, /do not fail this workflow/);
+  assert.match(report, /Rolling comparisons are informational/);
   assert.equal(comparison.deltasAvailable, true);
+  assert.equal(comparison.policy.status, 'confirmation-required');
+  assert.equal(comparison.policy.confirmationProfiles.length, 8);
 });
 
 test('accepts observed Ruby and Node patch drift while preserving exact recorded versions', () => {
@@ -267,6 +270,7 @@ test('preserves legacy scheduled and new orchestrated Lighthouse history provena
     id: '123',
     event: 'schedule',
     head_branch: 'main',
+    head_sha: 'abc123',
     status: 'completed',
     conclusion: 'success'
   };

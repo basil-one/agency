@@ -63,6 +63,12 @@ function makeComparison({ available = false, historyStatus = 'collecting_history
   const summary = makeSummary();
   return {
     deltasAvailable: available,
+    policy: {
+      status: 'passed',
+      initialViolations: [],
+      confirmations: [],
+      confirmedViolations: []
+    },
     fixedReference: available
       ? { available: true, runUrl: 'https://github.com/basil-one/agency/actions/runs/88' }
       : { available: false, reason: 'No versioned successful main reference has been established.' },
@@ -101,11 +107,12 @@ function makeInputs(overrides = {}) {
 test('puts completed informational outcome first and summarizes representative LCP/TBT by page', () => {
   const report = renderPerformanceSummary(makeInputs());
 
-  assert.match(report, /^# Performance Integrity\n\n\*\*Measurement completed — 24\/24 Lighthouse samples\*\*/);
+  assert.match(report, /^# Site: Performance Integrity\n\n\*\*Measurement completed — 24\/24 Lighthouse samples; safeguard passed\*\*/);
   assert.match(
     report,
-    /Measurements were collected using controlled Lighthouse tests, not actual visitors\. Comparisons are informational; no automatic regression thresholds are enforced\./
+    /Three fresh-browser Lighthouse runs are summarized by route\/profile medians\. Absolute mobile\/desktop budgets apply/
   );
+  assert.match(report, /\*\*Passed:\*\* no confirmed absolute-budget or substantial compatible-reference LCP violation/);
   assert.match(report, /\| Home \| 1\.23 s \| 567 ms \| 89 ms \|/);
   assert.match(report, /\| Know Your Patterns \|/);
   assert.match(report, /\| Reflections \|/);
@@ -126,12 +133,47 @@ test('puts completed informational outcome first and summarizes representative L
 });
 
 test('reports pending fixed anchor and collecting rolling history without an empty comparison table', () => {
-  const report = renderPerformanceSummary(makeInputs());
+  const comparison = makeComparison();
+  comparison.policy.referenceReason =
+    'No reviewed successful main reference is available; absolute budgets remain active.';
+  const report = renderPerformanceSummary(makeInputs({ comparison }));
 
-  assert.match(report, /Fixed reference:\*\* pending reviewed successful `main` anchor/);
+  assert.match(report, /Fixed reference:\*\* pending confirmation and review of a complete successful `main` measurement/);
   assert.match(report, /Rolling daily-main baseline:\*\* collecting \(0\/28\)/);
-  assert.match(report, /review and version it as the fixed anchor/);
+  assert.match(report, /Rolling history is informational/);
+  assert.match(report, /Relative deterioration gate unavailable: No reviewed successful main reference is available; absolute budgets remain enforced\./);
   assert.doesNotMatch(report, /^\| Page \| Profile \| Fixed LCP/m);
+});
+
+test('reports confirmed violations with route, profile, criterion, measurements, and next action', () => {
+  const comparison = makeComparison();
+  comparison.policy = {
+    status: 'failed',
+    initialViolations: [{
+      route: '/know-your-patterns/',
+      formFactor: 'mobile',
+      criterion: 'absolute',
+      metric: 'total-blocking-time',
+      value: 337,
+      limit: 300
+    }],
+    confirmations: [{
+      route: '/know-your-patterns/',
+      formFactor: 'mobile',
+      criterion: 'absolute',
+      metric: 'total-blocking-time',
+      value: 337,
+      limit: 300,
+      confirmationValue: 321,
+      result: 'confirmed'
+    }],
+    confirmedViolations: []
+  };
+  const report = renderPerformanceSummary(makeInputs({ comparison, jobStatus: 'failure' }));
+
+  assert.match(report, /safeguard failed/);
+  assert.match(report, /`\/know-your-patterns\/` \/ mobile: total-blocking-time 337 ms vs 300 ms absolute limit; confirmation 321 ms; confirmed/);
+  assert.match(report, /correct the confirmed regression/);
 });
 
 test('renders route/profile-specific deltas and matching baseline provenance when available', () => {
@@ -169,7 +211,7 @@ test('does not report complete sample counts from partial measurement data', () 
   }));
 
   assert.match(report, /\*\*Measurement failed or incomplete/);
-  assert.match(report, /No complete measurement is reported/);
+  assert.match(report, /No complete measurement or safeguard pass is reported/);
   assert.doesNotMatch(report, /Measurements were collected/);
   assert.match(report, /Complete sample count: \*\*unavailable\*\*/);
   assert.doesNotMatch(report, /24\/24 Lighthouse samples|12\/24/);
@@ -211,7 +253,7 @@ test('uses the same hierarchy for intentional reflection-only skips without meas
     steps: { measure: 'skipped' }
   }));
 
-  assert.match(report, /^# Performance Integrity\n\n\*\*Intentionally skipped — reflection text only\*\*/);
+  assert.match(report, /^# Site: Performance Integrity\n\n\*\*Intentionally skipped — reflection text only\*\*/);
   assert.match(report, /Changed paths \(1\): `_reflections\/new\.md`/);
   assert.match(report, /Lighthouse samples collected: \*\*0\*\*/);
   assert.match(report, /No metrics, baseline comparison, or artifacts were produced/);
@@ -230,7 +272,7 @@ test('reports measurement failure and incomplete setup without fabricated counts
   }));
 
   assert.match(report, /\*\*Measurement failed or incomplete/);
-  assert.match(report, /No complete measurement is reported/);
+  assert.match(report, /No complete measurement or safeguard pass is reported/);
   assert.doesNotMatch(report, /Measurements were collected/);
   assert.match(report, /Complete sample count: \*\*unavailable\*\*/);
   assert.match(report, /performance tests failed/);

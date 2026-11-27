@@ -4,21 +4,21 @@ published: false
 
 # Working in Agency
 
-Agency is a Jekyll website for individual coaching and reflections. Follow the approved task; these instructions do not replace its requirements.
+Agency is a Jekyll website for individual coaching, change leadership consulting, and reflections. Follow the approved task; these instructions do not replace its requirements.
 
 ## Understand before changing
 
-- Start with [README.md](README.md). For quality work, read [.github/QUALITY.md](.github/QUALITY.md) and inspect the actual workflows and tests.
+- Start with [README.md](README.md), including its intellectual stewardship principles. Understand our quality commitments in [QUALITY.md](.github/QUALITY.md) and follow the repository conventions in [CONVENTIONS.md](.github/CONVENTIONS.md).
+- For automation work involving workflows or their supporting scripts and tests, also read [automation guidance](.github/AGENTS.md).
 - Establish the intended outcome, what must stay true, and how to verify it before implementing. Surface unresolved editorial or operating decisions early rather than inventing a policy.
 - Inspect current `main`, the working branch, and affected consumers. Reconcile concurrent changes without undoing merged features, protections, or tests.
-- For automation work involving `.github/`, `scripts/`, or `tests/`, also consult [.github/AGENTS.md](.github/AGENTS.md) when the files support GitHub workflows.
-- Use [.github/CONVENTIONS.md](.github/CONVENTIONS.md) for Agency's quality workflow, script, test, and evidence conventions.
 
 ## Keep the change deliberate
 
 - Prefer the smallest coherent change that solves the stated problem. Explain necessary deviations; avoid speculative refactoring, redundant infrastructure, and unrelated cleanup.
 - Preserve the owner's approved language, links, positioning, and visitor experience. Do not rewrite content or make editorial choices under the guise of technical improvement.
 - Use existing conventions and safeguards. Do not weaken quality gates, security, or access controls just to make a check green.
+- Preserve licensing, attribution, and AI disclosures. Do not change version tags, release assets, or published versions without explicit authorization.
 
 ## Verify outcomes, not just code
 

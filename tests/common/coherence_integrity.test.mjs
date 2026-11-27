@@ -163,6 +163,32 @@ function collectCoherenceFailures(repository) {
   if (!packageScripts['test:coherence-integrity']?.includes('tests/common/coherence_integrity.test.mjs')) {
     failures.push('coherence contract test is not wired to an npm command');
   }
+  if (!packageScripts['test:performance-policy']?.includes('tests/site/performance_policy.test.mjs')) {
+    failures.push('performance policy tests are not wired to an npm command');
+  }
+  const performanceWorkflow = read(repository, '.github/workflows/site-performance-integrity.yml') ?? '';
+  if (!performanceWorkflow.includes('PERFORMANCE_REFERENCE_PATH: .github/site-performance-reference.json')) {
+    failures.push('performance workflow does not use the canonical domain reference');
+  }
+  if (
+    !performanceWorkflow.includes('Confirm initially violating route profiles') ||
+    !performanceWorkflow.includes('compare_performance.mjs --finalize') ||
+    !performanceWorkflow.includes('PERFORMANCE_PROFILES_JSON:')
+  ) {
+    failures.push('performance workflow does not measure and enforce route/profile confirmation');
+  }
+  const confirmationStep = performanceWorkflow.split('id: confirmation')[1]?.split(
+    '- name: Enforce confirmed performance safeguards'
+  )[0] ?? '';
+  if (!confirmationStep.includes('GITHUB_SHA: ${{ github.sha }}')) {
+    failures.push('performance confirmation does not preserve the checked-out source revision');
+  }
+  if (
+    !existsSync(join(repository, '.github/site-performance-reference.json')) ||
+    existsSync(join(repository, '.github/performance-reference.json'))
+  ) {
+    failures.push('site performance reference filename is not canonical');
+  }
   const workflowContents = actualWorkflowFiles.map((file) => [
     file,
     read(repository, `.github/workflows/${file}`) ?? ''
@@ -186,9 +212,9 @@ function collectCoherenceFailures(repository) {
   if (
     !orchestration.includes('git rev-parse HEAD') ||
     !orchestration.includes('PULSE_SOURCE_REVISION:') ||
-    !read(repository, 'scripts/orchestration/quality_pulse.mjs')?.includes('Validator/source revision:')
+    !read(repository, 'scripts/orchestration/quality_pulse.mjs')?.includes('Validator revision:')
   ) {
-    failures.push('Quality Pulse summary does not report its validator/source revision');
+    failures.push('Quality Pulse summary does not report its validator revision');
   }
 
   const referencedText = [

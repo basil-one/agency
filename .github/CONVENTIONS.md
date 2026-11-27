@@ -1,6 +1,6 @@
 # Repository Conventions
 
-Agency's quality practice serves the website. The domains are ordered **Common → Site**; [Quality Stance](QUALITY.md) describes the safeguards, and this guide describes where their implementation lives.
+Agency's shared quality practice covers the website. The domains are ordered **Common → Site**; [Quality Stance](QUALITY.md) describes the capabilities, and this guide describes where their implementation lives.
 
 ## Find the work
 
@@ -10,30 +10,32 @@ Agency's quality practice serves the website. The domains are ordered **Common �
 | Site | `.github/workflows/site-*.yml` | `scripts/site/` | `tests/site/` |
 | Cross-domain orchestration | `quality-pulse.yml` | `scripts/orchestration/` | `tests/orchestration/` |
 
-Use workflow filenames as capability IDs. A single-job workflow uses its filename stem as its job ID. Multi-job capabilities qualify distinct roles, as in `common-dependency-security-review` and `common-dependency-security-posture`. Human-facing check names are exactly `Domain: Capability`; Quality Pulse is the unqualified Common → Site coordinator.
+Use workflow filenames as capability IDs. A workflow with one substantive job uses its filename stem as that job ID; multi-job workflows qualify each role (`common-dependency-security-review` / `-posture`). Keep human-facing check names exactly `Domain: Capability`. Quality Pulse is the unqualified Common → Site coordinator.
 
-Production helpers live under `scripts/{common,site,orchestration}/`; automated tests live under matching `tests/` domains. Production route discovery and matrices live in `scripts/site/`. Browser test support stays under `tests/site/browser/`.
+Production helpers live under `scripts/{common,site,orchestration}/`; automated tests live under matching `tests/` domains. Browser test support stays under `tests/site/browser/`, while production route discovery and matrices live in `scripts/site/`.
 
-## Workflow contracts
+## Workflow anatomy and intentional differences
 
-Each capability is directly runnable for pull requests, manual diagnostics, and reusable workflow calls. Only Quality Pulse owns the daily schedule. Its dimensions run in Common then Site order and each substantive workflow retains the corresponding direct pull-request check. Keep permissions narrow and preserve ordinary pull-request review; do not make repository protection changes as part of a capability migration.
+Make the checked-out revision and task context clear; prepare only the needed environment; generate artifacts when required; run the check and focused tests; preserve named evidence; summarize passed, advisory, failed, incomplete, unknown, and skipped outcomes without inferring success from missing evidence.
 
-Report the checked-out revision and distinguish passed, advisory, failed, incomplete, skipped, and unknown outcomes. Missing evidence is not a pass. Site Link Integrity reports uncertain external responses as nonblocking advisories, while confirmed internal or likely-broken links retain failure precedence.
+Use release version tags for external actions and one version of each shared dependency across workflows, unless a documented compatibility constraint requires otherwise. Agency currently pins jactionlint to the commit for v2.6.0.
 
-Site Performance Integrity retains its four-route, mobile/desktop, three-run Lighthouse measurements, reflection-text-only skip classification, artifact names, and comparison behavior. Only successful scheduled-main evidence contributes to history; pull-request and manual measurements are excluded. The fixed reference remains pending until a reviewed successful main measurement exists.
+The order is purposeful, not a template: Dependency Security separates pull-request review from scheduled/manual alert posture. Performance keeps classification, initial measurement, confirmation, and artifact evidence distinct. Only Quality Pulse owns the daily schedule; proposed-change safeguards retain pull-request checks, and verification workflows support manual diagnostics. Keep permissions narrow and preserve ordinary pull-request protection.
 
-## Sustaining coherence
+Site Link Integrity reports uncertain external responses as nonblocking advisories; known defects retain failure precedence. Site Performance Integrity measures four representative routes on mobile and desktop with three-run Lighthouse medians and confirms initial violations with three new measurements per affected route/profile. Incomplete confirmation is not a pass. The executable policy defines the budgets and substantial deterioration criteria; the canonical fixed reference is [site-performance-reference.json](site-performance-reference.json). Use complete, successful, compatible main evidence after human review; only successful scheduled-main evidence contributes to informational rolling history. Retain compatible historical readers.
 
-Common: Coherence Integrity verifies the canonical capability inventory and order, workflow names and job IDs, domain ownership, direct script/test/workflow references, package commands, and consistent external action versions. Focused negative fixtures prove that incorrect identities, paths, references, or action versions are rejected. Site Build verifies that generated `_site` excludes repository scripts and tests.
-
-The contracts protect explicit relationships, not conceptual simplicity. Reviewers still judge whether a boundary or exception earns its maintenance cost and whether the system remains understandable.
+Agency retains its reflection-text-only skip classification and missing-route diagnostic.
 
 ## Run and maintain checks
 
-- `npm run test:coherence-integrity` — capability inventory, identities, paths, ownership, references, and action version contracts.
 - `npm run test:quality-pulse` — Pulse outcomes, orchestration, and dependency posture.
+- `npm run test:coherence-integrity` — capability inventory/order, workflow IDs, repository boundaries, script/test placement, reference traceability, and negative fixtures.
 - `npm run test:required-checks` — canonical PR check identities and triggers.
-- `npm run test:site-routes` — generated-route discovery.
-- `npm run test:performance-history`, `npm run test:performance-skip`, and `npm run test:performance-summary` — Site Performance behavior and evidence.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
+- `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks.
+- `npm run test:site-routes` — generated-route discovery. The browser suite needs a built `_site` and the installed Playwright browser.
 - `bundle exec jekyll build --trace` — production site build.
+
+## Sustaining coherence
+
+Common: Coherence Integrity runs the architectural contracts on pull requests and in Quality Pulse. It checks the capability inventory/order and job IDs; resolves direct script, Python module, unittest discovery, and package-script references; enforces domain script/test placement; and rejects production imports from tests. Common: Code Quality retains workflow correctness, source lint/complexity, and operational regression tests. Site Build verifies that the generated `_site` excludes repository scripts and tests. When changing a capability, consider its relationship to the whole: follow the existing conventions, update affected references and contracts, and make intentional exceptions explicit. Reviewers still judge conceptual simplicity, teaching clarity, and whether a boundary or exception earns its maintenance cost; these are not reducible to a score.

@@ -70,8 +70,11 @@ function failedStepNames(inputs) {
     history: 'daily-main history lookup',
     measure: 'Lighthouse measurement',
     comparison: 'baseline comparison',
+    confirmation: 'required performance confirmation',
+    evaluation: 'performance safeguard evaluation',
     diagnostic: 'missing-route diagnostic',
     reports: 'raw report upload',
+    confirmation_reports: 'confirmation report upload',
     summary: 'summary artifact upload'
   };
   return Object.entries(names)
@@ -93,7 +96,7 @@ function baselineLines(comparison) {
     ? `[available](${fixed.runUrl})`
     : fixed?.reason?.includes('different tool')
       ? 'not comparable; tool or runner environment differs'
-      : 'pending reviewed successful `main` anchor';
+      : 'pending confirmation and review of a complete successful `main` measurement';
   let rollingStatus;
   if (history.status === 'available' && history.availableDailySamples >= history.requiredDailySamples) {
     rollingStatus = `${history.availableDailySamples}/${history.requiredDailySamples} compatible successful daily-main runs available`;
@@ -107,11 +110,11 @@ function baselineLines(comparison) {
     `- **Rolling daily-main baseline:** ${rollingStatus}.`
   ];
   if (comparison.deltasAvailable) {
-    lines.push('- Deltas are descriptive lab comparisons only; no threshold or regression verdict is applied.');
+    lines.push('- Rolling deltas are informational; fixed-reference LCP deterioration and absolute mobile/desktop budgets are evaluated separately.');
   } else if (history.status === 'unavailable') {
     lines.push('- No comparison/deltas available; inspect the history lookup details below and rerun when access is restored.');
   } else {
-    lines.push('- No comparison/deltas available yet; after the first successful `main` measurement, review and version it as the fixed anchor.');
+    lines.push('- No comparison/deltas available yet; absolute budgets remain active while the fixed-reference LCP gate is pending.');
   }
   return lines;
 }
@@ -150,6 +153,47 @@ function deltaTable(comparison) {
     '| --- | --- | ---: | ---: | ---: | ---: |',
     ...rows
   ];
+}
+
+function performanceSafeguardLines(policy) {
+  if (!policy) {
+    return ['- **Not established:** safeguard evidence is unavailable; no performance pass is inferred.'];
+  }
+  const lines = [
+    policy.status === 'passed'
+      ? '- **Passed:** no confirmed absolute-budget or substantial compatible-reference LCP violation.'
+      : policy.status === 'failed'
+        ? '- **Failed:** one or more performance violations were confirmed.'
+        : policy.status === 'incomplete'
+          ? `- **Not passed:** required confirmation is incomplete (${policy.confirmationReason ?? 'reason unavailable'}).`
+          : '- **Pending:** initial route/profile violations require confirmation.'
+  ];
+  for (const violation of policy.confirmations ?? policy.initialViolations ?? []) {
+    const profile = `\`${violation.route}\` / ${violation.formFactor}`;
+    const initial = formatValue(violation.metric, violation.value);
+    const confirmed = Number.isFinite(violation.confirmationValue)
+      ? `; confirmation ${formatValue(violation.metric, violation.confirmationValue)}`
+      : '';
+    const result = violation.result ?? 'confirmation required';
+    if (violation.criterion === 'absolute') {
+      lines.push(`- ${profile}: ${violation.metric} ${initial} vs ${formatValue(violation.metric, violation.limit)} absolute limit${confirmed}; ${result}.`);
+    } else {
+      lines.push(`- ${profile}: LCP ${initial} vs fixed reference ${formatValue(violation.metric, violation.referenceValue)}; delta ${formatValue(violation.metric, violation.delta)} (+${violation.deltaPercentage.toFixed(1)}%); both >${formatValue(violation.metric, violation.minimumMilliseconds)} and >${violation.minimumPercentage}% required${confirmed}; ${result}.`);
+    }
+  }
+  if (policy.referenceReason) {
+    const reason = policy.referenceReason.replace(
+      /;\s*absolute budgets remain (?:active|enforced)\.?$/i,
+      ''
+    );
+    lines.push(`- Relative deterioration gate unavailable: ${reason}; absolute budgets remain enforced.`);
+  }
+  if (['failed', 'incomplete'].includes(policy.status)) {
+    lines.push('- Next step: review the route/profile reports, correct the confirmed regression, or restore complete confirmation evidence.');
+  } else if (policy.status === 'passed' && policy.confirmations?.length) {
+    lines.push('- Initial variation was not confirmed; no safeguard failure was raised.');
+  }
+  return lines;
 }
 
 function technicalDetails(summary, comparison, inputs) {
@@ -245,7 +289,7 @@ function renderPerformanceSummary(inputs) {
   const job = inputs.jobStatus ?? 'unknown';
   const failures = failedStepNames(inputs);
   const lines = [
-    '# Performance Integrity',
+    '# Site: Performance Integrity',
     ''
   ];
   if (skipped) {
@@ -268,8 +312,9 @@ function renderPerformanceSummary(inputs) {
     summary.coverage?.runCount === 3 &&
     summary.coverage?.measurementCount === 24;
   const measurementFailed = measure === 'failure';
+  const policyStatus = comparison?.policy?.status;
   const statusText = complete
-    ? `**Measurement completed — 24/24 Lighthouse samples${job === 'failure' ? '; a later workflow operation failed' : ''}**`
+    ? `**Measurement completed — 24/24 Lighthouse samples${policyStatus ? `; safeguard ${policyStatus}` : ''}${job === 'failure' && policyStatus === 'passed' ? '; a later workflow operation failed' : ''}**`
     : measurementFailed
       ? '**Measurement failed or incomplete**'
       : '**Measurement failed or incomplete — no complete measurement was produced**';
@@ -277,8 +322,8 @@ function renderPerformanceSummary(inputs) {
     statusText,
     '',
     complete
-    ? '- Measurements were collected using controlled Lighthouse tests, not actual visitors. Comparisons are informational; no automatic regression thresholds are enforced.'
-    : '- No complete measurement is reported. Any partial output is not treated as complete; comparisons are informational and no automatic regression thresholds are enforced.',
+    ? '- Three fresh-browser Lighthouse runs are summarized by route/profile medians. Absolute mobile/desktop budgets apply; substantial LCP deterioration is checked against a compatible reviewed fixed reference. Rolling history is informational.'
+    : '- No complete measurement or safeguard pass is reported. Partial output and missing confirmation evidence are not treated as clean.',
     `- Run: \`${inputs.eventName ?? 'unknown'}\` on ref \`${inputs.ref ?? 'unknown'}\`; job status: ${job}.`
   );
   if (complete) {
@@ -297,6 +342,7 @@ function renderPerformanceSummary(inputs) {
 
   lines.push('', '## Findings', '');
   lines.push(...baselineLines(comparison));
+  lines.push(...performanceSafeguardLines(comparison?.policy));
   if (comparison?.deltasAvailable) {
     lines.push(...deltaTable(comparison));
   } else if (complete) {
@@ -317,6 +363,11 @@ function renderPerformanceSummary(inputs) {
     lines.push(`- [${artifactLabel}](${inputs.machineArtifact.url}) — 90-day retention.`);
   } else {
     lines.push(`- Machine-readable summary/comparison artifact unavailable (${inputs.machineArtifact?.outcome ?? 'not uploaded'}); inspect the upload step in [the workflow run](${inputs.runUrl ?? ''}).`);
+  }
+  if (inputs.confirmationReports?.outcome === 'success' && inputs.confirmationReports.url) {
+    lines.push(`- [Three-run confirmation reports](${inputs.confirmationReports.url}) — affected route/profile measurements.`);
+  } else if (['incomplete', 'confirmation-required'].includes(policyStatus)) {
+    lines.push(`- Confirmation reports unavailable (${inputs.confirmationReports?.outcome ?? 'not completed'}); the safeguard is not passed.`);
   }
 
   lines.push('', ...technicalDetails(summary, comparison, inputs));
@@ -353,7 +404,8 @@ function main() {
     },
     steps: Object.fromEntries([
       'tests', 'classify', 'ruby', 'node', 'build', 'dependencies', 'chromium',
-      'history', 'measure', 'comparison', 'diagnostic', 'reports', 'summary'
+      'history', 'measure', 'comparison', 'confirmation', 'evaluation',
+      'diagnostic', 'reports', 'confirmation_reports', 'summary'
     ].map((key) => [key, process.env[`STEP_${key.toUpperCase()}`]]))
   };
   const markdown = `${renderPerformanceSummary(inputs)}\n`;
@@ -367,4 +419,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   main();
 }
 
-export { formatDelta, formatValue, renderPerformanceSummary, routeLabel };
+export {
+  formatDelta,
+  formatValue,
+  performanceSafeguardLines,
+  renderPerformanceSummary,
+  routeLabel
+};

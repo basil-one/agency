@@ -8,6 +8,10 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import {
+  assessPerformance,
+  finalizePerformanceAssessment
+} from './performance_policy.mjs';
 
 const apiVersion = '2022-11-28';
 const historyLimit = 28;
@@ -69,7 +73,11 @@ function isCompleteSummary(summary) {
     result.route &&
     ['mobile', 'desktop'].includes(result.formFactor) &&
     metrics.every(([key]) => Number.isFinite(result.values?.[key]))
-  );
+  ) &&
+    typeof summary.source?.sha === 'string' &&
+    Boolean(summary.source.sha) &&
+    Boolean(summary.source.runId) &&
+    Boolean(summary.source.runUrl);
 }
 
 function referenceIsReady(reference) {
@@ -127,7 +135,8 @@ function isDailyPerformanceEvidence(summary, run, workflowFile, performanceJobSu
     run.head_branch !== 'main' ||
     summary?.source?.eventName !== 'schedule' ||
     summary.source.branch !== 'main' ||
-    String(summary.source.runId) !== String(run.id)
+    String(summary.source.runId) !== String(run.id) ||
+    summary.source.sha !== run.head_sha
   ) {
     return false;
   }
@@ -310,6 +319,68 @@ function summarizeRolling(history) {
   }));
 }
 
+function getConfirmationSummary(reportDirectory) {
+  try {
+    return JSON.parse(readFileSync(join(reportDirectory, 'performance-summary.json'), 'utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
+function isCompleteConfirmationSummary(summary, profiles) {
+  if (
+    summary?.schemaVersion !== 1 ||
+    summary.complete !== true ||
+    summary.coverage?.runCount !== 3 ||
+    summary.coverage?.routeProfiles !== profiles.length ||
+    summary.coverage?.measurementCount !== profiles.length * 3 ||
+    !Array.isArray(summary.results) ||
+    summary.results.length !== profiles.length
+  ) return false;
+  const expected = new Set(profiles.map(({ route, formFactor }) => `${route}\u0000${formFactor}`));
+  const actual = new Set(summary.results.map(({ route, formFactor }) => `${route}\u0000${formFactor}`));
+  return actual.size === expected.size &&
+    [...actual].every((key) => expected.has(key)) &&
+    summary.results.every((result) =>
+      Object.entries({
+        'largest-contentful-paint': result.formFactor === 'mobile' ? 3_000 : 1_500,
+        'total-blocking-time': result.formFactor === 'mobile' ? 300 : 150,
+        'cumulative-layout-shift': 0.1
+      }).every(([metric]) => Number.isFinite(result.values?.[metric]))
+    );
+}
+
+function sameRunProvenance(current, confirmation) {
+  return ['eventName', 'branch', 'sha', 'runId'].every((key) =>
+    String(current.source?.[key] ?? '') === String(confirmation.source?.[key] ?? '')
+  );
+}
+
+function readComparison(reportDirectory) {
+  try {
+    return JSON.parse(readFileSync(join(reportDirectory, 'performance-comparison.json'), 'utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
+function writeComparison(reportDirectory, comparison) {
+  writeFileSync(
+    join(reportDirectory, 'performance-comparison.json'),
+    `${JSON.stringify(comparison, null, 2)}\n`
+  );
+}
+
+function writeComparisonOutputs(comparison) {
+  if (!process.env.GITHUB_OUTPUT) return;
+  const policy = comparison.policy;
+  writeFileSync(
+    process.env.GITHUB_OUTPUT,
+    `confirmation_required=${policy?.status === 'confirmation-required'}\nconfirmation_profiles=${JSON.stringify(policy?.confirmationProfiles ?? [])}\npolicy_status=${policy?.status ?? 'unavailable'}\n`,
+    { flag: 'a' }
+  );
+}
+
 function conditionDifferences(current, baseline) {
   const differences = [];
   for (const [key, label] of Object.entries({
@@ -412,6 +483,17 @@ function buildComparison(current, reference, history) {
     ? referenceReady
     : undefined;
   const referenceResults = getResults(readyReference);
+  const referenceReason = readyReference
+    ? undefined
+    : referenceReady
+      ? 'The reviewed fixed reference uses a different tool or runner environment.'
+      : 'No reviewed successful main reference is available; absolute budgets remain active.';
+  const policy = assessPerformance(
+    [...currentResults.values()],
+    [...referenceResults.values()],
+    Boolean(readyReference),
+    referenceReason
+  );
   const historyProvenance = compatibleHistory.map((summary) => ({
     runId: summary.source.runId,
     runUrl: summary.source.runUrl,
@@ -426,17 +508,17 @@ function buildComparison(current, reference, history) {
     '',
     `- **Run:** ${current.source.eventName} on \`${current.source.branch ?? 'unknown'}\`; ${current.coverage.routeCount} routes × mobile/desktop × ${current.coverage.runCount} runs; tools: Lighthouse ${current.environment.lighthouse}, Chrome ${current.environment.chrome}, Node ${current.environment.node}.`,
     `- **Fixed reference:** ${readyReference
-      ? `[successful main run](${readyReference.source.runUrl})`
+      ? `[reviewed main run](${readyReference.source.runUrl})`
       : referenceReady
         ? 'not comparable; tool or runner versions differ from the versioned reference'
-        : 'pending first reviewed successful main measurement'}.`,
+        : 'pending review of a complete successful main measurement'}.`,
     `- **Rolling daily-main baseline:** ${comparisonHistory.status === 'unavailable'
       ? `unavailable (${historyReason})`
       : comparisonHistory.status === 'available'
         ? `${historyLimit}/${historyLimit} compatible successful daily-main runs; available`
         : `collecting (${compatibleHistory.length}/${historyLimit} compatible successful daily-main runs)`}.`,
     '- **Environment compatibility:** runner, Lighthouse, Chrome, and Jekyll must match exactly; Ruby and Node must match by major.minor. Full versions remain in the summary artifact.',
-    '- Deltas are descriptive only; they do not fail this workflow or establish a performance-quality verdict.'
+    '- Rolling comparisons are informational; fixed-reference LCP deterioration and absolute mobile/desktop budgets are evaluated separately.'
   ];
   if (deltasAvailable) {
     lines.push('- A dash means no matching route/profile baseline metric is available (for example, when the latest reflection route changes).');
@@ -491,6 +573,7 @@ function buildComparison(current, reference, history) {
 
   const comparison = {
     schemaVersion: 1,
+    policy,
     history: {
       status: comparisonHistory.status,
       availableDailySamples: compatibleHistory.length,
@@ -560,6 +643,45 @@ async function main() {
   const reportDirectory = resolve(
     process.env.PERFORMANCE_REPORT_DIR ?? resolve(process.cwd(), 'performance-reports')
   );
+  if (process.argv.includes('--finalize')) {
+    const comparison = readComparison(reportDirectory);
+    const current = getCurrentSummary(reportDirectory);
+    if (!comparison?.policy || !current) {
+      throw new Error('Performance policy evidence is unavailable; no pass can be inferred.');
+    }
+    let confirmation;
+    let compatible = false;
+    let reason = 'Three new confirmation measurements were not completed.';
+    const confirmationDirectory = resolve(
+      process.env.PERFORMANCE_CONFIRMATION_REPORT_DIR ??
+        join(tmpdir(), 'performance-confirmation-reports')
+    );
+    confirmation = getConfirmationSummary(confirmationDirectory);
+    const targets = comparison.policy.confirmationProfiles ?? [];
+    if (isCompleteConfirmationSummary(confirmation, targets)) {
+      if (!sameRunProvenance(current, confirmation)) {
+        reason = 'Confirmation evidence came from a different event, branch, revision, or run.';
+      } else if (!sameMeasurementEnvironment(current, confirmation)) {
+        reason = 'The measurement environment is incompatible with the initial evidence.';
+      } else {
+        compatible = true;
+        reason = undefined;
+      }
+    } else if (confirmation) {
+      reason = 'Confirmation evidence is incomplete or does not cover every affected route/profile three times.';
+    }
+    comparison.policy = finalizePerformanceAssessment(
+      comparison.policy,
+      confirmation,
+      { compatible, reason }
+    );
+    writeComparison(reportDirectory, comparison);
+    writeComparisonOutputs(comparison);
+    process.stdout.write(`Performance safeguard outcome: ${comparison.policy.status}.\n`);
+    if (comparison.policy.status !== 'passed') process.exitCode = 1;
+    return;
+  }
+
   const summaryPath = join(reportDirectory, 'performance-summary.json');
   const summary = getCurrentSummary(reportDirectory);
   if (!summary) {
@@ -569,7 +691,7 @@ async function main() {
   }
 
   const referencePath = resolve(
-    process.env.PERFORMANCE_REFERENCE_PATH ?? '.github/performance-reference.json'
+    process.env.PERFORMANCE_REFERENCE_PATH ?? '.github/site-performance-reference.json'
   );
   let reference;
   try {
@@ -585,7 +707,8 @@ async function main() {
   };
   const { lines, comparison } = buildComparison(summary, reference, history);
   writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
-  writeFileSync(join(reportDirectory, 'performance-comparison.json'), `${JSON.stringify(comparison, null, 2)}\n`);
+  writeComparison(reportDirectory, comparison);
+  writeComparisonOutputs(comparison);
   if (process.env.GITHUB_OUTPUT) {
     writeFileSync(
       process.env.GITHUB_OUTPUT,
