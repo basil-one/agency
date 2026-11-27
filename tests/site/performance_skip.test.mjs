@@ -133,6 +133,7 @@ test('runs the full baseline for changed media, embeds, HTML, and Liquid', () =>
     '[download](/assets/recording.mp3)',
     '[stylesheet](/assets/css/site.css)',
     '<iframe src="https://example.test/embed"></iframe>',
+    '--!>',
     '{% include callout.html %}',
     '{{ site.title }}'
   ];

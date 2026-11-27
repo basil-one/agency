@@ -98,6 +98,23 @@ test('failed and intentionally skipped runs remain distinct', () => {
   );
 });
 
+test('Pulse escapes backslashes and Markdown delimiters in evidence details', () => {
+  const markdown = renderPulse({
+    date,
+    generatedAt: `${date}T18:17:00Z`,
+    results: [{
+      name: 'Site: Build Integrity',
+      result: {
+        state: 'fresh',
+        label: 'Passed',
+        detail: String.raw`untrusted\| detail`,
+        run: passingRun
+      }
+    }]
+  });
+  assert.ok(markdown.includes(String.raw`untrusted\\\| detail`));
+});
+
 test('completed job evidence after cutoff is late; run started before cutoff', () => {
   const completedAfterCutoff = new Map([
     [123, completionEvidenceFromJobs([
