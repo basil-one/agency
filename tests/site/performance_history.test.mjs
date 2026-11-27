@@ -171,13 +171,15 @@ test('separates controlled measurements from full-experience references and hist
   assert.equal(comparison.policy.referenceAvailable, false);
   assert.ok(comparison.conditions.includes('measurement context differs'));
   assert.match(lines.join('\n'), /pr-controlled context/);
+  assert.match(lines.join('\n'), /not comparable; measurement context differs from the versioned reference/);
   assert.match(lines.join('\n'), /No comparison\/deltas available yet/);
 
-  const withoutReference = buildComparison(
+  const { lines: withoutReferenceLines, comparison: withoutReference } = buildComparison(
     current,
     undefined,
     makeHistory([])
-  ).comparison;
+  );
+  assert.match(withoutReferenceLines.join('\n'), /pending review of a complete successful controlled main measurement/);
   assert.match(withoutReference.fixedReference.reason, /pr-controlled context/);
   assert.match(withoutReference.policy.referenceReason, /absolute budgets remain active/);
   assert.equal(withoutReference.deltasAvailable, false);

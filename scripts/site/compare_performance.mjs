@@ -512,16 +512,21 @@ function buildComparison(current, reference, history) {
   }));
   const deltasAvailable = Boolean(readyReference || rolling.size);
   const historyReason = comparisonHistory.reason?.replace(/[.!?]+$/, '') ?? 'history lookup failed';
+  const fixedReferenceStatus = readyReference
+    ? `[reviewed main run](${readyReference.source.runUrl})`
+    : referenceReady
+      ? measurementContext(current) !== measurementContext(referenceReady)
+        ? 'not comparable; measurement context differs from the versioned reference'
+        : 'not comparable; tool or runner versions differ from the versioned reference'
+      : measurementContext(current) === 'pr-controlled'
+        ? 'pending review of a complete successful controlled main measurement'
+        : 'pending review of a complete successful main measurement';
   const lines = [
     '',
     '## Baseline comparison',
     '',
     `- **Run:** ${current.source.eventName} on \`${current.source.branch ?? 'unknown'}\`; ${measurementContext(current)} context; ${current.coverage.routeCount} routes × mobile/desktop × ${current.coverage.runCount} runs; tools: Lighthouse ${current.environment.lighthouse}, Chrome ${current.environment.chrome}, Node ${current.environment.node}.`,
-    `- **Fixed reference:** ${readyReference
-      ? `[reviewed main run](${readyReference.source.runUrl})`
-      : referenceReady
-        ? 'not comparable; tool or runner versions differ from the versioned reference'
-        : 'pending review of a complete successful main measurement'}.`,
+    `- **Fixed reference:** ${fixedReferenceStatus}.`,
     `- **Rolling daily-main baseline:** ${comparisonHistory.status === 'unavailable'
       ? `unavailable (${historyReason})`
       : comparisonHistory.status === 'available'
