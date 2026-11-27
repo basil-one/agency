@@ -182,7 +182,11 @@ function performanceSafeguardLines(policy) {
     }
   }
   if (policy.referenceReason) {
-    lines.push(`- Relative deterioration gate unavailable: ${policy.referenceReason}; absolute budgets remain enforced.`);
+    const reason = policy.referenceReason.replace(
+      /;\s*absolute budgets remain (?:active|enforced)\.?$/i,
+      ''
+    );
+    lines.push(`- Relative deterioration gate unavailable: ${reason}; absolute budgets remain enforced.`);
   }
   if (['failed', 'incomplete'].includes(policy.status)) {
     lines.push('- Next step: review the route/profile reports, correct the confirmed regression, or restore complete confirmation evidence.');

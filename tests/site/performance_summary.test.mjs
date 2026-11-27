@@ -133,11 +133,15 @@ test('puts completed informational outcome first and summarizes representative L
 });
 
 test('reports pending fixed anchor and collecting rolling history without an empty comparison table', () => {
-  const report = renderPerformanceSummary(makeInputs());
+  const comparison = makeComparison();
+  comparison.policy.referenceReason =
+    'No reviewed successful main reference is available; absolute budgets remain active.';
+  const report = renderPerformanceSummary(makeInputs({ comparison }));
 
   assert.match(report, /Fixed reference:\*\* pending confirmation and review of a complete successful `main` measurement/);
   assert.match(report, /Rolling daily-main baseline:\*\* collecting \(0\/28\)/);
   assert.match(report, /Rolling history is informational/);
+  assert.match(report, /Relative deterioration gate unavailable: No reviewed successful main reference is available; absolute budgets remain enforced\./);
   assert.doesNotMatch(report, /^\| Page \| Profile \| Fixed LCP/m);
 });
 
