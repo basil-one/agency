@@ -13,7 +13,7 @@
     "test:performance-skip": "node --test tests/site/performance_skip.test.mjs",
     "test:performance-summary": "node --test tests/site/performance_summary.test.mjs",
     "test:quality-pulse": "node --test tests/orchestration/daily_quality_workflow.test.mjs tests/orchestration/quality_pulse.test.mjs tests/common/dependency_posture.test.mjs",
-    "test:required-checks": "node --test tests/common/required_checks.test.mjs tests/orchestration/release_publish_workflow.test.mjs && python3 -m unittest discover -s tests/orchestration -p 'test_release_publish.py' -v",
+    "test:required-checks": "node --test tests/common/required_checks.test.mjs tests/site/publication_workflow.test.mjs tests/orchestration/release_publish_workflow.test.mjs && python3 -m unittest discover -s tests/orchestration -p 'test_release_publish.py' -v",
     "test:site-routes": "node --test tests/site/routes.test.mjs",
     "measure:performance": "node scripts/site/measure_performance.mjs"
   },
