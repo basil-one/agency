@@ -24,6 +24,7 @@ const capabilities = [
   ['Site: Rendering Integrity', 'site-rendering-integrity.yml', 'site-rendering-integrity'],
   ['Site: Performance Integrity', 'site-performance-integrity.yml', 'site-performance-integrity']
 ];
+const publicationCapability = ['Site: Publish', 'site-publish.yml'];
 
 function read(repository, path) {
   const file = join(repository, path);
@@ -45,7 +46,7 @@ function collectCoherenceFailures(repository) {
   const expectedWorkflowFiles = [
     ...capabilities.map(([, file]) => file),
     'quality-pulse.yml',
-    'site-publish.yml'
+    publicationCapability[1]
   ].sort();
   const actualWorkflowFiles = readdirSync(workflowDirectory)
     .filter((file) => file.endsWith('.yml'))
@@ -55,22 +56,21 @@ function collectCoherenceFailures(repository) {
   }
 
   const stance = read(repository, '.github/QUALITY.md') ?? '';
-  const verificationSection = stance.match(
-    /^### Required verification capabilities\n([\s\S]*?)(?=^### |\n## )/m
+  const capabilitySection = stance.match(
+    /^## Capabilities in Operation\n([\s\S]*?)(?=\n## )/m
   )?.[1] ?? '';
-  const documentedCapabilities = [...verificationSection.matchAll(
+  const documentedCapabilities = [...capabilitySection.matchAll(
     /^\| \[((?:Common|Site): [^\]]+)\]\(workflows\/([a-z-]+\.yml)\)/gm
   )].map(([, name, file]) => [name, file]);
   if (JSON.stringify(documentedCapabilities) !== JSON.stringify(
-    capabilities.map(([name, file]) => [name, file])
+    [...capabilities.map(([name, file]) => [name, file]), publicationCapability]
   )) {
     failures.push('quality capability table differs from the canonical order');
   }
-  if (
-    !stance.includes('### Site publication (not a required check or Pulse dimension)') ||
-    !stance.includes('| [Site: Publish](workflows/site-publish.yml) |')
-  ) {
-    failures.push('Site publication is not documented separately from verification capabilities');
+  if (!capabilitySection.includes(
+    '| [Site: Publish](workflows/site-publish.yml) | Automatic publication of the website using the verified build environment. |'
+  )) {
+    failures.push('Site Publish capability description is not canonical');
   }
   const orchestration = read(repository, '.github/workflows/quality-pulse.yml') ?? '';
   const childJobs = [...orchestration.matchAll(

@@ -25,7 +25,7 @@ See the [repository conventions](.github/CONVENTIONS.md) for workflow, script, a
 
 ## Site Publication
 
-The repository-controlled [Site: Publish workflow](.github/workflows/site-publish.yml) is prepared to publish from `main`, with manual dispatch for recovery. Before it can deploy, the owner must set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. A successful main deployment and live-site verification remain pending; this workflow and setting change are not evidence of a live publication.
+See [Publication](.github/QUALITY.md#publication) for the Site: Publish workflow and its pending owner transition and verification.
 
 ## Intellectual stewardship
 
