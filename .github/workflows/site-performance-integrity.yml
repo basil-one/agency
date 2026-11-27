@@ -31,7 +31,7 @@ jobs:
           fetch-depth: 0
       - name: Record checked-out revision
         run: |
-          printf 'Checked-out revision: `%s`\n\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Checked-out revision: %s\n\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
       - name: Run performance classifier and history tests
         id: tests
         run: npm run test:performance-history && npm run test:performance-skip && npm run test:performance-summary

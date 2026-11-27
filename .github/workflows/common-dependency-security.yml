@@ -27,30 +27,28 @@ jobs:
         env:
           REVIEW_OUTCOME: ${{ steps.dependency_review.outcome }}
         run: |
-          echo "# Common: Dependency Security" >> "$GITHUB_STEP_SUMMARY"
-          echo >> "$GITHUB_STEP_SUMMARY"
-          echo "Reviewed revision: \`$GITHUB_SHA\`" >> "$GITHUB_STEP_SUMMARY"
-          echo >> "$GITHUB_STEP_SUMMARY"
+          {
+          echo "# Common: Dependency Security"
+          echo
+          printf 'Reviewed revision: %s\n\n' "$GITHUB_SHA"
           case "$REVIEW_OUTCOME" in
             success)
               printf '%s\n' \
                 "- Dependency review: **passed**." \
-                "  Threshold: moderate+; scopes: runtime/development/unknown." \
-                >> "$GITHUB_STEP_SUMMARY"
+                "  Threshold: moderate+; scopes: runtime/development/unknown."
               ;;
             failure)
               printf '%s\n' \
                 "- Dependency review: **failed**; see action findings/logs." \
-                "  Threshold: moderate+; scopes: runtime/development/unknown." \
-                >> "$GITHUB_STEP_SUMMARY"
+                "  Threshold: moderate+; scopes: runtime/development/unknown."
               ;;
             *)
               printf '%s\n' \
                 "- Dependency review: **not completed**; see earlier logs." \
-                "  Threshold: moderate+; scopes: runtime/development/unknown." \
-                >> "$GITHUB_STEP_SUMMARY"
+                "  Threshold: moderate+; scopes: runtime/development/unknown."
               ;;
           esac
+          } >> "$GITHUB_STEP_SUMMARY"
 
   common-dependency-security-posture:
     name: Dependency posture
@@ -66,7 +64,7 @@ jobs:
           persist-credentials: false
       - name: Record checked-out revision
         run: |
-          printf 'Checked-out revision: `%s`\n\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Checked-out revision: %s\n\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
       - name: Review open Dependabot alerts
         id: posture
         run: node scripts/common/dependency_posture.mjs
