@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 from scripts.orchestration import release_publish as release
 
-
 HEAD = "a" * 40
 MERGE = "b" * 40
 BASE = "c" * 40
