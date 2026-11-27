@@ -429,9 +429,7 @@ def report_for_site(
     likely_broken_count = sum(
         category == "likely broken" for category, _ in external_results.values()
     )
-    uncertain_count = sum(
-        category == "uncertain" for category, _ in external_results.values()
-    )
+    uncertain_count = sum(category == "uncertain" for category, _ in external_results.values())
     result = ("\n".join(lines) + "\n", len(internal), likely_broken_count)
     return (*result, uncertain_count) if include_status else result
 
