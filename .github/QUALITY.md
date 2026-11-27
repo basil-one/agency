@@ -27,7 +27,7 @@ Technical quality protects people's ability to understand, trust, navigate, and 
 A single quality practice serves the website.
 
 - **Common:** Shared code quality, coherence integrity, and dependency security.
-- **Site:** Integrity of website development, generation, and the visitor's experience.
+- **Site:** Integrity of website development, generation, publication, and the visitor's experience.
 
 Domain-specific workflows follow the naming convention `Domain: Capability`. Cross-domain capabilities retain unqualified names.
 
@@ -43,10 +43,11 @@ Domain-specific workflows follow the naming convention `Domain: Capability`. Cro
 | [Site: SEO Integrity](workflows/site-seo-integrity.yml) | Page titles, canonical URLs, and indexing directives. |
 | [Site: Rendering Integrity](workflows/site-rendering-integrity.yml) | Browser verification, accessibility, and responsive usability at 320px, 768px, and 1280px. |
 | [Site: Performance Integrity](workflows/site-performance-integrity.yml) | Loading performance, responsiveness, and visual stability across representative pages. |
+| [Site: Publish](workflows/site-publish.yml) | Automatic publication of the website using the verified build environment. |
 
 ## Quality Gate
 
-Quality safeguards verify proposed changes before merging; safeguards that verify existing published experiences run over time. Required status checks are temporarily inactive during the approved migration; ordinary pull-request protection remains in place.
+Required checks protect against known defects before changes are merged. Quality safeguards that verify proposed changes are required; safeguards that verify existing published experiences run over time.
 
 Performance Integrity protects against confirmed budget violations and substantial loading regressions against a compatible reviewed reference. Rolling comparisons inform human judgment.
 
@@ -56,7 +57,7 @@ Sustain conceptual integrity across workflows, code, tests, and documentation. E
 
 ## Publication
 
-The website is published through the existing GitHub Pages mechanism following an approved merge.
+The website is published automatically following an approved merge.
 
 ## Quality Pulse
 

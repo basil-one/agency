@@ -25,7 +25,7 @@ See the [repository conventions](.github/CONVENTIONS.md) for workflow, script, a
 
 ## Site Publication
 
-The website is published through the existing GitHub Pages mechanism following an approved merge.
+The website is published automatically to GitHub Pages from `main` using the repository's verified build environment. [Site: Publish](.github/workflows/site-publish.yml) can also be run manually from `main` for recovery.
 
 ## Intellectual stewardship
 
