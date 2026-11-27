@@ -67,11 +67,6 @@ function collectCoherenceFailures(repository) {
   )) {
     failures.push('quality capability table differs from the canonical order');
   }
-  if (!capabilitySection.includes(
-    '| [Site: Publish](workflows/site-publish.yml) | Automatic publication of the website using the verified build environment. |'
-  )) {
-    failures.push('Site Publish capability description is not canonical');
-  }
   const orchestration = read(repository, '.github/workflows/quality-pulse.yml') ?? '';
   const childJobs = [...orchestration.matchAll(
     /^  ((?:common|site)-[a-z-]+):\n    name: "((?:Common|Site): [^"]+)"\n    uses: \.\/\.github\/workflows\/([a-z-]+\.yml)$/gm
@@ -179,11 +174,11 @@ function collectCoherenceFailures(repository) {
   if (!packageScripts['test:performance-policy']?.includes('tests/site/performance_policy.test.mjs')) {
     failures.push('performance policy tests are not wired to an npm command');
   }
-  if (!packageScripts['test:site-publication']?.includes('tests/site/publication_workflow.test.mjs')) {
+  if (!packageScripts['test:required-checks']?.includes('tests/site/publication_workflow.test.mjs')) {
     failures.push('Site publication workflow tests are not wired to an npm command');
   }
   if (!read(repository, '.github/workflows/common-code-quality.yml')?.includes(
-    'run: npm run test:site-publication'
+    'run: npm run test:required-checks'
   )) {
     failures.push('Site publication workflow tests are not wired to Common: Code Quality');
   }

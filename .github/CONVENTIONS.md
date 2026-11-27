@@ -30,8 +30,7 @@ Agency retains its reflection-text-only skip classification and missing-route di
 
 - `npm run test:quality-pulse` — Pulse outcomes, orchestration, and dependency posture.
 - `npm run test:coherence-integrity` — capability inventory/order, workflow IDs, repository boundaries, script/test placement, reference traceability, and negative fixtures.
-- `npm run test:required-checks` — canonical PR check identities and triggers.
-- `npm run test:site-publication` — main-only publication workflow, source/artifact integrity, scoped permissions, and recovery boundaries.
+- `npm run test:required-checks` — required workflow triggers/jobs and publication contracts.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
 - `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks.
 - `npm run test:site-routes` — generated-route discovery. The browser suite needs a built `_site` and the installed Playwright browser.
