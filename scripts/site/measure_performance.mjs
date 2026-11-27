@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { extname, resolve } from 'node:path';
 import { chromium } from 'playwright';
 import { discoverReflections } from './routes.js';
+import { selectMeasurementProfiles } from './performance_policy.mjs';
 
 const root = process.cwd();
 const siteDirectory = resolve(root, '_site');
@@ -177,6 +178,15 @@ function reportFileName(route, formFactor, run) {
   return resolve(reportDirectory, `${slug}-${formFactor}-${run}.json`);
 }
 
+function requestedProfiles() {
+  if (!process.env.PERFORMANCE_PROFILES_JSON) return undefined;
+  try {
+    return JSON.parse(process.env.PERFORMANCE_PROFILES_JSON);
+  } catch {
+    throw new Error('PERFORMANCE_PROFILES_JSON must be a JSON array of route/profile pairs.');
+  }
+}
+
 function loadMetric(report, key) {
   const value = report.audits[key]?.numericValue;
   if (!Number.isFinite(value)) {
@@ -200,10 +210,10 @@ function renderSummary(
   const lines = [
     '# Performance integrity',
     '',
-    `- **Mode:** ${process.env.PERFORMANCE_EVENT_NAME ?? 'local'} run on \`${process.env.PERFORMANCE_SOURCE_BRANCH ?? 'local'}\`; informational lab baseline, not a performance-quality judgment.`,
+    `- **Mode:** ${process.env.PERFORMANCE_EVENT_NAME ?? 'local'} run on \`${process.env.PERFORMANCE_SOURCE_BRANCH ?? 'local'}\`; measurements provide evidence for the separate safeguard evaluation.`,
     `- **Tools:** Lighthouse ${lighthouseVersion}; ${chromeVersion}; ${rubyVersion}; ${jekyllVersion}; Node ${process.version}.`,
     `- **Conditions:** ${process.env.PERFORMANCE_RUNNER ?? `local ${process.platform}/${process.arch}`}; Jekyll production build served locally; Lighthouse default mobile configuration and desktop preset; ${runCount} fresh-browser runs per route and form factor; medians shown; external scripts are allowed but Google Analytics collection requests are blocked to avoid synthetic visits. These are lab measurements, not field data or real-user Core Web Vitals.`,
-    `- **Coverage:** ${results.length / 2} generated routes × 2 form factors × ${runCount} runs.`,
+    `- **Coverage:** ${machineSummary.coverage.routeProfiles} route/profile pairs × ${runCount} runs.`,
     `- **Measurement runtime:** ${elapsedSeconds.toFixed(1)} seconds, excluding workflow setup, build, dependency/browser installation, missing-route verification, and artifact upload; total Actions job duration is shown in the run overview.`,
     '',
     '| Generated route | Form factor | Lab FCP | Lab LCP | Lab Speed Index | Lab TBT | Lab CLS |',
@@ -249,6 +259,8 @@ async function main() {
       throw new Error(`Expected generated output for performance route ${route}.`);
     }
   }
+  const profiles = selectMeasurementProfiles(routes, requestedProfiles());
+  const measuredRoutes = [...new Set(profiles.map(({ route }) => route))];
 
   const port = await findFreePort();
   const origin = `http://${host}:${port}`;
@@ -270,7 +282,7 @@ async function main() {
 
   try {
     await waitForServer(server, origin);
-    for (const route of routes) {
+    for (const route of measuredRoutes) {
       const response = await fetch(`${origin}${route}`);
       if (response.status !== 200) {
         throw new Error(`Expected generated route ${route} to return HTTP 200; received HTTP ${response.status}.`);
@@ -280,41 +292,41 @@ async function main() {
     const results = [];
     const loadedAssets = new Map();
     const externalScriptObservations = new Map();
-    for (const route of routes) {
-      for (const formFactor of ['mobile', 'desktop']) {
-        const reports = [];
-        for (let run = 1; run <= runCount; run += 1) {
-          const outputPath = reportFileName(route, formFactor, run);
-          await runCommand(process.execPath, [
-            lighthousePath,
-            `${origin}${route}`,
-            '--only-categories=performance',
-            '--output=json',
-            `--output-path=${outputPath}`,
-            ...(formFactor === 'desktop' ? ['--preset=desktop'] : []),
-            '--blocked-url-patterns=*google-analytics.com/*/collect*',
-            '--chrome-flags=--headless --no-sandbox --disable-dev-shm-usage',
-            '--quiet'
-          ], { ...process.env, CHROME_PATH: chromePath });
-          const report = JSON.parse(readFileSync(outputPath, 'utf8'));
-          if (report.lighthouseVersion === undefined) {
-            throw new Error(`Lighthouse report for ${route} did not include its version.`);
-          }
-          if (run === 1) {
-            recordLoadedAssets(report, origin, loadedAssets);
-            recordExternalScriptObservations(report, origin, externalScriptObservations);
-          }
-          reports.push(report);
+    for (const { route, formFactor } of profiles) {
+      const reports = [];
+      for (let run = 1; run <= runCount; run += 1) {
+        const outputPath = reportFileName(route, formFactor, run);
+        await runCommand(process.execPath, [
+          lighthousePath,
+          `${origin}${route}`,
+          '--only-categories=performance',
+          '--output=json',
+          `--output-path=${outputPath}`,
+          ...(formFactor === 'desktop' ? ['--preset=desktop'] : []),
+          '--blocked-url-patterns=*google-analytics.com/*/collect*',
+          '--chrome-flags=--headless --no-sandbox --disable-dev-shm-usage',
+          '--quiet'
+        ], { ...process.env, CHROME_PATH: chromePath });
+        const report = JSON.parse(readFileSync(outputPath, 'utf8'));
+        if (report.lighthouseVersion === undefined) {
+          throw new Error(`Lighthouse report for ${route} did not include its version.`);
         }
-        const values = {};
-        for (const [key] of metrics) {
-          values[key] = median(reports.map((report) => loadMetric(report, key)));
+        if (run === 1) {
+          recordLoadedAssets(report, origin, loadedAssets);
+          recordExternalScriptObservations(report, origin, externalScriptObservations);
         }
-        results.push({ route, formFactor, values });
+        reports.push(report);
       }
+      const values = {};
+      for (const [key] of metrics) {
+        values[key] = median(reports.map((report) => loadMetric(report, key)));
+      }
+      results.push({ route, formFactor, values });
     }
 
-    const lighthouseVersion = JSON.parse(readFileSync(reportFileName(routes[0], 'mobile', 1), 'utf8')).lighthouseVersion;
+    const lighthouseVersion = JSON.parse(
+      readFileSync(reportFileName(profiles[0].route, profiles[0].formFactor, 1), 'utf8')
+    ).lighthouseVersion;
     const externalScripts = collectExternalScripts(origin);
     const externalScriptSummary = externalScripts.map((source) => {
       const observation = externalScriptObservations.get(source);
@@ -342,8 +354,8 @@ async function main() {
           : null
       },
       coverage: {
-        routeCount: routes.length,
-        formFactors: ['mobile', 'desktop'],
+        routeCount: measuredRoutes.length,
+        formFactors: [...new Set(profiles.map(({ formFactor }) => formFactor))],
         runCount,
         routeProfiles: results.length,
         measurementCount: results.length * runCount

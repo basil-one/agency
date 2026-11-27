@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "status": "pending",
+  "note": "The scheduled main candidate below is complete and provenance-verified, but three mobile TBT readings exceed the absolute budget and still require three new route/profile measurements. Keep this reference pending until a successful main run has complete confirmation and human review.",
+  "proposedSource": {
+    "source": {
+      "eventName": "schedule",
+      "branch": "main",
+      "sha": "4f1ea918a8630adfa2757b8d7d2dd878f4b6bf58",
+      "runId": "45996004222",
+      "runUrl": "https://github.com/basil-one/agency/actions/runs/45996004222",
+      "summaryArtifactUrl": "https://github.com/basil-one/agency/actions/runs/45996004222/artifacts/15195678804"
+    },
+    "capturedAt": "2026-11-27T12:12:51.730Z",
+    "coverage": {
+      "routeCount": 4,
+      "formFactors": [
+        "mobile",
+        "desktop"
+      ],
+      "runCount": 3,
+      "routeProfiles": 8,
+      "measurementCount": 24
+    },
+    "environment": {
+      "runner": "ubuntu-24.04",
+      "lighthouse": "13.6.0",
+      "chrome": "Google Chrome for Testing 159.0.8154.6",
+      "ruby": "ruby 3.3.14 (2026-11-19 revision f4c37f481b) [x86_64-linux]",
+      "jekyll": "jekyll 3.10.0",
+      "node": "v22.23.5"
+    },
+    "reviewFindings": [
+      {
+        "route": "/know-your-patterns/",
+        "formFactor": "mobile",
+        "metric": "total-blocking-time",
+        "value": 337,
+        "limit": 300
+      },
+      {
+        "route": "/reflections/",
+        "formFactor": "mobile",
+        "metric": "total-blocking-time",
+        "value": 344,
+        "limit": 300
+      },
+      {
+        "route": "/reflections/the-world-that-conflict-intelligence-opens/",
+        "formFactor": "mobile",
+        "metric": "total-blocking-time",
+        "value": 338,
+        "limit": 300
+      }
+    ]
+  }
+}

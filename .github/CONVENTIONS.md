@@ -20,7 +20,7 @@ Each capability is directly runnable for pull requests, manual diagnostics, and 
 
 Report the checked-out revision and distinguish passed, advisory, failed, incomplete, skipped, and unknown outcomes. Missing evidence is not a pass. Site Link Integrity reports uncertain external responses as nonblocking advisories, while confirmed internal or likely-broken links retain failure precedence.
 
-Site Performance Integrity retains its four-route, mobile/desktop, three-run Lighthouse measurements, reflection-text-only skip classification, artifact names, and comparison behavior. Only successful scheduled-main evidence contributes to history; pull-request and manual measurements are excluded. The fixed reference remains pending until a reviewed successful main measurement exists.
+Site Performance Integrity retains its four-route, mobile/desktop, three-run Lighthouse medians, reflection-text-only skip classification, artifact names, and compatible historical readers. Absolute budgets are always evaluated; substantial LCP deterioration needs a compatible reviewed fixed reference. Confirm initial violations with three new measurements for each affected route/profile; incomplete confirmation is not a pass. Only successful scheduled-main evidence contributes to rolling history; pull-request and manual measurements are excluded. Rolling history is informational. The canonical fixed-reference file is `.github/site-performance-reference.json` and stays pending until a complete successful main source is confirmed compatible and reviewed.
 
 ## Sustaining coherence
 
@@ -34,6 +34,6 @@ The contracts protect explicit relationships, not conceptual simplicity. Reviewe
 - `npm run test:quality-pulse` — Pulse outcomes, orchestration, and dependency posture.
 - `npm run test:required-checks` — canonical PR check identities and triggers.
 - `npm run test:site-routes` — generated-route discovery.
-- `npm run test:performance-history`, `npm run test:performance-skip`, and `npm run test:performance-summary` — Site Performance behavior and evidence.
+- `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — Site Performance behavior and evidence.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
 - `bundle exec jekyll build --trace` — production site build.

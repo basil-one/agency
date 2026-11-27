@@ -22,7 +22,10 @@ const passingRun = {
   status: 'completed',
   conclusion: 'success',
   html_url: 'https://github.com/basil-one/agency/actions/runs/123',
-  id: 123
+  id: 123,
+  event: 'schedule',
+  head_branch: 'main',
+  head_sha: 'revision-123'
 };
 const jobsCompletedBeforeCutoff = new Map([
   [123, completionEvidenceFromJobs([
@@ -31,6 +34,12 @@ const jobsCompletedBeforeCutoff = new Map([
 ]);
 const performanceComparison = {
   schemaVersion: 1,
+  policy: {
+    status: 'passed',
+    initialViolations: [],
+    confirmations: [],
+    confirmedViolations: []
+  },
   fixedReference: { available: true, runUrl: 'https://github.com/basil-one/agency/actions/runs/99' },
   history: {
     status: 'available',
@@ -264,6 +273,60 @@ test('partial pulse highlights missing coverage and exact run evidence', () => {
   assert.match(summary, /Unknown \/ API inaccessible/);
   assert.match(summary, /actions\/runs\/123/);
   assert.match(summary, /late or missing runs are not replaced with prior green results/);
+});
+
+test('rendered Quality Pulse keeps shared headings, revision label, outcomes, findings, trends, and evidence order', () => {
+  const summary = renderPulse({
+    date,
+    generatedAt: `${date}T10:17:00Z`,
+    sourceRevision: 'revision-123',
+    orchestrated: true,
+    results: [
+      {
+        name: 'Common: Code Quality',
+        result: { state: 'fresh', label: 'Passed', detail: 'The check passed.' }
+      },
+      {
+        name: 'Site: Link Integrity',
+        result: {
+          state: 'advisory',
+          label: 'Advisory — uncertain external responses',
+          detail: 'External responses need review.'
+        }
+      },
+      {
+        name: 'Site: Performance Integrity',
+        result: {
+          state: 'failed',
+          label: 'Failed',
+          detail: 'The check failed.',
+          policy: {
+            status: 'failed',
+            confirmedViolations: [{
+              route: '/know-your-patterns/',
+              formFactor: 'mobile',
+              metric: 'total-blocking-time',
+              criterion: 'absolute',
+              value: 337,
+              confirmationValue: 321,
+              limit: 300
+            }]
+          }
+        }
+      }
+    ]
+  });
+
+  assert.match(summary, /^# Quality Pulse\n/);
+  assert.match(summary, /\*\*Reporting date:\*\* 2026-11-16 UTC/);
+  assert.match(summary, /\*\*Validator\/source revision:\*\* `revision-123`/);
+  assert.ok(summary.indexOf('## Findings') < summary.indexOf('## Performance Trends'));
+  assert.ok(summary.indexOf('## Performance Trends') < summary.indexOf('## Evidence'));
+  assert.match(summary, /\| Dimension \| Outcome \| Measurement \/ run time \(UTC\) \| Source \/ run \| Useful detail or next action \|/);
+  assert.match(summary, /\| Common: Code Quality \| Passed \|/);
+  assert.match(summary, /Site: Link Integrity — Advisory — uncertain external responses/);
+  assert.match(summary, /`\/know-your-patterns\/`\/mobile total-blocking-time: 337 ms initially, 321 ms confirmed vs 300 ms limit/);
+  assert.match(summary, /Next step: correct the affected route\/profile and rerun Performance Integrity/);
 });
 
 test('permission-denied Actions API is reported as unknown, not passed', async () => {
@@ -573,7 +636,18 @@ test('Pulse loads a valid comparison artifact and keeps failed or unavailable ar
       date,
       generatedAt: `${date}T18:17:00Z`,
       fetchImpl,
-      unzipImpl: () => JSON.stringify(artifactJson)
+      unzipImpl: (_command, args) => args.at(-1) === 'performance-summary.json'
+        ? JSON.stringify({
+            complete: true,
+            capturedAt: `${date}T06:30:00.000Z`,
+            source: {
+              eventName: 'schedule',
+              branch: 'main',
+              sha: 'revision-123',
+              runId: String(successRun.id)
+            }
+          })
+        : JSON.stringify(artifactJson)
     });
   };
 
@@ -617,7 +691,7 @@ test('Pulse loads a valid comparison artifact and keeps failed or unavailable ar
     artifactResponse: { ok: true, json: async () => ({ artifacts: [] }) },
     conclusion: 'failure'
   });
-  assert.match(failedMeasurement, /Performance Integrity result is fresh — failed/);
+  assert.match(failedMeasurement, /Measurement failed or a later step failed/);
   assert.doesNotMatch(failedMeasurement, /\| Mobile LCP \|/);
 });
 
@@ -626,9 +700,10 @@ test('real comparison artifact history states render through source lookup with 
     ok: true,
     json: async () => ({ artifacts: [{ name: 'performance-summary', expired: false, id: 456 }] })
   };
-  const buildArtifact = async (history) => {
+  const buildArtifact = async (history, policy = performanceComparison.policy) => {
     const comparison = structuredClone(performanceComparison);
     comparison.history = history;
+    comparison.policy = policy;
     for (const result of comparison.comparisons) {
       for (const deltas of Object.values(result.deltas)) {
         deltas.rolling = history.status === 'available' ? deltas.rolling : null;
@@ -667,7 +742,18 @@ test('real comparison artifact history states render through source lookup with 
         }
         return { ok: true, json: async () => ({ workflow_runs: [] }) };
       },
-      unzipImpl: () => JSON.stringify(comparison)
+      unzipImpl: (_command, args) => args.at(-1) === 'performance-summary.json'
+        ? JSON.stringify({
+            complete: true,
+            capturedAt: `${date}T06:30:00.000Z`,
+            source: {
+              eventName: 'schedule',
+              branch: 'main',
+              sha: 'revision-123',
+              runId: '700'
+            }
+          })
+        : JSON.stringify(comparison)
     });
   };
   const history = (status, availableDailySamples, extra = {}) => ({
@@ -700,6 +786,43 @@ test('real comparison artifact history states render through source lookup with 
   }));
   assert.match(unavailable, /rolling baseline: unavailable/);
   assert.match(unavailable, /\| Mobile LCP \| \+1\.50 s \(\+10\.0%\) \| — \|/);
+
+  const confirmedViolation = await buildArtifact(history('collecting_history', 0), {
+    status: 'failed',
+    initialViolations: [],
+    confirmations: [],
+    confirmedViolations: [{
+      route: '/know-your-patterns/',
+      formFactor: 'mobile',
+      criterion: 'reference-deterioration',
+      metric: 'largest-contentful-paint',
+      value: 1_600,
+      referenceValue: 1_000,
+      delta: 600,
+      deltaPercentage: 60,
+      confirmationValue: 1_650
+    }]
+  });
+  assert.match(confirmedViolation, /Confirmed performance violation\(s\): `\/know-your-patterns\/`\/mobile LCP: 1\.60 s initially, 1\.65 s confirmed vs reference 1\.00 s \(Δ 600 ms, \+60\.0%; both >500 ms and >25% thresholds met\)/);
+
+  const incompleteConfirmation = await buildArtifact(history('collecting_history', 0), {
+    status: 'incomplete',
+    confirmationReason: 'confirmation report is unavailable',
+    initialViolations: [],
+    confirmations: [{
+      route: '/know-your-patterns/',
+      formFactor: 'mobile',
+      criterion: 'reference-deterioration',
+      metric: 'largest-contentful-paint',
+      value: 1_600,
+      referenceValue: 1_000,
+      delta: 600,
+      deltaPercentage: 60,
+      result: 'incomplete'
+    }],
+    confirmedViolations: []
+  });
+  assert.match(incompleteConfirmation, /Performance confirmation incomplete .* `\/know-your-patterns\/`\/mobile LCP: 1\.60 s vs reference 1\.00 s \(Δ 600 ms, \+60\.0%; requires both >500 ms and >25%\); confirmation incomplete; no pass is inferred/);
 
   for (const malformed of [
     history('collecting_history', 28),
@@ -734,7 +857,7 @@ test('orchestrated Pulse reports same-cycle job results and requires valid evide
   const performanceSummary = {
     complete: true,
     capturedAt: `${date}T06:30:00.000Z`,
-    source: { eventName: 'schedule', branch: 'main', runId }
+    source: { eventName: 'schedule', branch: 'main', sha: 'revision-123', runId }
   };
   const fetchImpl = async (url) => {
     const parsed = new URL(url);
@@ -794,6 +917,7 @@ test('orchestrated Pulse reports same-cycle job results and requires valid evide
     eventName: 'workflow_dispatch',
     date,
     generatedAt: `${date}T06:40:00Z`,
+    sourceRevision: 'revision-123',
     fetchImpl,
     unzipImpl
   });
@@ -817,6 +941,7 @@ test('orchestrated Pulse reports same-cycle job results and requires valid evide
     runUrl,
     date,
     generatedAt: `${date}T06:40:00Z`,
+    sourceRevision: 'revision-123',
     fetchImpl,
     unzipImpl
   });
@@ -825,6 +950,42 @@ test('orchestrated Pulse reports same-cycle job results and requires valid evide
   assert.match(advisoryPulse.markdown, /Cycle completed with advisories — 7 dimensions passed and 1 is advisory/);
   assert.match(advisoryPulse.markdown, /\| Site: Link Integrity \| Advisory — uncertain external responses \|/);
   assert.match(advisoryPulse.markdown, /not evidence of a confirmed broken destination/);
+
+  const successfulPolicy = performanceComparison.policy;
+  performanceComparison.policy = {
+    status: 'failed',
+    confirmedViolations: [{
+      route: '/know-your-patterns/',
+      formFactor: 'mobile',
+      metric: 'total-blocking-time',
+      criterion: 'absolute',
+      value: 337,
+      confirmationValue: 321,
+      limit: 300
+    }]
+  };
+  const failedNeeds = {
+    ...needs,
+    'site-performance-integrity': { result: 'failure' }
+  };
+  const failedPerformancePulse = await buildOrchestratedPulse({
+    apiUrl: 'https://api.github.com',
+    repository: 'basil-one/agency',
+    token: 'test-token',
+    needs: failedNeeds,
+    runId,
+    runUrl,
+    date,
+    generatedAt: `${date}T06:40:00Z`,
+    sourceRevision: 'revision-123',
+    fetchImpl,
+    unzipImpl
+  });
+  assert.equal(failedPerformancePulse.successful, false);
+  assert.match(failedPerformancePulse.markdown, /\| Site: Performance Integrity \| Failed \|/);
+  assert.match(failedPerformancePulse.markdown, /`\/know-your-patterns\/`\/mobile total-blocking-time: 337 ms initially, 321 ms confirmed vs 300 ms limit/);
+  assert.match(failedPerformancePulse.markdown, /correct the affected route\/profile/);
+  performanceComparison.policy = successfulPolicy;
 });
 
 test('orchestrated Pulse never treats failed, skipped, cancelled, unknown, or missing jobs as passed', async () => {
