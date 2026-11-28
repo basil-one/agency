@@ -21,8 +21,9 @@ analytics:
 footer:
   copyright: "© 2026 Michael Basil · Selected content CC BY-SA 4.0"
 
-# Legal texts are repository references, not generated site pages.
+# Repository references and tooling are not generated site pages.
 exclude:
+  - CHANGELOG.md
   - LICENSES
   - scripts
   - tests

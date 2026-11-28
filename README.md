@@ -27,6 +27,10 @@ See the [repository conventions](.github/CONVENTIONS.md) for workflow, script, a
 
 The website is published automatically to GitHub Pages from `main` using the repository's verified build environment. [Site: Publish](.github/workflows/site-publish.yml) can also be run manually from `main` for recovery.
 
+## Releases
+
+[Release Publish](.github/workflows/release-publish.yml) preserves intentional milestones separately from the living site. See [CHANGELOG.md](CHANGELOG.md) and the [release conventions](.github/CONVENTIONS.md#changelog-and-releases).
+
 ## Intellectual stewardship
 
 We develop original work while recognizing that knowledge emerges through practice, relationships, and the contributions of others.

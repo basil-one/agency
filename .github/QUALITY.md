@@ -44,6 +44,7 @@ Domain-specific workflows follow the naming convention `Domain: Capability`. Cro
 | [Site: Rendering Integrity](workflows/site-rendering-integrity.yml) | Browser verification, accessibility, and responsive usability at 320px, 768px, and 1280px. |
 | [Site: Performance Integrity](workflows/site-performance-integrity.yml) | Loading performance, responsiveness, and visual stability across representative pages. |
 | [Site: Publish](workflows/site-publish.yml) | Automatic publication of the website using the verified build environment. |
+| [Release Publish](workflows/release-publish.yml) | Human-initiated, reviewed publication of a versioned milestone. |
 
 ## Quality Gate
 
@@ -58,6 +59,8 @@ Sustain conceptual integrity across workflows, code, tests, and documentation. E
 ## Publication
 
 The website is published automatically following an approved merge.
+
+Versioned milestones are published separately by human initiation and approval through the Quality Gate.
 
 ## Quality Pulse
 

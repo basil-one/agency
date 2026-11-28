@@ -46,7 +46,8 @@ function collectCoherenceFailures(repository) {
   const expectedWorkflowFiles = [
     ...capabilities.map(([, file]) => file),
     'quality-pulse.yml',
-    publicationCapability[1]
+    publicationCapability[1],
+    'release-publish.yml'
   ].sort();
   const actualWorkflowFiles = readdirSync(workflowDirectory)
     .filter((file) => file.endsWith('.yml'))
@@ -66,6 +67,14 @@ function collectCoherenceFailures(repository) {
     [...capabilities.map(([name, file]) => [name, file]), publicationCapability]
   )) {
     failures.push('quality capability table differs from the canonical order');
+  }
+  if (!stance.includes('| [Release Publish](workflows/release-publish.yml)')) {
+    failures.push('release publication is missing from the capability table');
+  }
+  const release = read(repository, '.github/workflows/release-publish.yml') ?? '';
+  if (!release.startsWith('name: "Release Publish"\n') ||
+      !release.includes('  release-publish:\n    name: "Release Publish"')) {
+    failures.push('release publication identity is not canonical');
   }
   const orchestration = read(repository, '.github/workflows/quality-pulse.yml') ?? '';
   const childJobs = [...orchestration.matchAll(
@@ -123,6 +132,7 @@ function collectCoherenceFailures(repository) {
     'scripts/site/routes.js',
     'scripts/site/measure_performance.mjs',
     'scripts/orchestration/quality_pulse.mjs',
+    'tests/orchestration/test_release_publish.py',
     'tests/site/browser/smoke.spec.js'
   ]) {
     if (!existsSync(join(repository, path))) failures.push(`owned implementation path is missing: ${path}`);
@@ -160,8 +170,9 @@ function collectCoherenceFailures(repository) {
   }
 
   const config = read(repository, '_config.yml') ?? '';
-  if (!/^\s+- scripts$/m.test(config) || !/^\s+- tests$/m.test(config)) {
-    failures.push('Jekyll does not exclude repository scripts and tests');
+  if (!/^\s+- scripts$/m.test(config) || !/^\s+- tests$/m.test(config) ||
+      !/^\s+- CHANGELOG\.md$/m.test(config)) {
+    failures.push('Jekyll does not exclude the changelog and repository scripts and tests');
   }
 
   const packageJson = read(repository, 'package.json');
@@ -176,6 +187,11 @@ function collectCoherenceFailures(repository) {
   }
   if (!packageScripts['test:performance-policy']?.includes('tests/site/performance_policy.test.mjs')) {
     failures.push('performance policy tests are not wired to an npm command');
+  }
+  if (!packageScripts['test:required-checks']?.includes('tests/orchestration/release_publish_workflow.test.mjs') ||
+      !packageScripts['test:required-checks']?.includes('test_release_publish.py') ||
+      !read(repository, '.github/workflows/common-code-quality.yml')?.includes('run: npm run test:required-checks')) {
+    failures.push('release publication tests are not wired to Common: Code Quality');
   }
   if (!packageScripts['test:required-checks']?.includes('tests/site/publication_workflow.test.mjs')) {
     failures.push('Site publication workflow tests are not wired to an npm command');
@@ -312,6 +328,31 @@ test('rejects a noncanonical workflow identity or job ID', () => {
     writeFileSync(file, content.replace('  common-code-quality:', '  code-quality:'));
   });
   assert.ok(failures.includes('canonical job ID is missing: common-code-quality.yml'));
+});
+
+test('rejects missing release identity, test wiring, or changelog exclusion', () => {
+  const missingIdentity = fixture((directory) => {
+    const file = join(directory, '.github/workflows/release-publish.yml');
+    writeFileSync(file, readFileSync(file, 'utf8').replace('  release-publish:', '  publish:'));
+  });
+  assert.ok(missingIdentity.includes('release publication identity is not canonical'));
+
+  const missingTests = fixture((directory) => {
+    const file = join(directory, 'package.json');
+    writeFileSync(file, readFileSync(file, 'utf8').replace('test_release_publish.py', 'missing.py'));
+  });
+  assert.ok(missingTests.includes('release publication tests are not wired to Common: Code Quality'));
+
+  const missingTestFile = fixture((directory) => {
+    rmSync(join(directory, 'tests/orchestration/test_release_publish.py'));
+  });
+  assert.ok(missingTestFile.includes('owned implementation path is missing: tests/orchestration/test_release_publish.py'));
+
+  const missingExclusion = fixture((directory) => {
+    const file = join(directory, '_config.yml');
+    writeFileSync(file, readFileSync(file, 'utf8').replace('  - CHANGELOG.md\n', ''));
+  });
+  assert.ok(missingExclusion.includes('Jekyll does not exclude the changelog and repository scripts and tests'));
 });
 
 test('rejects missing Site production paths and production imports from tests', () => {

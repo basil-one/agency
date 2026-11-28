@@ -8,9 +8,9 @@ Agency's shared quality practice covers the website. The domains are ordered **C
 | --- | --- | --- | --- |
 | Common | `.github/workflows/common-*.yml` | `scripts/common/` | `tests/common/` |
 | Site | `.github/workflows/site-*.yml` | `scripts/site/` | `tests/site/` |
-| Cross-domain orchestration | `quality-pulse.yml` | `scripts/orchestration/` | `tests/orchestration/` |
+| Cross-domain orchestration | `quality-pulse.yml`, `release-publish.yml` | `scripts/orchestration/` | `tests/orchestration/` |
 
-Use workflow filenames as capability IDs. A workflow with one substantive job uses its filename stem as that job ID; multi-job workflows qualify each role (`common-dependency-security-review` / `-posture`, `site-publish-build` / `-deploy`). Keep human-facing check names exactly `Domain: Capability`. Quality Pulse is the unqualified Common → Site coordinator.
+Use workflow filenames as capability IDs. A workflow with one substantive job uses its filename stem as that job ID; multi-job workflows qualify each role (`common-dependency-security-review` / `-posture`, `site-publish-build` / `-deploy`). Keep domain-facing check names exactly `Domain: Capability`. Quality Pulse and Release Publish are unqualified orchestration capabilities.
 
 Production helpers live under `scripts/{common,site,orchestration}/`; automated tests live under matching `tests/` domains. Browser test support stays under `tests/site/browser/`, while production route discovery and matrices live in `scripts/site/`.
 
@@ -34,7 +34,7 @@ Maintain reviewed fixed references in [site-performance-reference.json](site-per
 
 - `npm run test:quality-pulse` — Pulse outcomes, orchestration, and dependency posture.
 - `npm run test:coherence-integrity` — capability inventory/order, workflow IDs, repository boundaries, script/test placement, reference traceability, and negative fixtures.
-- `npm run test:required-checks` — required workflow triggers/jobs and publication contracts.
+- `npm run test:required-checks` — required workflow triggers/jobs and Site and Release publication contracts.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
 - `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks; run `npm run test:performance-cli` after `npm ci` to verify Lighthouse option parsing.
 - `npm run test:site-routes` — generated-route discovery. The browser suite needs a built `_site` and the installed Playwright browser.
@@ -43,3 +43,9 @@ Maintain reviewed fixed references in [site-performance-reference.json](site-per
 ## Sustaining coherence
 
 Common: Coherence Integrity runs the architectural contracts on pull requests and in Quality Pulse. It checks the capability inventory/order and job IDs; resolves direct script, Python module, unittest discovery, and package-script references; enforces domain script/test placement; and rejects production imports from tests. Common: Code Quality retains workflow correctness, source lint/complexity, and operational regression tests. Site Build verifies that the generated `_site` excludes repository scripts and tests. When changing a capability, consider its relationship to the whole: follow the existing conventions, update affected references and contracts, and make intentional exceptions explicit. Reviewers still judge conceptual simplicity, teaching clarity, and whether a boundary or exception earns its maintenance cost; these are not reducible to a score.
+
+## Changelog and releases
+
+Record notable outcomes under Unreleased in [CHANGELOG.md](../CHANGELOG.md) as work is merged. Preserve published entries.
+
+With human authorization, dispatch Release Publish from `main` with a stable version (`X.Y.Z`). Review and merge the changelog-only PR through the Quality Gate, approving its checks if requested. The workflow verifies the approved revision before tagging and publishing. Rerun the same version to resume an interrupted publication.

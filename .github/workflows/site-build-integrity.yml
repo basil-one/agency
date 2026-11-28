@@ -33,6 +33,8 @@ jobs:
       - name: Verify repository tooling is excluded from generated site
         id: internal_exclusions
         run: |
+          test ! -e _site/CHANGELOG.html
+          test ! -e _site/CHANGELOG.md
           test ! -e _site/scripts
           test ! -e _site/tests
       - name: Summarize production build
@@ -52,5 +54,5 @@ jobs:
             echo "# Site: Build Integrity"
             echo
             summary_outcome "$BUILD_OUTCOME" "Production Jekyll build"
-            summary_outcome "$EXCLUSIONS_OUTCOME" "Repository scripts and tests excluded from generated site"
+            summary_outcome "$EXCLUSIONS_OUTCOME" "Changelog and repository tooling excluded from generated site"
           } >> "$GITHUB_STEP_SUMMARY"
