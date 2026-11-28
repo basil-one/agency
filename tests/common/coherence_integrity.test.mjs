@@ -78,18 +78,11 @@ function collectCoherenceFailures(repository) {
   }
   const orchestration = read(repository, '.github/workflows/quality-pulse.yml') ?? '';
   const childJobs = [...orchestration.matchAll(
-    /^  ((?:common|site)-[a-z-]+):\n    name: "((?:Common|Site): [^"]+)"\n    uses: \.\/\.github\/workflows\/([a-z-]+\.yml)$/gm
-  )].map(([, id, name, file]) => [name, file, id]);
-  if (JSON.stringify(childJobs) !== JSON.stringify(capabilities)) {
+    /^  ((?:common|site)-[a-z-]+):\n(?:    name: "[^"]+"\n)?    uses: \.\/\.github\/workflows\/([a-z-]+\.yml)$/gm
+  )].map(([, id, file]) => [id, file]);
+  const expectedPulseJobs = capabilities.map(([, file, id]) => [id, file]);
+  if (JSON.stringify(childJobs) !== JSON.stringify(expectedPulseJobs)) {
     failures.push('Quality Pulse jobs do not match the canonical ordered inventory');
-  }
-  const needsSection = orchestration.match(/^\s+needs:\n([\s\S]*?)^\s+runs-on:/m)?.[1] ?? '';
-  const needs = [...needsSection.matchAll(/^      - ([a-z-]+)$/gm)].map(([, id]) => id);
-  if (JSON.stringify(needs) !== JSON.stringify(capabilities.map(([, , id]) => id))) {
-    failures.push('Quality Pulse needs list does not include every canonical check in order');
-  }
-  if (!orchestration.includes('PULSE_RESULTS_JSON: ${{ toJSON(needs) }}')) {
-    failures.push('Quality Pulse does not pass same-cycle job evidence to its summarizer');
   }
 
   for (const [name, file] of capabilities) {

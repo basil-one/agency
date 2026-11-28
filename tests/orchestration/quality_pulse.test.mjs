@@ -155,8 +155,8 @@ test('Pulse escapes Markdown delimiters in evidence details', () => {
     results: [{
       name: 'Site: Build Integrity',
       result: {
-        state: 'fresh',
-        label: 'Passed',
+        state: 'failed',
+        label: 'Failed',
         detail: String.raw`untrusted\| detail`,
         run: { cycle: true, html_url: runUrl }
       }
@@ -238,8 +238,9 @@ test('orchestrated Pulse reports same-cycle outcomes and validated evidence', as
   assert.equal(pulse.completed, true);
   assert.match(pulse.markdown, /All 8 dimensions passed in this cycle/);
   assert.match(pulse.markdown, /\*\*Validator revision:\*\* `revision-123`/);
-  assert.match(pulse.markdown, /\| Site: Build Integrity \| Passed \| Same-cycle job result \|/);
-  assert.match(pulse.markdown, /\[same-cycle run\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/888\)/);
+  assert.match(pulse.markdown, /\*\*Cycle:\*\* \[workflow run\]\(https:\/\/github\.com\/basil-one\/agency\/actions\/runs\/888\)/);
+  assert.match(pulse.markdown, /\| Site: Build Integrity \| Passed \| — \|/);
+  assert.equal((pulse.markdown.match(/\[workflow run\]/g) ?? []).length, 1);
   assert.match(pulse.markdown, /actions\/runs\/888\/artifacts\/456/);
   assert.match(pulse.markdown, /actions\/runs\/888\/artifacts\/457/);
   assert.match(pulse.markdown, /\| Mobile LCP \| \+1\.50 s/);

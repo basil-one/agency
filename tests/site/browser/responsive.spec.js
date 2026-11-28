@@ -43,9 +43,7 @@ for (const route of routes) {
           navigation.getByRole('link', { name }),
           `main navigation ${name} link`,
           route,
-          width,
-          test.info(),
-          'navigation'
+          width
         );
       }
 
@@ -57,9 +55,7 @@ for (const route of routes) {
           link,
           `footer ${label} link`,
           route,
-          width,
-          test.info(),
-          'footer'
+          width
         );
       }
 
@@ -98,16 +94,6 @@ for (const route of routes) {
         );
       }
 
-      const hitAreaAnnotations = test.info().annotations.filter(
-        ({ type }) => type === 'responsive-hit-area'
-      );
-      expect(hitAreaAnnotations.length).toBeGreaterThan(0);
-      expect(
-        hitAreaAnnotations.every(({ description }) =>
-          description.startsWith('navigation:main navigation ') ||
-          description.startsWith('footer:footer ')
-        )
-      ).toBe(true);
     });
   }
 }
@@ -115,7 +101,9 @@ for (const route of routes) {
 test('responsive check rejects whole-page horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.setContent('<main><h1>Fixture</h1><div style="width: 640px">Overflow</div></main>');
-  await expect(assertResponsivePage(page, 'in-memory fixture', 320)).rejects.toThrow();
+  await expect(
+    assertResponsivePage(page, 'in-memory fixture', 320)
+  ).rejects.toThrow(/whole-page horizontal overflow/);
 });
 
 test('intentional local horizontal scrolling is not page overflow', async ({ page }) => {

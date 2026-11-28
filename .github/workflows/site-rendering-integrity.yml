@@ -47,6 +47,7 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps --only-shell chromium
       - name: Test SVG assets
+        id: svg
         run: python3 -m unittest discover -s tests/site -p 'test_svg_assets.py' -v
       - name: Run rendered-site smoke tests
         id: smoke
@@ -58,6 +59,7 @@ jobs:
         if: always()
         env:
           BUILD_OUTCOME: ${{ steps.build.outcome }}
+          SVG_OUTCOME: ${{ steps.svg.outcome }}
           SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
           RESULTS_FILE: ${{ runner.temp }}/browser-results.json
         run: node scripts/site/summarize_rendering.mjs

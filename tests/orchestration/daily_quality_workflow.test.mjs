@@ -4,14 +4,14 @@ import test from 'node:test';
 
 const workflowDirectory = new URL('../../.github/workflows/', import.meta.url);
 const children = [
-  ['common-code-quality.yml', 'common-code-quality', 'Common: Code Quality'],
-  ['common-coherence-integrity.yml', 'common-coherence-integrity', 'Common: Coherence Integrity'],
-  ['common-dependency-security.yml', 'common-dependency-security', 'Common: Dependency Security'],
-  ['site-build-integrity.yml', 'site-build-integrity', 'Site: Build Integrity'],
-  ['site-link-integrity.yml', 'site-link-integrity', 'Site: Link Integrity'],
-  ['site-seo-integrity.yml', 'site-seo-integrity', 'Site: SEO Integrity'],
-  ['site-rendering-integrity.yml', 'site-rendering-integrity', 'Site: Rendering Integrity'],
-  ['site-performance-integrity.yml', 'site-performance-integrity', 'Site: Performance Integrity']
+  ['common-code-quality.yml', 'common-code-quality'],
+  ['common-coherence-integrity.yml', 'common-coherence-integrity'],
+  ['common-dependency-security.yml', 'common-dependency-security'],
+  ['site-build-integrity.yml', 'site-build-integrity'],
+  ['site-link-integrity.yml', 'site-link-integrity'],
+  ['site-seo-integrity.yml', 'site-seo-integrity'],
+  ['site-rendering-integrity.yml', 'site-rendering-integrity'],
+  ['site-performance-integrity.yml', 'site-performance-integrity']
 ];
 
 test('one daily workflow owns the schedule and fans out to all eight reusable checks', async () => {
@@ -26,11 +26,11 @@ test('one daily workflow owns the schedule and fans out to all eight reusable ch
   const orchestrator = await readFile(new URL('quality-pulse.yml', workflowDirectory), 'utf8');
   assert.match(orchestrator, /cron: '17 3 \* \* \*'/);
   assert.match(orchestrator, /^  workflow_dispatch:$/m);
-  for (const [file, jobId, name] of children) {
+  for (const [file, jobId] of children) {
     const child = await readFile(new URL(file, workflowDirectory), 'utf8');
     assert.match(child, /^  workflow_call:$/m, `${file} can be called`);
     assert.doesNotMatch(child, /^  schedule:$/m, `${file} has no independent daily schedule`);
-    assert.match(orchestrator, new RegExp(`^  ${jobId}:\\n    name: "${name}"\\n    uses: \\.\\/\\.github\\/workflows\\/${file}$`, 'm'));
+    assert.match(orchestrator, new RegExp(`^  ${jobId}:\\n(?:    name: "[^"]+"\\n)?    uses: \\.\\/\\.github\\/workflows\\/${file}$`, 'm'));
   }
 });
 
@@ -44,8 +44,8 @@ test('Pulse waits for every substantive result and preserves least-privilege per
   assert.match(pulse, /PULSE_RESULTS_JSON: \$\{\{ toJSON\(needs\) \}\}/);
   assert.match(pulse, /actions: read/);
   assert.match(pulse, /contents: read/);
-  assert.match(orchestrator, /common-dependency-security:\n    name: "Common: Dependency Security"\n    uses: \.\/\.github\/workflows\/common-dependency-security\.yml\n    permissions:\n      contents: read\n      vulnerability-alerts: read/);
-  assert.match(orchestrator, /site-performance-integrity:\n    name: "Site: Performance Integrity"\n    uses: \.\/\.github\/workflows\/site-performance-integrity\.yml\n    with:\n      caller_event_name: \$\{\{ github\.event_name \}\}\n    permissions:\n      actions: read\n      contents: read/);
+  assert.match(orchestrator, /common-dependency-security:\n    name: "[^"]+"\n    uses: \.\/\.github\/workflows\/common-dependency-security\.yml\n    permissions:\n      contents: read\n      vulnerability-alerts: read/);
+  assert.match(orchestrator, /site-performance-integrity:\n    name: "[^"]+"\n    uses: \.\/\.github\/workflows\/site-performance-integrity\.yml\n    with:\n      caller_event_name: \$\{\{ github\.event_name \}\}\n    permissions:\n      actions: read\n      contents: read/);
   assert.match(orchestrator, /group: daily-quality-\$\{\{ github\.ref \}\}\n  cancel-in-progress: false/);
   for (const [file, group] of [
     ['site-performance-integrity.yml', 'site-performance-integrity'],

@@ -58,10 +58,14 @@ for (const route of htmlRoutes) {
 }
 
 test('accessibility check rejects a missing image alternative', async ({ page }) => {
-  await page.setContent('<main><h1>Fixture</h1><img></main>');
+  await page.setContent(`<!doctype html>
+    <html lang="en">
+      <head><title>Fixture</title></head>
+      <body><main><h1>Fixture</h1><img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="></main></body>
+    </html>`);
   await expect(
     assertNoAccessibilityViolations(page, 'in-memory fixture')
-  ).rejects.toThrow();
+  ).rejects.toThrow(/image-alt/);
 });
 
 test('the reflections index links to a selected article', async ({ page }) => {

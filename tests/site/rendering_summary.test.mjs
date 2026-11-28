@@ -3,86 +3,84 @@ import test from 'node:test';
 import { summarizeRendering } from '../../scripts/site/summarize_rendering.mjs';
 
 const successfulReport = {
-  stats: { duration: 1200 },
   suites: [{
     specs: [
       {
         title: '/ is present in generated output and loads',
-        tests: [{ results: [{ status: 'passed', duration: 100 }] }]
+        tests: [{ results: [{ status: 'passed' }] }]
       },
       {
         title: '/ has no detectable accessibility violations',
         tests: [{
           annotations: [{ type: 'axe-scan-complete' }],
-          results: [{ status: 'passed', duration: 200 }]
+          results: [{ status: 'passed' }]
         }]
       },
       {
         title: 'Responsive usability: / at 320px',
-        tests: [{
-          annotations: [
-            { type: 'responsive-hit-area', description: 'navigation:main nav:44.0x44.0' },
-            { type: 'responsive-hit-area', description: 'footer:origin:48.0x48.0' }
-          ],
-          results: [{ status: 'passed', duration: 300 }]
-        }]
+        tests: [{ results: [{ status: 'passed' }] }]
       }
     ]
   }]
 };
 
-test('summary reports route, accessibility, responsive, and hit-area evidence', () => {
+test('summary reports build, SVG, route, axe, and responsive coverage', () => {
   const summary = summarizeRendering({
     buildOutcome: 'success',
+    svgOutcome: 'success',
     smokeOutcome: 'success',
     report: successfulReport
   });
 
   assert.equal(summary.failed, false);
-  assert.match(summary.markdown, /Smoke routes selected.*1/);
-  assert.match(summary.markdown, /Full-site axe accessibility.*1\/1 scans completed/);
-  assert.match(summary.markdown, /Responsive usability:.*320px/);
-  assert.match(summary.markdown, /navigation.*44×44px/);
-  assert.match(summary.markdown, /footer.*48×48px/);
+  assert.match(summary.markdown, /Production build: \*\*passed\*\*/);
+  assert.match(summary.markdown, /SVG assets: \*\*passed\*\*/);
+  assert.match(summary.markdown, /Smoke routes: \*\*1\/1 passed/);
+  assert.match(summary.markdown, /Axe scans: \*\*1\/1 completed/);
+  assert.match(summary.markdown, /Responsive checks: \*\*1\/1 passed.*1 route and 1 viewport \(320px\)/);
+  assert.match(summary.markdown, /Coverage verification: \*\*complete\*\*/);
 });
 
-test('missing report after a successful browser step fails coverage without claiming zero results', () => {
-  const summary = summarizeRendering({
+test('missing and malformed reports are unavailable, not zero coverage', () => {
+  const missing = summarizeRendering({
     buildOutcome: 'success',
+    svgOutcome: 'success',
     smokeOutcome: 'success',
     reportUnavailableReason: 'Playwright JSON report was unreadable or malformed'
   });
 
-  assert.equal(summary.failed, true);
-  assert.match(summary.markdown, /not available/);
-  assert.match(summary.markdown, /unavailable, not zero/);
-  assert.match(summary.markdown, /failed verification/);
+  assert.equal(missing.failed, true);
+  assert.match(missing.markdown, /Browser evidence: \*\*unavailable\*\*/);
+  assert.match(missing.markdown, /Coverage verification: \*\*incomplete\*\*/);
+  assert.doesNotMatch(missing.markdown, /0\/0/);
 
   const malformed = summarizeRendering({
     buildOutcome: 'success',
+    svgOutcome: 'success',
     smokeOutcome: 'success',
     report: { suites: [null] }
   });
   assert.equal(malformed.failed, true);
-  assert.match(malformed.markdown, /unreadable or malformed/);
+  assert.match(malformed.markdown, /Browser evidence: \*\*unavailable\*\*/);
 });
 
-test('missing accessibility or malformed responsive cases fail coverage verification', () => {
+test('missing axe completion and malformed responsive cases are incomplete coverage', () => {
   const report = structuredClone(successfulReport);
   report.suites[0].specs[1].tests[0].annotations = [];
   report.suites[0].specs[2].title = 'Responsive usability: /';
   const summary = summarizeRendering({
     buildOutcome: 'success',
+    svgOutcome: 'success',
     smokeOutcome: 'success',
     report
   });
 
   assert.equal(summary.failed, true);
-  assert.match(summary.markdown, /Coverage verification: \*\*failed\*\*/);
-  assert.match(summary.markdown, /0\/1 scans completed/);
+  assert.match(summary.markdown, /0\/1 completed/);
+  assert.match(summary.markdown, /Coverage verification: \*\*incomplete\*\*/);
 });
 
-test('failed and incomplete browser results retain the original failure details', () => {
+test('failed and interrupted browser cases retain useful details and distinct outcomes', () => {
   const report = structuredClone(successfulReport);
   report.suites[0].specs[0].tests[0].results[0] = {
     status: 'failed',
@@ -91,12 +89,13 @@ test('failed and incomplete browser results retain the original failure details'
   report.suites[0].specs[2].tests[0].results[0] = { status: 'interrupted' };
   const summary = summarizeRendering({
     buildOutcome: 'success',
+    svgOutcome: 'success',
     smokeOutcome: 'failure',
     report
   });
 
-  assert.equal(summary.failed, false);
-  assert.match(summary.markdown, /Browser suite.*failed/);
+  assert.equal(summary.failed, true);
+  assert.match(summary.markdown, /Browser suite: \*\*failed\*\*/);
   assert.match(summary.markdown, /received HTTP 404/);
-  assert.match(summary.markdown, /interrupted/);
+  assert.match(summary.markdown, /not completed/);
 });

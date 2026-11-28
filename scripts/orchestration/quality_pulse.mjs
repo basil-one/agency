@@ -20,10 +20,6 @@ function timestamp(value) {
     : `${parsed.toISOString().replace('T', ' ').replace(/Z$/, ' UTC')}`;
 }
 
-function runTime() {
-  return 'Same-cycle job result';
-}
-
 function runLink(run) {
   return run?.html_url ?? '';
 }
@@ -227,7 +223,6 @@ function renderPerformanceTrends(result) {
         ? 'the measurement is not a dated successful current run'
         : 'no successful measurement evidence is available.');
     lines.push('', `Performance comparison unavailable: ${reason}`);
-    if (trends?.runUrl) lines.push(`Source: [Site: Performance Integrity run](${trends.runUrl}).`);
     if (trends?.baseline) lines.push(`Baselines: ${trends.baseline}.`);
     return lines;
   }
@@ -241,7 +236,6 @@ function renderPerformanceTrends(result) {
     `**Baselines:** ${describePerformanceComparison(trends.comparison)}.`
   );
   const sources = [];
-  if (trends.runUrl) sources.push(`[Site: Performance Integrity run](${trends.runUrl})`);
   if (trends.artifactUrl) sources.push(`[comparison artifact](${trends.artifactUrl})`);
   const fixedRunUrl = trends.comparison.fixedReference?.runUrl;
   if (fixedRunUrl) sources.push(`[fixed reference run](${fixedRunUrl})`);
@@ -381,6 +375,7 @@ function renderPulse({
   );
   const advisories = results.filter((item) => item.result.state === 'advisory');
   const findings = [...needsReview, ...advisories];
+  const cycleRun = results.find((item) => runLink(item.result.run))?.result.run;
   const aggregate = needsReview.length
     ? `Cycle incomplete — ${needsReview.length} of ${results.length} dimensions are not confirmed successful.`
     : advisories.length
@@ -390,6 +385,8 @@ function renderPulse({
     '# Quality Pulse',
     '',
     `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}`,
+    '',
+    `**Cycle:** ${cycleRun ? `[workflow run](${runLink(cycleRun)})` : 'unavailable'}`,
     '',
     `**Validator revision:** \`${sourceRevision || 'unavailable'}\``,
     '',
@@ -402,13 +399,11 @@ function renderPulse({
     for (const item of findings) {
       const state = item.result.state;
       const action = state === 'failed'
-        ? item.name === 'Site: Performance Integrity' && item.result.run?.cycle
-          ? ''
-          : 'Open the run and address the reported failure.'
+        ? ''
         : state === 'advisory'
-          ? 'Review the reported external uncertainty.'
+          ? ''
           : state === 'unknown'
-            ? 'Check Actions/API access and inspect the last available workflow run.'
+            ? 'Check Actions/API access and inspect this cycle.'
             : state === 'missing'
               ? 'Inspect the orchestration run and confirm the missing check was invoked.'
               : state === 'skipped'
@@ -417,7 +412,8 @@ function renderPulse({
       const detail = item.name === 'Site: Performance Integrity'
         ? performanceDetail(item.result)
         : item.result.detail;
-      lines.push(`- **${item.name} — ${item.result.label}:** ${detail} ${action}`);
+      const finding = `${detail} ${action}`.replace(/[\\|`<>]/g, '\\$&');
+      lines.push(`- **${item.name} — ${item.result.label}:** ${finding}`);
     }
   } else {
     lines.push('No material failures or missing coverage were reported.');
@@ -428,26 +424,21 @@ function renderPulse({
     '',
     '## Evidence',
     '',
-    '| Dimension | Outcome | Measurement / run time (UTC) | Source / run | Useful detail or next action |',
-    '| --- | --- | --- | --- | --- |'
+    '**Outcomes below are the substantive job results for this cycle.**',
+    '',
+    '| Dimension | Outcome | Artifact |',
+    '| --- | --- | --- |'
   );
   for (const item of results) {
     const result = item.result;
-    const sources = [];
-    if (result.run && runLink(result.run)) {
-      sources.push(`[same-cycle run](${runLink(result.run)})`);
-    }
-    if (result.artifactUrl) sources.push(`[evidence artifact](${result.artifactUrl})`);
-    const source = sources.length ? sources.join(' · ') : 'No run link available';
-    const detail = item.name === 'Site: Performance Integrity'
-      ? performanceDetail(result)
-      : result.detail;
+    const artifact = result.artifactUrl
+      ? `[evidence artifact](${result.artifactUrl})`
+      : '—';
     lines.push(
-      `| ${item.name} | ${result.label} | ${result.run ? runTime() : 'not measured today'} | ${source} | ${detail.replace(/[\\|`<>]/g, '\\$&')} |`
+      `| ${item.name} | ${result.label} | ${artifact} |`
     );
   }
   lines.push('');
-  lines.push('Each outcome below comes from the corresponding job in this run.');
   return `${lines.join('\n')}\n`;
 }
 
@@ -466,7 +457,7 @@ function orchestratedJobResult(needs, jobId, name, run) {
   const outcome = needs[jobId]?.result;
   const outcomes = {
     success: ['fresh', 'Passed', 'The substantive check completed successfully in this cycle.'],
-    failure: ['failed', 'Failed', 'The substantive check failed in this cycle; inspect its job logs and artifacts.'],
+    failure: ['failed', 'Failed', 'The substantive check failed; inspect its job logs and artifacts.'],
     skipped: ['skipped', 'Skipped', 'The substantive check was skipped; confirm whether the skip was intentional.'],
     cancelled: ['incomplete', 'Incomplete / cancelled', 'The substantive check was cancelled before a result was established.']
   };
@@ -491,7 +482,7 @@ function orchestratedJobResult(needs, jobId, name, run) {
           state: 'advisory',
           label: 'Advisory — uncertain external responses',
           run,
-          detail: 'Internal links passed; uncertain external responses are listed in the linked audit evidence.'
+          detail: 'Internal links passed; uncertain external responses require review.'
         }
       };
     }
