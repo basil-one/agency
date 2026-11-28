@@ -22,6 +22,23 @@ CHECKS = (
     "Site: Rendering Integrity",
     "Site: Performance Integrity",
 )
+WORKFLOWS = {
+    name: ".github/workflows/" + filename + ".yml"
+    for name, filename in zip(
+        CHECKS,
+        (
+            "common-code-quality",
+            "common-coherence-integrity",
+            "common-dependency-security",
+            "site-build-integrity",
+            "site-link-integrity",
+            "site-seo-integrity",
+            "site-rendering-integrity",
+            "site-performance-integrity",
+        ),
+        strict=True,
+    )
+}
 APP_ID = 15368
 SHA = re.compile(r"[0-9a-f]{40}")
 VERSION = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
@@ -153,6 +170,40 @@ def check_identity(run, head):
     if run.get("status") not in ("queued", "in_progress", "completed"):
         raise ReleaseError(f"Malformed check status for {name}.")
     return name, stamp
+
+
+def verify_workflows(repo, head, number, branch, check_ids):
+    """Bind each selected check to its canonical PR workflow and job."""
+    for name, check_id in check_ids.items():
+        job = api(f"repos/{repo}/actions/jobs/{check_id}")
+        if not isinstance(job, dict) or (
+            job.get("id") != check_id
+            or job.get("name") != name
+            or job.get("head_sha") != head
+            or job.get("status") != "completed"
+            or job.get("conclusion") != "success"
+            or type(job.get("run_id")) is not int
+            or job["run_id"] < 1
+        ):
+            raise ReleaseError(f"Invalid workflow job evidence for {name}.")
+        run = api(f"repos/{repo}/actions/runs/{job['run_id']}")
+        if not isinstance(run, dict) or (
+            run.get("id") != job["run_id"]
+            or run.get("path") != WORKFLOWS[name]
+            or run.get("event") != "pull_request"
+            or run.get("head_sha") != head
+            or run.get("head_branch") != branch
+            or (run.get("repository") or {}).get("full_name") != repo
+            or (run.get("head_repository") or {}).get("full_name") != repo
+            or run.get("status") != "completed"
+            or run.get("conclusion") != "success"
+            or not isinstance(run.get("pull_requests"), list)
+            or not any(
+                isinstance(pr, dict) and pr.get("number") == number
+                for pr in run["pull_requests"]
+            )
+        ):
+            raise ReleaseError(f"Invalid canonical workflow evidence for {name}.")
 
 
 def changelog_bounds(text):
