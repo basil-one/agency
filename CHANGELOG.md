@@ -12,8 +12,10 @@ For licensing, see `LICENSE.md`.
 - Established a quality practice across the Common and Site domains, with pull-request safeguards and a daily Quality Pulse.
 - Added Coherence Integrity to sustain repository organization and architectural relationships.
 - Established a reviewed performance reference and confirmation of potential regressions.
+- Added human-initiated Release Publish for versioned milestones.
 
 ### Changed
 - Moved website publication to a repository-controlled GitHub Actions workflow.
+- Separated controlled performance checks on changes from full-experience monitoring over time.
 - Strengthened site accessibility, link integrity, SEO, and dependency security checks.
 - Organized workflows, supporting scripts, and tests around consistent ownership boundaries.
