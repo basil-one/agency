@@ -302,7 +302,7 @@ function renderPerformanceSummary(inputs) {
       '',
       '- Informational lab measurement; this is not a performance pass, field Core Web Vitals result, or regression gate.',
       `- Selected measurement context: **${inputs.measurementContext ?? 'unknown'}**; Lighthouse was not run.`,
-      `- Reason: ${inputs.skip.reason ?? 'the classifier found only changes outside generated-site performance inputs'}.`,
+      `- Reason: ${inputs.skip.reason ?? 'all changed files are text-only Markdown reflections'}.`,
       `- Changed paths (${inputs.skip.paths?.length ?? 0}): ${inputs.skip.paths?.length ? inputs.skip.paths.map((path) => `\`${path}\``).join(', ') : 'none reported'}.`,
       '- Lighthouse samples collected: **0**.',
       '- No metrics, baseline comparison, or artifacts were produced.',

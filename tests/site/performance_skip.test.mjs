@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import test from 'node:test';
@@ -40,7 +40,7 @@ function writeFiles(cwd, files) {
   }
 }
 
-function scenario({ base = {}, head = {}, intermediate = [], remove = [], rename, symlinks = [], eventName = 'pull_request' }) {
+function scenario({ base = {}, head = {}, intermediate = [], remove = [], rename, eventName = 'pull_request' }) {
   const cwd = mkdtempSync(join(tmpdir(), 'agency-performance-skip-'));
   try {
     execFileSync('git', ['init', '--quiet', '-b', 'main'], { cwd });
@@ -53,18 +53,12 @@ function scenario({ base = {}, head = {}, intermediate = [], remove = [], rename
     for (const path of remove) rmSync(join(cwd, path), { force: true });
     if (rename) execFileSync('git', ['mv', rename.from, rename.to], { cwd });
     writeFiles(cwd, head);
-    for (const [path, target] of symlinks) {
-      mkdirSync(dirname(join(cwd, path)), { recursive: true });
-      symlinkSync(target, join(cwd, path));
-    }
     const headSha = commit(cwd, 'head');
     return classifyChanges({ baseSha, headSha, eventName, cwd });
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }
 }
-
-const excludedLicenseConfig = readFileSync(new URL('../../_config.yml', import.meta.url), 'utf8');
 
 test('skips an added reflection with conventional front matter and editorial text', () => {
   const result = scenario({ head: { '_reflections/new-reflection.md': reflection('new-reflection') } });
@@ -119,87 +113,10 @@ test('classifies the complete change range across multiple PR commits', () => {
   assert.equal(result.skip, true, result.reason);
 });
 
-test('skips license-only changes only while Jekyll explicitly excludes the LICENSES directory', () => {
-  const skipped = scenario({
-    base: {
-      '_config.yml': excludedLicenseConfig,
-      'LICENSES/MIT.txt': 'Original license text.\n'
-    },
-    head: {
-      '_config.yml': excludedLicenseConfig,
-      'LICENSES/MIT.txt': 'Revised license text.\n',
-      'LICENSES/CC-BY-SA-4.0.md': 'Additional license text.\n'
-    }
-  });
-  assert.equal(skipped.skip, true, skipped.reason);
-
-  const mixedSafe = scenario({
-    base: {
-      '_config.yml': excludedLicenseConfig,
-      'LICENSES/MIT.txt': 'Original license text.\n',
-      '_reflections/existing.md': reflection('existing')
-    },
-    head: {
-      '_config.yml': excludedLicenseConfig,
-      'LICENSES/MIT.txt': 'Revised license text.\n',
-      '_reflections/existing.md': reflection('existing', 'Edited editorial reflection text.')
-    }
-  });
-  assert.equal(mixedSafe.skip, true, mixedSafe.reason);
-
-  const deleted = scenario({
-    base: {
-      '_config.yml': excludedLicenseConfig,
-      'LICENSES/MIT.txt': 'Original license text.\n'
-    },
-    head: { '_config.yml': excludedLicenseConfig },
-    remove: ['LICENSES/MIT.txt']
-  });
-  assert.equal(deleted.skip, true, deleted.reason);
-
-  const included = scenario({
-    base: {
-      '_config.yml': 'exclude:\n  - scripts\n  - tests\n',
-      'LICENSES/MIT.txt': 'Original license text.\n'
-    },
-    head: {
-      '_config.yml': 'exclude:\n  - scripts\n  - tests\n',
-      'LICENSES/MIT.txt': 'Revised license text.\n'
-    }
-  });
-  assert.equal(included.skip, false);
-  assert.match(included.reason, /Jekyll does not explicitly exclude LICENSES/);
-
-  const explicitlyIncluded = scenario({
-    base: {
-      '_config.yml': `${excludedLicenseConfig}include:\n  - LICENSES\n`,
-      'LICENSES/MIT.txt': 'Original license text.\n'
-    },
-    head: {
-      '_config.yml': `${excludedLicenseConfig}include:\n  - LICENSES\n`,
-      'LICENSES/MIT.txt': 'Revised license text.\n'
-    }
-  });
-  assert.equal(explicitlyIncluded.skip, false);
-  assert.match(explicitlyIncluded.reason, /explicit include list/);
-
-  const symlink = scenario({
-    base: { '_config.yml': excludedLicenseConfig },
-    head: {},
-    symlinks: [['LICENSES/MIT.txt', '../LICENSE.md']]
-  });
-  assert.equal(symlink.skip, false);
-  assert.match(symlink.reason, /not a regular Git file/);
-});
-
-test('runs the full baseline for excluded tooling, dependencies, and nested license paths', () => {
-  for (const path of ['scripts/site/measure_performance.mjs', 'tests/site/example.test.mjs', 'Gemfile', '_config.yml', 'LICENSES/archive/MIT.txt']) {
+test('runs the full baseline for excluded tooling, dependencies, and configuration changes', () => {
+  for (const path of ['scripts/site/measure_performance.mjs', 'tests/site/example.test.mjs', 'Gemfile', '_config.yml']) {
     const result = scenario({
-      base: { '_config.yml': excludedLicenseConfig },
-      head: {
-        '_config.yml': excludedLicenseConfig,
-        [path]: 'change\n'
-      }
+      head: { [path]: 'change\n' }
     });
     assert.equal(result.skip, false, `${path} must fail open`);
   }

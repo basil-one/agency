@@ -291,38 +291,28 @@ test('does not imply a comparison file exists when only the summary was produced
   assert.match(report, /Machine-readable performance summary \(comparison unavailable\)/);
 });
 
-test('reports reflection, license-only, and mixed safe skips neutrally without measurement claims', () => {
-  for (const { reason, paths } of [
-    {
-      reason: 'all changes are text-only Markdown reflections',
+test('reports reflection-only skips neutrally without measurement claims', () => {
+  const report = renderPerformanceSummary(makeInputs({
+    summary: undefined,
+    comparison: undefined,
+    skip: {
+      measurement: true,
+      reason: 'all changed files are text-only Markdown reflections',
       paths: ['_reflections/new.md']
     },
-    {
-      reason: 'all changed files are Jekyll-excluded license files',
-      paths: ['LICENSES/MIT.txt']
-    },
-    {
-      reason: 'all changed files are Jekyll-excluded license files or text-only Markdown reflections',
-      paths: ['LICENSES/MIT.txt', '_reflections/new.md']
-    }
-  ]) {
-    const report = renderPerformanceSummary(makeInputs({
-      summary: undefined,
-      comparison: undefined,
-      skip: { measurement: true, reason, paths },
-      measurementContext: 'pr-controlled',
-      reports: { outcome: 'skipped' },
-      machineArtifact: { outcome: 'skipped' },
-      steps: { measure: 'skipped' }
-    }));
+    measurementContext: 'pr-controlled',
+    reports: { outcome: 'skipped' },
+    machineArtifact: { outcome: 'skipped' },
+    steps: { measure: 'skipped' }
+  }));
 
-    assert.match(report, /^# Site: Performance Integrity\n\n\*\*Lighthouse measurement intentionally skipped\*\*/);
-    assert.match(report, new RegExp(`Reason: ${reason.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
-    assert.match(report, /Selected measurement context: \*\*pr-controlled\*\*; Lighthouse was not run/);
-    assert.match(report, /Lighthouse samples collected: \*\*0\*\*/);
-    assert.match(report, /No metrics, baseline comparison, or artifacts were produced/);
-    assert.doesNotMatch(report, /24\/24|Mobile LCP|Fixed LCP Δ/);
-  }
+  assert.match(report, /^# Site: Performance Integrity\n\n\*\*Lighthouse measurement intentionally skipped\*\*/);
+  assert.match(report, /Reason: all changed files are text-only Markdown reflections/);
+  assert.match(report, /Changed paths \(1\): `_reflections\/new\.md`/);
+  assert.match(report, /Selected measurement context: \*\*pr-controlled\*\*; Lighthouse was not run/);
+  assert.match(report, /Lighthouse samples collected: \*\*0\*\*/);
+  assert.match(report, /No metrics, baseline comparison, or artifacts were produced/);
+  assert.doesNotMatch(report, /24\/24|Mobile LCP|Fixed LCP Δ/);
 });
 
 test('reports measurement failure and incomplete setup without fabricated counts or artifact links', () => {
