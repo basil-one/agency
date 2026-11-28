@@ -29,9 +29,7 @@ The website is published automatically to GitHub Pages from `main` using the rep
 
 ## Releases
 
-The living site and a versioned release serve different purposes. To preserve an intentional milestone, a human runs [Release Publish](.github/workflows/release-publish.yml) from `main` with a stable version, reviews and merges the changelog-only release PR through the Quality Gate, and can rerun the same version to resume an interrupted publication. GitHub Actions may require repository permission to create pull requests and human approval of checks.
-
-Maintain notable outcomes under Unreleased in [CHANGELOG.md](CHANGELOG.md); release notes come from the reviewed changelog.
+[Release Publish](.github/workflows/release-publish.yml) preserves intentional milestones separately from the living site. See [CHANGELOG.md](CHANGELOG.md) and the [release conventions](.github/CONVENTIONS.md#changelog-and-releases).
 
 ## Intellectual stewardship
 
