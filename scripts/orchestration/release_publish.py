@@ -172,6 +172,51 @@ def check_identity(run, head):
     return name, stamp
 
 
+def matching_run_pr(pr, number, head, branch, repo_id):
+    if not isinstance(pr, dict) or pr.get("number") != number:
+        return False
+    candidate, base = pr.get("head"), pr.get("base")
+    if not isinstance(candidate, dict) or not isinstance(base, dict):
+        return False
+    head_repo, base_repo = candidate.get("repo"), base.get("repo")
+    return (
+        candidate.get("sha") == head
+        and candidate.get("ref") == branch
+        and base.get("ref") == "main"
+        and isinstance(head_repo, dict)
+        and isinstance(base_repo, dict)
+        and head_repo.get("id") == repo_id
+        and base_repo.get("id") == repo_id
+    )
+
+
+def verify_run(run, run_id, name, repo, head, number, branch):
+    if not isinstance(run, dict):
+        raise ReleaseError(f"Malformed workflow evidence for {name}.")
+    repository, head_repository = run.get("repository"), run.get("head_repository")
+    if not isinstance(repository, dict) or not isinstance(head_repository, dict):
+        raise ReleaseError(f"Malformed workflow repositories for {name}.")
+    repo_id = repository.get("id")
+    pull_requests = run.get("pull_requests")
+    if (
+        run.get("id") != run_id
+        or run.get("path") != WORKFLOWS[name]
+        or run.get("event") != "pull_request"
+        or run.get("head_sha") != head
+        or run.get("head_branch") != branch
+        or repository.get("full_name") != repo
+        or type(repo_id) is not int
+        or repo_id < 1
+        or head_repository.get("id") != repo_id
+        or head_repository.get("full_name") != repo
+        or run.get("status") != "completed"
+        or run.get("conclusion") != "success"
+        or not isinstance(pull_requests, list)
+        or not any(matching_run_pr(pr, number, head, branch, repo_id) for pr in pull_requests)
+    ):
+        raise ReleaseError(f"Invalid canonical workflow evidence for {name}.")
+
+
 def verify_workflows(repo, head, number, branch, check_ids):
     """Bind each selected check to its canonical PR workflow and job."""
     for name, check_id in check_ids.items():
@@ -180,6 +225,8 @@ def verify_workflows(repo, head, number, branch, check_ids):
             job.get("id") != check_id
             or job.get("name") != name
             or job.get("head_sha") != head
+            or job.get("check_run_url")
+            != f"https://api.github.com/repos/{repo}/check-runs/{check_id}"
             or job.get("status") != "completed"
             or job.get("conclusion") != "success"
             or type(job.get("run_id")) is not int
@@ -187,23 +234,7 @@ def verify_workflows(repo, head, number, branch, check_ids):
         ):
             raise ReleaseError(f"Invalid workflow job evidence for {name}.")
         run = api(f"repos/{repo}/actions/runs/{job['run_id']}")
-        if not isinstance(run, dict) or (
-            run.get("id") != job["run_id"]
-            or run.get("path") != WORKFLOWS[name]
-            or run.get("event") != "pull_request"
-            or run.get("head_sha") != head
-            or run.get("head_branch") != branch
-            or (run.get("repository") or {}).get("full_name") != repo
-            or (run.get("head_repository") or {}).get("full_name") != repo
-            or run.get("status") != "completed"
-            or run.get("conclusion") != "success"
-            or not isinstance(run.get("pull_requests"), list)
-            or not any(
-                isinstance(pr, dict) and pr.get("number") == number
-                for pr in run["pull_requests"]
-            )
-        ):
-            raise ReleaseError(f"Invalid canonical workflow evidence for {name}.")
+        verify_run(run, job["run_id"], name, repo, head, number, branch)
 
 
 def changelog_bounds(text):
@@ -270,10 +301,12 @@ def promote(version, day, text, tags):
 
 def notes(version, text):
     matches = list(HEADING.finditer(text))
-    if not matches or matches[0].group(1) != version:
-        raise ReleaseError("Requested version is not the latest changelog entry.")
-    end = matches[1].start() if len(matches) > 1 else len(text)
-    section = text[matches[0].end() : end]
+    indexes = [index for index, match in enumerate(matches) if match.group(1) == version]
+    if len(indexes) != 1:
+        raise ReleaseError("Requested changelog entry is missing or duplicated.")
+    index = indexes[0]
+    end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+    section = text[matches[index].end() : end]
     section = re.split(r"^\[[^]]+\]: ", section, maxsplit=1, flags=re.M)[0].strip()
     if not section:
         raise ReleaseError("Release notes are empty.")
@@ -289,6 +322,30 @@ def safe_sha(value):
     if not isinstance(value, str) or not SHA.fullmatch(value):
         raise ReleaseError("Invalid commit SHA.")
     return value
+
+
+def verify_linear_merge(base, merge):
+    rows = git("rev-list", "--parents", f"{base}..{merge}").splitlines()
+    if not rows or len(rows) > 1000:
+        raise ReleaseError("Rebased release history is incomplete or too long.")
+    expected = merge
+    for row in rows:
+        commits = row.split()
+        if len(commits) != 2 or commits[0] != expected:
+            raise ReleaseError("Rebased release history is not linear.")
+        changed = git("diff", "--name-only", commits[1], commits[0]).splitlines()
+        if any(name != "CHANGELOG.md" for name in changed):
+            raise ReleaseError("Rebased release history changes more than CHANGELOG.md.")
+        expected = commits[1]
+    if expected != base:
+        raise ReleaseError("Rebased release history does not reach the reviewed base.")
+
+
+def publication_unavailable():
+    raise ReleaseError(
+        "Release Publish is disabled: historical PR association and the exact checkout tree "
+        "of each required workflow run cannot be established."
+    )
 
 
 class Publisher:
@@ -371,6 +428,8 @@ class Publisher:
         head = self.verify_pr(pr, version)
         if pr.get("state") != "closed" or not pr.get("merged_at") or pr.get("merged") is not True:
             raise ReleaseError("Release PR has not been merged.")
+        if not isinstance(pr.get("merged_by"), dict) or pr["merged_by"].get("type") != "User":
+            raise ReleaseError("Release PR must be merged by a human GitHub user.")
         merge = safe_sha(pr.get("merge_commit_sha"))
         number = pr["number"]
         git("fetch", "origin", f"+refs/pull/{number}/head:refs/remotes/release-pr/{number}")
@@ -381,10 +440,22 @@ class Publisher:
             raise ReleaseError("Merge is not on main.")
         if git("rev-parse", f"{head}^{{tree}}") != git("rev-parse", f"{merge}^{{tree}}"):
             raise ReleaseError("Merged tree differs from the checked head.")
-        parent = git("rev-parse", f"{merge}^1")
-        base = git("merge-base", head, parent)
+        parents = git("rev-list", "--parents", "-n", "1", merge).split()
+        if len(parents) not in (2, 3) or parents[0] != merge:
+            raise ReleaseError("Merge parents do not establish the reviewed PR relationship.")
+        if len(parents) == 3:
+            if parents[2] != head or not ancestor(parents[1], head):
+                raise ReleaseError("Merge parents do not establish the reviewed PR relationship.")
+            base = parents[1]
+        else:
+            base = safe_sha(git("merge-base", head, merge))
+            verify_linear_merge(base, merge)
         self.verify_promotion(head, base, version)
-        return merge, head, verify_checks(check_pages(self.repo, head), head) if checks else None
+        if not checks:
+            return merge, head, None
+        check_ids = verify_checks(check_pages(self.repo, head), head)
+        verify_workflows(self.repo, head, number, pr["head"]["ref"], check_ids)
+        return merge, head, check_ids
 
     def reject_competing_prs(self, branch):
         open_prs = pages(f"repos/{self.repo}/pulls?state=open&base=main")
@@ -416,7 +487,9 @@ class Publisher:
             raise ReleaseError("Dispatch revision is not current main; rerun.")
         branch = f"release/v{version}"
         pr = self.pull_requests(branch)
-        self.reject_competing_prs(branch)
+        published = pr and pr.get("state") == "closed" and self.existing_release(f"v{version}")
+        if not published or published.get("draft") is not False:
+            self.reject_competing_prs(branch)
         if pr:
             head = self.verify_pr(pr, version)
             if pr.get("state") == "open":
@@ -478,6 +551,7 @@ class Publisher:
         return found[0] if found else None
 
     def tag_provenance(self, tag, merge, head, number, version):
+        # This record relies on repository-writer trust, not authenticated authorship.
         if (
             git("rev-parse", f"refs/tags/{tag}^{{commit}}") != merge
             or git("cat-file", "-t", f"refs/tags/{tag}") != "tag"
@@ -523,14 +597,21 @@ class Publisher:
     def ensure_tag(self, version, pr, merge, head, check_ids, item, completed):
         tag = f"v{version}"
         source = command(
-            ["git", "rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}"], allow_failure=True
+            ["git", "show-ref", "--verify", "--quiet", f"refs/tags/{tag}"], allow_failure=True
         )
+        remote = command(
+            ["git", "ls-remote", "--exit-code", "--refs", "origin", f"refs/tags/{tag}"],
+            allow_failure=True,
+        )
+        if remote.returncode not in (0, 2):
+            raise ReleaseError("Unable to inspect the remote release tag.")
         if source.returncode == 0:
-            recorded = self.tag_provenance(tag, merge, head, pr["number"], version)
-            if not completed and recorded != check_ids:
-                raise ReleaseError("Existing tag provenance differs from current evidence.")
+            local = git("rev-parse", f"refs/tags/{tag}")
+            if remote.returncode != 0 or remote.stdout.strip() != f"{local}\trefs/tags/{tag}":
+                raise ReleaseError("Local and remote release tags differ.")
+            self.tag_provenance(tag, merge, head, pr["number"], version)
         else:
-            if completed or item is not None:
+            if source.returncode != 1 or remote.returncode != 2 or completed or item is not None:
                 raise ReleaseError("Release exists without its verified tag.")
             provenance = {
                 "version": version,
@@ -556,11 +637,16 @@ class Publisher:
 
     def release(self, version, pr):
         publication_unavailable()
+        version_tuple(version)
+        pr = api(f"repos/{self.repo}/pulls/{pr['number']}")
         tag = f"v{version}"
         item = self.existing_release(tag)
         completed = item is not None and item.get("draft") is False
         merge, head, check_ids = self.merged(pr, version, checks=not completed)
-        current = changelog(self.main())
+        main = self.main()
+        if not ancestor(merge, main):
+            raise ReleaseError("Merge is no longer on main.")
+        current = changelog(main)
         approved = changelog(merge)
         if notes(version, current) != notes(version, approved):
             raise ReleaseError("Current main changed the release entry.")
@@ -569,10 +655,12 @@ class Publisher:
             for t in self.tags()
             if t.startswith("v") and VERSION.fullmatch(t[1:])
         ]
-        if stable and max(stable) > version_tuple(version):
+        if not completed and stable and max(stable) > version_tuple(version):
             raise ReleaseError("A newer stable tag exists.")
-        self.ensure_tag(version, pr, merge, head, check_ids, item, completed)
         body = notes(version, approved)
+        if item is not None:
+            self.validate_release(item, tag, body)
+        self.ensure_tag(version, pr, merge, head, check_ids, item, completed)
         if item is None:
             item = api(
                 f"repos/{self.repo}/releases",
@@ -589,18 +677,9 @@ class Publisher:
         if item["draft"]:
             item = api(f"repos/{self.repo}/releases/{item['id']}", "PATCH", {"draft": False})
             self.validate_release(item, tag, body)
-            if item.get("draft") is not False or item.get("immutable") is not True:
+            if item.get("draft") is not False:
                 raise ReleaseError("Published release could not be verified.")
-        elif item.get("immutable") is not True:
-            raise ReleaseError("Completed release does not have immutable provenance.")
         print(f"Published or verified {tag} at {merge}, PR #{pr['number']}.")
-
-
-def publication_unavailable():
-    raise ReleaseError(
-        "Release Publish is disabled: authenticated durable workflow provenance and "
-        "canonical PR check provenance are not established."
-    )
 
 
 def main():

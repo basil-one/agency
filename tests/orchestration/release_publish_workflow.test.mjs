@@ -13,7 +13,7 @@ test('release workflow is manual, main-only, serialized, and read-only while dis
   assert.match(workflow, /checks: read/);
   assert.match(workflow, /contents: read/);
   assert.match(workflow, /pull-requests: read/);
-  assert.doesNotMatch(workflow, /contents: write|pull-requests: write/);
+  assert.doesNotMatch(workflow, /contents: write|pull-requests: write|actions: write|attestations:|id-token:/);
   assert.match(workflow, /run: \|\n\s+printf 'Checked-out revision:.*git rev-parse HEAD/);
   assert.match(workflow, /python3 scripts\/orchestration\/release_publish\.py --version "\$VERSION"/);
   assert.doesNotMatch(workflow, /workflow_call:|schedule:|pull_request:|--force|--admin|pdf|upload-artifact/i);
