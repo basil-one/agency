@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "complete": true,
+  "capturedAt": "2026-11-28T03:39:20.069Z",
+  "source": {
+    "eventName": "workflow_dispatch",
+    "branch": "main",
+    "sha": "071ba8c4f21a338d708a5b72c595c471a10828ec",
+    "runId": "46103454650",
+    "runUrl": "https://github.com/basil-one/agency/actions/runs/46103454650"
+  },
+  "coverage": {
+    "routeCount": 4,
+    "formFactors": [
+      "mobile",
+      "desktop"
+    ],
+    "runCount": 3,
+    "routeProfiles": 8,
+    "measurementCount": 24
+  },
+  "environment": {
+    "runner": "ubuntu-24.04",
+    "lighthouse": "13.6.0",
+    "chrome": "Google Chrome for Testing 159.0.8154.6",
+    "ruby": "ruby 3.3.14 (2026-11-19 revision f4c37f481b) [x86_64-linux]",
+    "jekyll": "jekyll 3.10.0",
+    "node": "v22.23.5"
+  },
+  "conditions": {
+    "site": "Jekyll production build served locally",
+    "mobile": "Lighthouse default mobile configuration",
+    "desktop": "Lighthouse desktop preset",
+    "measurementContext": "pr-controlled",
+    "analyticsBlockedUrlPatterns": [
+      "*google-analytics.com/*/collect*",
+      "*googletagmanager.com/*",
+      "*google-analytics.com/*",
+      "*doubleclick.net/*"
+    ],
+    "externalAnalyticsScriptsBlocked": true,
+    "analyticsCollectionBlocked": true,
+    "labOnly": true
+  },
+  "timing": {
+    "measurementSeconds": 243.241
+  },
+  "firstPartyAssets": [
+    {
+      "path": "assets/images/profile.jpg",
+      "bytes": 180575
+    },
+    {
+      "path": "assets/css/site.css",
+      "bytes": 7287
+    },
+    {
+      "path": "assets/js/analytics.js",
+      "bytes": 1064
+    },
+    {
+      "path": "assets/images/favicon.svg",
+      "bytes": 311
+    }
+  ],
+  "externalScripts": [
+    {
+      "source": "https://www.googletagmanager.com/gtag/js",
+      "samples": 8,
+      "successful": 0,
+      "medianTransferBytes": null
+    }
+  ],
+  "results": [
+    {
+      "route": "/",
+      "formFactor": "mobile",
+      "values": {
+        "first-contentful-paint": 904.9715000000001,
+        "largest-contentful-paint": 904.9715000000001,
+        "speed-index": 904.9715000000001,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "route": "/",
+      "formFactor": "desktop",
+      "values": {
+        "first-contentful-paint": 245.46609999999998,
+        "largest-contentful-paint": 245.46609999999998,
+        "speed-index": 245.46609999999998,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "route": "/know-your-patterns/",
+      "formFactor": "mobile",
+      "values": {
+        "first-contentful-paint": 903.0364,
+        "largest-contentful-paint": 903.0364,
+        "speed-index": 903.0364,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "route": "/know-your-patterns/",
+      "formFactor": "desktop",
+      "values": {
+        "first-contentful-paint": 243.13940000000002,
+        "largest-contentful-paint": 243.13940000000002,
+        "speed-index": 243.13940000000002,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "route": "/reflections/",
+      "formFactor": "mobile",
+      "values": {
+        "first-contentful-paint": 902.4905000000001,
+        "largest-contentful-paint": 902.4905000000001,
+        "speed-index": 902.4905000000001,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "route": "/reflections/",
+      "formFactor": "desktop",
+      "values": {
+        "first-contentful-paint": 242.49869999999999,
+        "largest-contentful-paint": 242.49869999999999,
+        "speed-index": 242.49869999999999,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "route": "/reflections/the-world-that-conflict-intelligence-opens/",
+      "formFactor": "mobile",
+      "values": {
+        "first-contentful-paint": 902.1353999999999,
+        "largest-contentful-paint": 902.1353999999999,
+        "speed-index": 902.1353999999999,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    },
+    {
+      "route": "/reflections/the-world-that-conflict-intelligence-opens/",
+      "formFactor": "desktop",
+      "values": {
+        "first-contentful-paint": 244.8893,
+        "largest-contentful-paint": 244.8893,
+        "speed-index": 244.8893,
+        "total-blocking-time": 0,
+        "cumulative-layout-shift": 0
+      }
+    }
+  ]
+}
