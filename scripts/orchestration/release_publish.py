@@ -410,6 +410,7 @@ class Publisher:
                 raise ReleaseError("Malformed open PR branch.")
             if other.startswith("release/v") and other != branch:
                 raise ReleaseError("Another release PR is pending.")
+
     def validate_previous_releases(self):
         tags = self.tags()
         if not tags:

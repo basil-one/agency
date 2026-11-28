@@ -480,9 +480,7 @@ class PublisherTests(unittest.TestCase):
 
     def test_other_open_release_pr_still_blocks(self):
         publisher = self.publisher()
-        with patch.object(
-            release, "pages", return_value=[{"head": {"ref": "release/v1.0.0"}}]
-        ):
+        with patch.object(release, "pages", return_value=[{"head": {"ref": "release/v1.0.0"}}]):
             with self.assertRaisesRegex(release.ReleaseError, "Another release PR"):
                 publisher.reject_competing_prs("release/v1.0.1")
 
@@ -673,9 +671,11 @@ class GitMergeTests(unittest.TestCase):
                         "pages",
                         return_value=[{"filename": "CHANGELOG.md", "status": "modified"}],
                     ),
-                    patch.object(release, "check_pages", return_value=[
-                        {**row, "head_sha": head} for row in checks()
-                    ]),
+                    patch.object(
+                        release,
+                        "check_pages",
+                        return_value=[{**row, "head_sha": head} for row in checks()],
+                    ),
                 ):
                     self.assertEqual(publisher.merged(candidate, "1.0.0")[:2], (merge, head))
             different = self.commit(self.tree(promoted + "\nUnexpected.\n"), "different", base)
