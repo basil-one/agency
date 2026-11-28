@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import test from 'node:test';
@@ -40,7 +40,7 @@ function writeFiles(cwd, files) {
   }
 }
 
-function scenario({ base = {}, head = {}, intermediate = [], remove = [], rename, eventName = 'pull_request' }) {
+function scenario({ base = {}, head = {}, intermediate = [], remove = [], rename, symlinks = [], eventName = 'pull_request' }) {
   const cwd = mkdtempSync(join(tmpdir(), 'agency-performance-skip-'));
   try {
     execFileSync('git', ['init', '--quiet', '-b', 'main'], { cwd });
@@ -53,6 +53,10 @@ function scenario({ base = {}, head = {}, intermediate = [], remove = [], rename
     for (const path of remove) rmSync(join(cwd, path), { force: true });
     if (rename) execFileSync('git', ['mv', rename.from, rename.to], { cwd });
     writeFiles(cwd, head);
+    for (const [path, target] of symlinks) {
+      mkdirSync(dirname(join(cwd, path)), { recursive: true });
+      symlinkSync(target, join(cwd, path));
+    }
     const headSha = commit(cwd, 'head');
     return classifyChanges({ baseSha, headSha, eventName, cwd });
   } finally {
@@ -129,6 +133,20 @@ test('skips license-only changes only while Jekyll explicitly excludes the LICEN
   });
   assert.equal(skipped.skip, true, skipped.reason);
 
+  const mixedSafe = scenario({
+    base: {
+      '_config.yml': excludedLicenseConfig,
+      'LICENSES/MIT.txt': 'Original license text.\n',
+      '_reflections/existing.md': reflection('existing')
+    },
+    head: {
+      '_config.yml': excludedLicenseConfig,
+      'LICENSES/MIT.txt': 'Revised license text.\n',
+      '_reflections/existing.md': reflection('existing', 'Edited editorial reflection text.')
+    }
+  });
+  assert.equal(mixedSafe.skip, true, mixedSafe.reason);
+
   const deleted = scenario({
     base: {
       '_config.yml': excludedLicenseConfig,
@@ -151,6 +169,27 @@ test('skips license-only changes only while Jekyll explicitly excludes the LICEN
   });
   assert.equal(included.skip, false);
   assert.match(included.reason, /Jekyll does not explicitly exclude LICENSES/);
+
+  const explicitlyIncluded = scenario({
+    base: {
+      '_config.yml': `${excludedLicenseConfig}include:\n  - LICENSES\n`,
+      'LICENSES/MIT.txt': 'Original license text.\n'
+    },
+    head: {
+      '_config.yml': `${excludedLicenseConfig}include:\n  - LICENSES\n`,
+      'LICENSES/MIT.txt': 'Revised license text.\n'
+    }
+  });
+  assert.equal(explicitlyIncluded.skip, false);
+  assert.match(explicitlyIncluded.reason, /explicit include list/);
+
+  const symlink = scenario({
+    base: { '_config.yml': excludedLicenseConfig },
+    head: {},
+    symlinks: [['LICENSES/MIT.txt', '../LICENSE.md']]
+  });
+  assert.equal(symlink.skip, false);
+  assert.match(symlink.reason, /not a regular Git file/);
 });
 
 test('runs the full baseline for excluded tooling, dependencies, and nested license paths', () => {

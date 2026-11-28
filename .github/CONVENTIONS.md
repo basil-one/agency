@@ -28,7 +28,7 @@ Pull-request measurements use the `pr-controlled` context, which blocks Google T
 
 The controlled fixed reference is `.github/site-performance-reference-controlled.json`; until a reviewed reference exists, controlled runs retain absolute budgets and report relative comparison as unavailable. To capture evidence for human review, dispatch **Site: Performance Integrity** from `main` with `measurement_context: pr-controlled`; after a complete successful run, review the `performance-summary` artifact and propose its summary as that reference in a later change. Do not copy partial, failed, or mismatched-context evidence. The ordinary `.github/site-performance-reference.json` remains the full-experience reference.
 
-PR performance skips are limited to text-only reflection edits and direct `LICENSES/*` changes while `_config.yml` explicitly excludes `LICENSES` from the generated site. Jekyll renders reflections and serves assets, so other content/config/layout/asset changes require measurement. Although Jekyll excludes `scripts`, `tests`, and `Gemfile*`, those paths can change the measurement or build itself; workflow changes can change what runs. Uncertain changes fail open. Keep the missing-route diagnostic.
+PR performance skips are limited to text-only reflection edits and direct regular files under `LICENSES/` while `_config.yml` explicitly excludes `LICENSES` and has no explicit `include` list. Current references in `LICENSE.md` link to the GitHub-hosted license sources; they do not read those files into generated pages. Symlinks, nested license paths, and uncertain configurations fail open. Jekyll renders reflections and serves assets, so other content/config/layout/asset changes require measurement. Although Jekyll excludes `scripts`, `tests`, and `Gemfile*`, those paths can change the measurement or build itself; workflow changes can change what runs. Keep the missing-route diagnostic.
 
 ## Run and maintain checks
 
@@ -37,6 +37,7 @@ PR performance skips are limited to text-only reflection edits and direct `LICEN
 - `npm run test:required-checks` — required workflow triggers/jobs and publication contracts.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
 - `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks; run `npm run test:performance-cli` after `npm ci` to verify Lighthouse option parsing.
+- `npm run diagnose:performance-controlled` — optional one-run synthetic first-party TBT diagnostic; not part of routine CI and requires installed Lighthouse/Chromium.
 - `npm run test:site-routes` — generated-route discovery. The browser suite needs a built `_site` and the installed Playwright browser.
 - `bundle exec jekyll build --trace` — production site build.
 

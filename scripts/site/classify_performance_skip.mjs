@@ -153,10 +153,20 @@ function jekyllExcludesLicenses(revision, cwd) {
   } catch {
     return false;
   }
+  if (/^include\s*:/m.test(config)) return false;
   const excludeBlock = /^exclude:\s*\r?\n((?:[ \t]+-[^\r\n]*(?:\r?\n|$))*)/m.exec(config);
   return Boolean(
     excludeBlock?.[1].split(/\r?\n/).some((line) => /^\s+-\s+LICENSES\s*$/.test(line))
   );
+}
+
+function regularFileAtRevision(revision, path, cwd) {
+  try {
+    const entry = git(['ls-tree', revision, '--', path], cwd);
+    return /^100(?:644|755) blob [0-9a-f]+\t/.test(entry);
+  } catch {
+    return false;
+  }
 }
 
 function classifyFile(file, baseSha, headSha, cwd) {
@@ -164,9 +174,14 @@ function classifyFile(file, baseSha, headSha, cwd) {
     /^LICENSES\/[^/]+$/.test(file.path) &&
     ['A', 'M', 'D'].includes(file.status)
   ) {
-    return jekyllExcludesLicenses(headSha, cwd)
-      ? undefined
-      : 'Jekyll does not explicitly exclude LICENSES';
+    const regularFiles =
+      (file.status === 'A' || regularFileAtRevision(baseSha, file.path, cwd)) &&
+      (file.status === 'D' || regularFileAtRevision(headSha, file.path, cwd));
+    if (!regularFiles) return 'license path is missing or is not a regular Git file';
+    if (!jekyllExcludesLicenses(headSha, cwd)) {
+      return 'Jekyll does not explicitly exclude LICENSES or has an explicit include list';
+    }
+    return undefined;
   }
   if (!['A', 'M'].includes(file.status)) return `unsupported file status ${file.status}`;
   if (!/^_reflections\/[^/]+\.md$/.test(file.path)) return 'changed paths include files outside _reflections/*.md';
