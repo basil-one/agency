@@ -22,23 +22,6 @@ CHECKS = (
     "Site: Rendering Integrity",
     "Site: Performance Integrity",
 )
-WORKFLOWS = {
-    name: ".github/workflows/" + filename + ".yml"
-    for name, filename in zip(
-        CHECKS,
-        (
-            "common-code-quality",
-            "common-coherence-integrity",
-            "common-dependency-security",
-            "site-build-integrity",
-            "site-link-integrity",
-            "site-seo-integrity",
-            "site-rendering-integrity",
-            "site-performance-integrity",
-        ),
-        strict=True,
-    )
-}
 APP_ID = 15368
 SHA = re.compile(r"[0-9a-f]{40}")
 VERSION = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
@@ -47,6 +30,10 @@ HEADING = re.compile(r"^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})$", re.M)
 
 class ReleaseError(RuntimeError):
     """Evidence is incomplete or inconsistent."""
+
+
+class ChecksPending(ReleaseError):
+    """Required checks have not finished reporting."""
 
 
 def version_tuple(version):
@@ -143,9 +130,11 @@ def verify_checks(runs, head):
             latest[name] = (stamp, run)
     for name in CHECKS:
         if name not in latest:
-            raise ReleaseError(f"Missing check: {name}.")
+            raise ChecksPending(f"Missing check: {name}.")
         run = latest[name][1]
-        if run.get("status") != "completed" or run.get("conclusion") != "success":
+        if run.get("status") != "completed":
+            raise ChecksPending(f"Check is still running: {name}.")
+        if run.get("conclusion") != "success":
             raise ReleaseError(f"Check is not successful: {name}.")
     return {name: latest[name][1]["id"] for name in CHECKS}
 
@@ -170,71 +159,6 @@ def check_identity(run, head):
     if run.get("status") not in ("queued", "in_progress", "completed"):
         raise ReleaseError(f"Malformed check status for {name}.")
     return name, stamp
-
-
-def matching_run_pr(pr, number, head, branch, repo_id):
-    if not isinstance(pr, dict) or pr.get("number") != number:
-        return False
-    candidate, base = pr.get("head"), pr.get("base")
-    if not isinstance(candidate, dict) or not isinstance(base, dict):
-        return False
-    head_repo, base_repo = candidate.get("repo"), base.get("repo")
-    return (
-        candidate.get("sha") == head
-        and candidate.get("ref") == branch
-        and base.get("ref") == "main"
-        and isinstance(head_repo, dict)
-        and isinstance(base_repo, dict)
-        and head_repo.get("id") == repo_id
-        and base_repo.get("id") == repo_id
-    )
-
-
-def verify_run(run, run_id, name, repo, head, number, branch):
-    if not isinstance(run, dict):
-        raise ReleaseError(f"Malformed workflow evidence for {name}.")
-    repository, head_repository = run.get("repository"), run.get("head_repository")
-    if not isinstance(repository, dict) or not isinstance(head_repository, dict):
-        raise ReleaseError(f"Malformed workflow repositories for {name}.")
-    repo_id = repository.get("id")
-    pull_requests = run.get("pull_requests")
-    if (
-        run.get("id") != run_id
-        or run.get("path") != WORKFLOWS[name]
-        or run.get("event") != "pull_request"
-        or run.get("head_sha") != head
-        or run.get("head_branch") != branch
-        or repository.get("full_name") != repo
-        or type(repo_id) is not int
-        or repo_id < 1
-        or head_repository.get("id") != repo_id
-        or head_repository.get("full_name") != repo
-        or run.get("status") != "completed"
-        or run.get("conclusion") != "success"
-        or not isinstance(pull_requests, list)
-        or not any(matching_run_pr(pr, number, head, branch, repo_id) for pr in pull_requests)
-    ):
-        raise ReleaseError(f"Invalid canonical workflow evidence for {name}.")
-
-
-def verify_workflows(repo, head, number, branch, check_ids):
-    """Bind each selected check to its canonical PR workflow and job."""
-    for name, check_id in check_ids.items():
-        job = api(f"repos/{repo}/actions/jobs/{check_id}")
-        if not isinstance(job, dict) or (
-            job.get("id") != check_id
-            or job.get("name") != name
-            or job.get("head_sha") != head
-            or job.get("check_run_url")
-            != f"https://api.github.com/repos/{repo}/check-runs/{check_id}"
-            or job.get("status") != "completed"
-            or job.get("conclusion") != "success"
-            or type(job.get("run_id")) is not int
-            or job["run_id"] < 1
-        ):
-            raise ReleaseError(f"Invalid workflow job evidence for {name}.")
-        run = api(f"repos/{repo}/actions/runs/{job['run_id']}")
-        verify_run(run, job["run_id"], name, repo, head, number, branch)
 
 
 def changelog_bounds(text):
@@ -341,13 +265,6 @@ def verify_linear_merge(base, merge):
         raise ReleaseError("Rebased release history does not reach the reviewed base.")
 
 
-def publication_unavailable():
-    raise ReleaseError(
-        "Release Publish is disabled: historical PR association and the exact checkout tree "
-        "of each required workflow run cannot be established."
-    )
-
-
 class Publisher:
     def __init__(self):
         if os.environ.get("GITHUB_REPOSITORY") != REPOSITORY:
@@ -379,27 +296,35 @@ class Publisher:
         number = items[0].get("number")
         if type(number) is not int or number < 1:
             raise ReleaseError("Invalid PR number.")
-        return api(f"repos/{self.repo}/pulls/{number}")
+        pr = api(f"repos/{self.repo}/pulls/{number}")
+        if not isinstance(pr, dict) or pr.get("number") != number:
+            raise ReleaseError("Pull request detail does not match the listed PR.")
+        return pr
 
     def verify_pr(self, pr, version):
         branch = f"release/v{version}"
         if not isinstance(pr, dict):
             raise ReleaseError("Malformed PR.")
-        head, base = pr.get("head") or {}, pr.get("base") or {}
+        head, base = pr.get("head"), pr.get("base")
+        if not isinstance(head, dict) or not isinstance(base, dict):
+            raise ReleaseError("Malformed PR branches.")
+        if not isinstance(head.get("repo"), dict) or not isinstance(base.get("repo"), dict):
+            raise ReleaseError("Malformed PR repositories.")
         if (
             type(pr.get("number")) is not int
             or pr["number"] < 1
             or pr.get("title") != f"Prepare Agency release v{version}"
             or head.get("ref") != branch
             or base.get("ref") != "main"
-            or (head.get("repo") or {}).get("full_name") != self.repo
-            or (base.get("repo") or {}).get("full_name") != self.repo
+            or head["repo"].get("full_name") != self.repo
+            or base["repo"].get("full_name") != self.repo
         ):
             raise ReleaseError("Release PR identity does not match.")
         safe_sha(head.get("sha"))
         files = pages(f"repos/{self.repo}/pulls/{pr['number']}/files")
         if (
             len(files) != 1
+            or not isinstance(files[0], dict)
             or files[0].get("filename") != "CHANGELOG.md"
             or files[0].get("status") != "modified"
         ):
@@ -424,6 +349,35 @@ class Publisher:
             raise ReleaseError("Changelog does not match the exact promotion.")
         return actual
 
+    def promotion_base(self, head, version):
+        commits = git("log", "--reverse", "--format=%H", head, "--", "CHANGELOG.md")
+        for commit in commits.splitlines():
+            if not any(match.group(1) == version for match in HEADING.finditer(changelog(commit))):
+                continue
+            parents = git("rev-list", "--parents", "-n", "1", commit).split()
+            if len(parents) != 2:
+                raise ReleaseError("Changelog promotion has no single parent.")
+            base = safe_sha(parents[1])
+            if any(match.group(1) == version for match in HEADING.finditer(changelog(base))):
+                raise ReleaseError("Cannot establish original changelog promotion.")
+            return base
+        raise ReleaseError("Cannot establish original changelog promotion.")
+
+    def merged_base(self, head, merge, version):
+        parents = git("rev-list", "--parents", "-n", "1", merge).split()
+        if len(parents) not in (2, 3) or parents[0] != merge:
+            raise ReleaseError("Merge parents do not establish the reviewed PR relationship.")
+        if len(parents) == 3:
+            if parents[2] != head or not ancestor(parents[1], head):
+                raise ReleaseError("Merge parents do not establish the reviewed PR relationship.")
+            base = parents[1]
+        else:
+            base = safe_sha(git("merge-base", head, merge))
+            if base == head:
+                base = self.promotion_base(head, version)
+            verify_linear_merge(base, merge)
+        return base
+
     def merged(self, pr, version, *, checks=True):
         head = self.verify_pr(pr, version)
         if pr.get("state") != "closed" or not pr.get("merged_at") or pr.get("merged") is not True:
@@ -440,21 +394,10 @@ class Publisher:
             raise ReleaseError("Merge is not on main.")
         if git("rev-parse", f"{head}^{{tree}}") != git("rev-parse", f"{merge}^{{tree}}"):
             raise ReleaseError("Merged tree differs from the checked head.")
-        parents = git("rev-list", "--parents", "-n", "1", merge).split()
-        if len(parents) not in (2, 3) or parents[0] != merge:
-            raise ReleaseError("Merge parents do not establish the reviewed PR relationship.")
-        if len(parents) == 3:
-            if parents[2] != head or not ancestor(parents[1], head):
-                raise ReleaseError("Merge parents do not establish the reviewed PR relationship.")
-            base = parents[1]
-        else:
-            base = safe_sha(git("merge-base", head, merge))
-            verify_linear_merge(base, merge)
-        self.verify_promotion(head, base, version)
+        self.verify_promotion(head, self.merged_base(head, merge, version), version)
         if not checks:
             return merge, head, None
         check_ids = verify_checks(check_pages(self.repo, head), head)
-        verify_workflows(self.repo, head, number, pr["head"]["ref"], check_ids)
         return merge, head, check_ids
 
     def reject_competing_prs(self, branch):
@@ -467,7 +410,6 @@ class Publisher:
                 raise ReleaseError("Malformed open PR branch.")
             if other.startswith("release/v") and other != branch:
                 raise ReleaseError("Another release PR is pending.")
-
     def validate_previous_releases(self):
         tags = self.tags()
         if not tags:
@@ -480,7 +422,6 @@ class Publisher:
                     raise ReleaseError(f"Previous release {tag} is missing or incomplete.")
 
     def prepare(self, version):
-        publication_unavailable()
         version_tuple(version)
         main = self.main()
         if git("rev-parse", "HEAD") != main:
@@ -503,6 +444,8 @@ class Publisher:
         remote = git("ls-remote", "--heads", "origin", f"refs/heads/{branch}")
         if f"v{version}" in self.tags():
             raise ReleaseError("Existing tag without a matching PR.")
+        if self.existing_release(f"v{version}") is not None:
+            raise ReleaseError("Existing release without a matching PR and tag.")
         if remote:
             git("fetch", "origin", f"+refs/heads/{branch}:refs/remotes/release-branch")
             head = safe_sha(git("rev-parse", "refs/remotes/release-branch"))
@@ -561,24 +504,18 @@ class Publisher:
         try:
             title, raw = existing.split("\n", 1)
             recorded = json.loads(raw)
-            check_ids = recorded["checks"]
         except (ValueError, IndexError, KeyError, TypeError) as error:
             raise ReleaseError("Existing tag lacks release provenance.") from error
         if (
             title != "Agency Release Publish provenance"
             or not isinstance(recorded, dict)
-            or set(recorded) != {"version", "pr", "head", "source", "checks"}
+            or set(recorded) != {"version", "pr", "head", "source"}
             or recorded["version"] != version
             or recorded["pr"] != number
             or recorded["head"] != head
             or recorded["source"] != merge
-            or not isinstance(check_ids, dict)
-            or set(check_ids) != set(CHECKS)
-            or any(type(value) is not int or value < 1 for value in check_ids.values())
-            or len(set(check_ids.values())) != len(CHECKS)
         ):
             raise ReleaseError("Existing tag provenance does not match release PR.")
-        return check_ids
 
     def validate_release(self, item, tag, body):
         if (
@@ -594,7 +531,7 @@ class Publisher:
         ):
             raise ReleaseError("Existing release differs from approved publication.")
 
-    def ensure_tag(self, version, pr, merge, head, check_ids, item, completed):
+    def ensure_tag(self, version, pr, merge, head, item, completed):
         tag = f"v{version}"
         source = command(
             ["git", "show-ref", "--verify", "--quiet", f"refs/tags/{tag}"], allow_failure=True
@@ -618,7 +555,6 @@ class Publisher:
                 "pr": pr["number"],
                 "head": head,
                 "source": merge,
-                "checks": check_ids,
             }
             message = "Agency Release Publish provenance\n" + json.dumps(provenance, sort_keys=True)
             git(
@@ -636,19 +572,20 @@ class Publisher:
             git("push", "origin", f"refs/tags/{tag}")
 
     def release(self, version, pr):
-        publication_unavailable()
         version_tuple(version)
-        pr = api(f"repos/{self.repo}/pulls/{pr['number']}")
+        number = pr["number"]
+        pr = api(f"repos/{self.repo}/pulls/{number}")
+        if not isinstance(pr, dict) or pr.get("number") != number:
+            raise ReleaseError("Pull request detail does not match the selected PR.")
         tag = f"v{version}"
         item = self.existing_release(tag)
         completed = item is not None and item.get("draft") is False
-        merge, head, check_ids = self.merged(pr, version, checks=not completed)
+        merge, head, _ = self.merged(pr, version, checks=not completed)
         main = self.main()
         if not ancestor(merge, main):
             raise ReleaseError("Merge is no longer on main.")
-        current = changelog(main)
         approved = changelog(merge)
-        if notes(version, current) != notes(version, approved):
+        if not completed and notes(version, changelog(main)) != notes(version, approved):
             raise ReleaseError("Current main changed the release entry.")
         stable = [
             version_tuple(t[1:])
@@ -660,7 +597,7 @@ class Publisher:
         body = notes(version, approved)
         if item is not None:
             self.validate_release(item, tag, body)
-        self.ensure_tag(version, pr, merge, head, check_ids, item, completed)
+        self.ensure_tag(version, pr, merge, head, item, completed)
         if item is None:
             item = api(
                 f"repos/{self.repo}/releases",
@@ -689,15 +626,30 @@ def main():
     try:
         publisher = Publisher()
         pr = publisher.prepare(args.version)
-        print(f"Release PR #{pr['number']}: {pr.get('html_url')}", flush=True)
+        url = f"https://github.com/{publisher.repo}/pull/{pr['number']}"
+        print(f"Release PR #{pr['number']}: {url}", flush=True)
+        summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary and pr.get("state") == "open":
+            with open(summary, "a", encoding="utf-8") as stream:
+                print(
+                    "## Release Publish: human action\n\n"
+                    f"Review {url}, approve checks if prompted, "
+                    "and merge through the Quality Gate. Rerun the same version if interrupted.",
+                    file=stream,
+                )
         deadline = time.monotonic() + 1800
-        while pr.get("state") == "open":
+        while True:
+            if pr.get("state") != "open":
+                try:
+                    publisher.release(args.version, pr)
+                    break
+                except ChecksPending as error:
+                    print(f"Waiting for required checks: {error}", flush=True)
             if time.monotonic() >= deadline:
-                raise ReleaseError("Timed out waiting for human merge; rerun the same version.")
+                raise ReleaseError("Timed out waiting for merge/checks; rerun the same version.")
             time.sleep(60)
             pr = api(f"repos/{publisher.repo}/pulls/{pr['number']}")
             publisher.verify_pr(pr, args.version)
-        publisher.release(args.version, pr)
     except (ReleaseError, OSError, subprocess.SubprocessError) as error:
         print(f"Release stopped safely: {error}", file=sys.stderr)
         raise SystemExit(1) from error

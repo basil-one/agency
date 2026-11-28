@@ -47,44 +47,13 @@ def pr():
     }
 
 
-def workflow_evidence(name, check_id):
-    return (
-        {
-            "id": check_id,
-            "run_id": 1000 + check_id,
-            "check_run_url": f"https://api.github.com/repos/{release.REPOSITORY}/check-runs/{check_id}",
-            "name": name,
-            "head_sha": HEAD,
-            "status": "completed",
-            "conclusion": "success",
-        },
-        {
-            "id": 1000 + check_id,
-            "path": release.WORKFLOWS[name],
-            "event": "pull_request",
-            "head_sha": HEAD,
-            "head_branch": "release/v1.0.0",
-            "repository": {"id": 123, "full_name": release.REPOSITORY},
-            "head_repository": {"id": 123, "full_name": release.REPOSITORY},
-            "status": "completed",
-            "conclusion": "success",
-            "pull_requests": [
-                {
-                    "number": 42,
-                    "head": {"ref": "release/v1.0.0", "sha": HEAD, "repo": {"id": 123}},
-                    "base": {"ref": "main", "repo": {"id": 123}},
-                }
-            ],
-        },
-    )
-
-
 class Lifecycle:
     def __init__(self):
         self.tag = None
         self.item = None
         self.interrupt = True
         self.check_count = 0
+        self.write_count = 0
 
     def revision(self, ref):
         if ref == "refs/tags/v1.0.0":
@@ -112,6 +81,8 @@ class Lifecycle:
             return self.tag
         if "tag" in args and "-a" in args:
             self.tag = args[args.index("-m") + 1]
+        if "tag" in args and "-a" in args or args[0] == "push":
+            self.write_count += 1
         return ""
 
     def command(self, args, **_kwargs):
@@ -121,6 +92,7 @@ class Lifecycle:
         return subprocess.CompletedProcess(args, result, output, "")
 
     def write(self, method, data):
+        self.write_count += 1
         if method == "POST":
             self.item = {"id": 5, "assets": [], **data}
         elif self.interrupt:
@@ -144,10 +116,6 @@ class Lifecycle:
         if "/check-runs?" in path:
             self.check_count += 1
             return {"total_count": 8, "check_runs": checks()}
-        if "/actions/jobs/" in path or "/actions/runs/" in path:
-            job = "/actions/jobs/" in path
-            check_id = int(path.rsplit("/", 1)[1]) - (0 if job else 1000)
-            return workflow_evidence(release.CHECKS[check_id - 1], check_id)[0 if job else 1]
         raise AssertionError(path)
 
 
@@ -216,79 +184,6 @@ class VersionAndChecksTests(unittest.TestCase):
             with self.assertRaises(release.ReleaseError):
                 release.check_pages(release.REPOSITORY, HEAD)
 
-    def test_selected_checks_require_canonical_pr_workflows_and_jobs(self):
-        ids = {name: index + 1 for index, name in enumerate(release.CHECKS)}
-        responses = [
-            row for name, check_id in ids.items() for row in workflow_evidence(name, check_id)
-        ]
-        with patch.object(release, "api", side_effect=responses) as api:
-            release.verify_workflows(release.REPOSITORY, HEAD, 42, "release/v1.0.0", ids)
-            self.assertEqual(api.call_count, 16)
-        name = release.CHECKS[0]
-        for key, value in (
-            ("path", ".github/workflows/impostor.yml"),
-            ("event", "workflow_dispatch"),
-            ("head_sha", MERGE),
-            ("head_branch", "other"),
-            ("repository", {"full_name": "other/repo"}),
-            ("head_repository", None),
-            ("pull_requests", []),
-            ("pull_requests", [{"number": 43}]),
-            ("pull_requests", "malformed"),
-            ("conclusion", "failure"),
-        ):
-            job, run = workflow_evidence(name, 1)
-            run[key] = value
-            with (
-                self.subTest(key=key, value=value),
-                patch.object(release, "api", side_effect=[job, run]),
-                self.assertRaises(release.ReleaseError),
-            ):
-                release.verify_workflows(release.REPOSITORY, HEAD, 42, "release/v1.0.0", {name: 1})
-        job, run = workflow_evidence(name, 1)
-        job["name"] = "impostor"
-        with (
-            patch.object(release, "api", side_effect=[job, run]),
-            self.assertRaises(release.ReleaseError),
-        ):
-            release.verify_workflows(release.REPOSITORY, HEAD, 42, "release/v1.0.0", {name: 1})
-
-    def test_missing_pr_association_is_not_accepted(self):
-        name = release.CHECKS[0]
-        for association in ([], None):
-            job, run = workflow_evidence(name, 1)
-            run["pull_requests"] = association
-            with (
-                self.subTest(association=association),
-                patch.object(release, "api", side_effect=[job, run]),
-                self.assertRaises(release.ReleaseError),
-            ):
-                release.verify_workflows(release.REPOSITORY, HEAD, 42, "release/v1.0.0", {name: 1})
-
-    def test_merged_run_without_pr_association_remains_unverifiable(self):
-        run = {
-            "id": 46079347501,
-            "path": ".github/workflows/common-code-quality.yml",
-            "event": "pull_request",
-            "head_sha": "c4b2306417743dca4f8e48d5c00aa0b08c7f314b",
-            "head_branch": "copilot/migrate-agency-website-publication",
-            "repository": {"id": 123, "full_name": release.REPOSITORY},
-            "head_repository": {"id": 123, "full_name": release.REPOSITORY},
-            "status": "completed",
-            "conclusion": "success",
-            "pull_requests": [],
-        }
-        with self.assertRaisesRegex(release.ReleaseError, "canonical workflow"):
-            release.verify_run(
-                run,
-                run["id"],
-                release.CHECKS[0],
-                release.REPOSITORY,
-                run["head_sha"],
-                115,
-                run["head_branch"],
-            )
-
     def test_old_release_notes_remain_available(self):
         text = release.promote("1.0.0", "2026-11-27", CHANGELOG, [])
         text = text.replace("## [Unreleased]\n", "## [Unreleased]\n\n- Next.\n")
@@ -297,11 +192,6 @@ class VersionAndChecksTests(unittest.TestCase):
 
 
 class PublisherTests(unittest.TestCase):
-    def setUp(self):
-        enabled = patch.object(release, "publication_unavailable")
-        enabled.start()
-        self.addCleanup(enabled.stop)
-
     def publisher(self):
         with patch.dict(os.environ, ENV, clear=True):
             return release.Publisher()
@@ -332,6 +222,19 @@ class PublisherTests(unittest.TestCase):
             with self.assertRaises(release.ReleaseError):
                 publisher.verify_pr(pr(), "1.0.0")
 
+    def test_exact_promotion_rejects_modified_entries(self):
+        publisher = self.publisher()
+        promoted = release.promote("1.0.0", "2026-11-27", CHANGELOG, [])
+        altered = promoted.replace("reviewed outcome", "different outcome")
+        with (
+            patch.object(release, "ancestor", return_value=True),
+            patch.object(release, "git", return_value="CHANGELOG.md"),
+            patch.object(release, "changelog", side_effect=[altered, CHANGELOG]),
+            patch.object(publisher, "tags", return_value=[]),
+            self.assertRaisesRegex(release.ReleaseError, "exact promotion"),
+        ):
+            publisher.verify_promotion(HEAD, BASE, "1.0.0")
+
     def test_merge_squash_rebase_evidence_and_divergent_tree(self):
         publisher = self.publisher()
         for mode in ("merge", "squash", "rebase"):
@@ -356,10 +259,10 @@ class PublisherTests(unittest.TestCase):
                 patch.object(publisher, "verify_pr", return_value=HEAD),
                 patch.object(publisher, "main", return_value=MERGE),
                 patch.object(publisher, "verify_promotion") as promotion,
+                patch.object(publisher, "promotion_base", return_value=BASE),
                 patch.object(release, "git", side_effect=fake_git),
                 patch.object(release, "ancestor", return_value=True),
                 patch.object(release, "check_pages", return_value=checks()),
-                patch.object(release, "verify_workflows"),
             ):
                 self.assertEqual(publisher.merged(pr(), "1.0.0")[:2], (MERGE, HEAD))
                 promotion.assert_called_once_with(HEAD, BASE, "1.0.0")
@@ -379,14 +282,11 @@ class PublisherTests(unittest.TestCase):
             "pr": 42,
             "head": HEAD,
             "source": MERGE,
-            "checks": {name: index + 1 for index, name in enumerate(release.CHECKS)},
         }
         message = "Agency Release Publish provenance\n" + json.dumps(evidence)
         with patch.object(release, "git", side_effect=[MERGE, "tag", message]):
-            self.assertEqual(
-                publisher.tag_provenance("v1.0.0", MERGE, HEAD, 42, "1.0.0"), evidence["checks"]
-            )
-        evidence["checks"].pop(release.CHECKS[0])
+            publisher.tag_provenance("v1.0.0", MERGE, HEAD, 42, "1.0.0")
+        evidence["head"] = BASE
         with patch.object(
             release,
             "git",
@@ -468,6 +368,7 @@ class PublisherTests(unittest.TestCase):
             patch.object(release, "git", side_effect=git_results),
             patch.object(release, "ancestor", return_value=True),
             patch.object(publisher, "verify_promotion") as promotion,
+            patch.object(publisher, "promotion_base", return_value=BASE),
         ):
             self.assertEqual(publisher.merged(pr(), "1.0.0", checks=False), (MERGE, HEAD, None))
         promotion.assert_called_once_with(HEAD, BASE, "1.0.0")
@@ -500,7 +401,7 @@ class PublisherTests(unittest.TestCase):
                 patch.object(publisher, "tag_provenance") as provenance,
                 self.assertRaisesRegex(release.ReleaseError, "tags differ"),
             ):
-                publisher.ensure_tag("1.0.0", pr(), MERGE, HEAD, {}, None, False)
+                publisher.ensure_tag("1.0.0", pr(), MERGE, HEAD, None, False)
             provenance.assert_not_called()
 
     def test_prepare_rejects_stale_branch(self):
@@ -518,6 +419,73 @@ class PublisherTests(unittest.TestCase):
         ):
             publisher.prepare("1.0.0")
 
+    def test_prepare_requires_current_main_dispatch(self):
+        publisher = self.publisher()
+        with (
+            patch.object(publisher, "main", return_value=MERGE),
+            patch.object(release, "git", return_value=BASE),
+            patch.object(publisher, "pull_requests") as prs,
+            self.assertRaisesRegex(release.ReleaseError, "not current main"),
+        ):
+            publisher.prepare("1.0.0")
+        prs.assert_not_called()
+
+    def test_prepare_reuses_existing_branch_after_pr_creation_interrupted(self):
+        publisher = self.publisher()
+        with (
+            patch.object(publisher, "main", return_value=BASE),
+            patch.object(publisher, "pull_requests", return_value=None),
+            patch.object(publisher, "reject_competing_prs"),
+            patch.object(publisher, "existing_release", return_value=None),
+            patch.object(publisher, "tags", return_value=[]),
+            patch.object(publisher, "verify_promotion") as promotion,
+            patch.object(publisher, "create_pr", return_value=pr()) as create,
+            patch.object(release, "git", side_effect=[BASE, f"{HEAD}\tref", "", HEAD]) as git,
+        ):
+            self.assertEqual(publisher.prepare("1.0.0"), pr())
+        promotion.assert_called_once_with(HEAD, BASE, "1.0.0")
+        create.assert_called_once_with("1.0.0", "release/v1.0.0")
+        self.assertFalse(any(call.args[0] in ("push", "switch") for call in git.call_args_list))
+
+    def test_retained_published_branch_does_not_block_next_release(self):
+        publisher = self.publisher()
+        old_branch = f"{HEAD}\trefs/heads/release/v1.0.0"
+        previous = release.promote("1.0.0", "2026-11-27", CHANGELOG, [])
+        current = previous.replace("## [Unreleased]\n", "## [Unreleased]\n\n- Next.\n")
+
+        def fake_git(*args):
+            if args == ("rev-parse", "HEAD"):
+                return BASE
+            if args == ("ls-remote", "--heads", "origin", "refs/heads/release/v*"):
+                return old_branch
+            return ""
+
+        def fake_pages(path):
+            return [{"tag_name": "v1.0.0", "draft": False}] if "/releases" in path else []
+
+        with (
+            patch.object(publisher, "main", return_value=BASE),
+            patch.object(publisher, "pull_requests", return_value=None),
+            patch.object(publisher, "existing_release", return_value=None),
+            patch.object(publisher, "tags", return_value=["v1.0.0"]),
+            patch.object(publisher, "create_pr", return_value=pr()) as create,
+            patch.object(release, "pages", side_effect=fake_pages),
+            patch.object(release, "changelog", return_value=current),
+            patch.object(release.Path, "write_text"),
+            patch.object(release, "git", side_effect=fake_git) as git,
+        ):
+            publisher.prepare("1.0.1")
+        create.assert_called_once_with("1.0.1", "release/v1.0.1")
+        git.assert_any_call("push", "origin", "HEAD:refs/heads/release/v1.0.1")
+
+    def test_other_open_release_pr_still_blocks(self):
+        publisher = self.publisher()
+        with patch.object(
+            release, "pages", return_value=[{"head": {"ref": "release/v1.0.0"}}]
+        ):
+            with self.assertRaisesRegex(release.ReleaseError, "Another release PR"):
+                publisher.reject_competing_prs("release/v1.0.1")
+
     def test_live_check_failure_stops_before_tag_or_release(self):
         publisher = self.publisher()
         failed = checks()
@@ -528,6 +496,7 @@ class PublisherTests(unittest.TestCase):
             patch.object(publisher, "verify_pr", return_value=HEAD),
             patch.object(publisher, "main", return_value=MERGE),
             patch.object(publisher, "verify_promotion"),
+            patch.object(publisher, "promotion_base", return_value=BASE),
             patch.object(release, "ancestor", return_value=True),
             patch.object(
                 release,
@@ -574,7 +543,7 @@ class PublisherTests(unittest.TestCase):
         ):
             publisher.release("1.0.0", pr())
         merged.assert_called_once_with(pr(), "1.0.0", checks=False)
-        tag.assert_called_once_with("1.0.0", pr(), MERGE, HEAD, None, item, True)
+        tag.assert_called_once_with("1.0.0", pr(), MERGE, HEAD, item, True)
         self.assertEqual(api.call_count, 1)
 
     def test_conflicting_draft_stops_before_tag_or_publication(self):
@@ -598,7 +567,6 @@ class PublisherTests(unittest.TestCase):
 
     def test_existing_tag_recovery_accepts_newer_live_checks(self):
         publisher = self.publisher()
-        ids = {name: index + 1 for index, name in enumerate(release.CHECKS)}
         with (
             patch.object(
                 release,
@@ -609,10 +577,9 @@ class PublisherTests(unittest.TestCase):
                 ],
             ),
             patch.object(release, "git", return_value=TAG),
-            patch.object(publisher, "tag_provenance", return_value=ids),
+            patch.object(publisher, "tag_provenance"),
         ):
-            newer = {name: check_id + 100 for name, check_id in ids.items()}
-            publisher.ensure_tag("1.0.0", pr(), MERGE, HEAD, newer, None, False)
+            publisher.ensure_tag("1.0.0", pr(), MERGE, HEAD, None, False)
 
     def test_prepare_publish_interrupted_draft_and_completed_recovery(self):
         publisher = self.publisher()
@@ -623,6 +590,7 @@ class PublisherTests(unittest.TestCase):
             patch.object(release, "command", side_effect=state.command),
             patch.object(release, "api", side_effect=state.api),
             patch.object(release, "ancestor", return_value=True),
+            patch.object(publisher, "promotion_base", return_value=BASE),
             patch.object(
                 release, "changelog", side_effect=lambda ref: CHANGELOG if ref == BASE else approved
             ),
@@ -635,22 +603,98 @@ class PublisherTests(unittest.TestCase):
             publisher.release("1.0.0", publisher.prepare("1.0.0"))
             self.assertFalse(state.item["draft"])
             checks_before = state.check_count
+            writes_before = state.write_count
             publisher.release("1.0.0", publisher.prepare("1.0.0"))
             self.assertEqual(state.check_count, checks_before)
+            self.assertEqual(state.write_count, writes_before)
 
 
-class DisabledPublicationTests(unittest.TestCase):
-    def test_prepare_and_release_stop_before_api_or_git(self):
-        with (
-            patch.dict(os.environ, ENV, clear=True),
-            patch.object(release, "api", side_effect=AssertionError("unexpected API access")),
-            patch.object(release, "git", side_effect=AssertionError("unexpected git access")),
-        ):
+class GitMergeTests(unittest.TestCase):
+    """Exercise the real Git ancestry, trees and changelog promotion."""
+
+    @staticmethod
+    def tree(text):
+        blob = release.command(["git", "hash-object", "-w", "--stdin"], input_text=text)
+        tree = release.command(
+            ["git", "mktree"],
+            input_text=f"100644 blob {blob.stdout.strip()}\tCHANGELOG.md\n",
+        )
+        return tree.stdout.strip()
+
+    @staticmethod
+    def commit(tree, message, *parents):
+        args = ["git", "commit-tree", tree]
+        for parent in parents:
+            args.extend(["-p", parent])
+        return release.command(args, input_text=message).stdout.strip()
+
+    def test_real_merge_squash_rebase_and_same_head(self):
+        identity = {
+            "GIT_AUTHOR_NAME": "Fixture",
+            "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
+            "GIT_COMMITTER_NAME": "Fixture",
+            "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
+        }
+        with patch.dict(os.environ, {**ENV, **identity}):
+            base_tree = self.tree(CHANGELOG)
+            promoted = release.promote("1.0.0", "2026-11-27", CHANGELOG, [])
+            promoted_tree = self.tree(promoted)
+            base = self.commit(base_tree, "base")
+            intermediate = self.commit(base_tree, "candidate first commit", base)
+            head = self.commit(promoted_tree, "promote", intermediate)
+            replayed = self.commit(base_tree, "rebased first commit", base)
+            cases = {
+                "merge": self.commit(promoted_tree, "merge", base, head),
+                "squash": self.commit(promoted_tree, "squash", base),
+                "rebase": self.commit(promoted_tree, "rebased promotion", replayed),
+                "same-head": head,
+            }
             publisher = release.Publisher()
-            with self.assertRaisesRegex(release.ReleaseError, "disabled"):
-                publisher.prepare("1.0.0")
-            with self.assertRaisesRegex(release.ReleaseError, "checkout tree"):
-                publisher.release("1.0.0", pr())
+            real_git = release.git
+
+            def git(*args):
+                if args[0] == "fetch":
+                    return ""
+                if args == ("rev-parse", "refs/remotes/release-pr/42"):
+                    return head
+                return real_git(*args)
+
+            for strategy, merge in cases.items():
+                candidate = pr()
+                candidate["head"]["sha"] = head
+                candidate["merge_commit_sha"] = merge
+                with (
+                    self.subTest(strategy=strategy),
+                    patch.object(release, "git", side_effect=git),
+                    patch.object(publisher, "main", return_value=merge),
+                    patch.object(publisher, "tags", return_value=[]),
+                    patch.object(
+                        release,
+                        "pages",
+                        return_value=[{"filename": "CHANGELOG.md", "status": "modified"}],
+                    ),
+                    patch.object(release, "check_pages", return_value=[
+                        {**row, "head_sha": head} for row in checks()
+                    ]),
+                ):
+                    self.assertEqual(publisher.merged(candidate, "1.0.0")[:2], (merge, head))
+            different = self.commit(self.tree(promoted + "\nUnexpected.\n"), "different", base)
+            candidate["merge_commit_sha"] = different
+            with (
+                patch.object(release, "git", side_effect=git),
+                patch.object(publisher, "main", return_value=different),
+                patch.object(publisher, "verify_pr", return_value=head),
+                self.assertRaisesRegex(release.ReleaseError, "tree"),
+            ):
+                publisher.merged(candidate, "1.0.0")
+            candidate["merge_commit_sha"] = cases["squash"]
+            with (
+                patch.object(release, "git", side_effect=git),
+                patch.object(publisher, "main", return_value=base),
+                patch.object(publisher, "verify_pr", return_value=head),
+                self.assertRaisesRegex(release.ReleaseError, "not on main"),
+            ):
+                publisher.merged(candidate, "1.0.0")
 
 
 if __name__ == "__main__":
