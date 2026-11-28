@@ -8,6 +8,8 @@ For licensing, see `LICENSE.md`.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-28
+
 ### Fixed
 - Report progress while Release Publish waits for human review and merge.
 
@@ -26,5 +28,6 @@ For licensing, see `LICENSE.md`.
 - Organized workflows, supporting scripts, and tests around consistent ownership boundaries.
 - Simplified quality automation and reporting while preserving substantive safeguards.
 
-[Unreleased]: https://github.com/basil-one/agency/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/basil-one/agency/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/basil-one/agency/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/basil-one/agency/releases/tag/v0.1.0
