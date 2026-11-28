@@ -216,6 +216,8 @@ def promote(version, day, text, tags):
     if prior:
         previous = matches[0].group(1)
         replacement += f"\n[{version}]: {url}/compare/v{previous}...v{version}"
+    else:
+        replacement += f"\n[{version}]: {url}/releases/tag/v{version}"
     if links:
         promoted = promoted[: links[0].start()] + replacement + promoted[links[0].end() :]
     else:

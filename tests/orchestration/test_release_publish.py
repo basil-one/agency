@@ -125,6 +125,10 @@ class VersionAndChecksTests(unittest.TestCase):
         self.assertIn("## [1.0.0] - 2026-11-27\n\n### Added\n- A reviewed outcome.", promoted)
         self.assertEqual(release.notes("1.0.0", promoted), "### Added\n- A reviewed outcome.\n")
         self.assertNotIn("/compare/v0", promoted)
+        self.assertIn(
+            "[Unreleased]: https://github.com/basil-one/agency/compare/v1.0.0...HEAD", promoted
+        )
+        self.assertIn("[1.0.0]: https://github.com/basil-one/agency/releases/tag/v1.0.0", promoted)
         with self.assertRaises(release.ReleaseError):
             release.promote(
                 "1.0.0", "2026-11-27", CHANGELOG.replace("- A reviewed outcome.", ""), []
@@ -137,7 +141,13 @@ class VersionAndChecksTests(unittest.TestCase):
         first = release.promote("1.0.0", "2026-11-27", CHANGELOG, [])
         next_text = first.replace("## [Unreleased]\n", "## [Unreleased]\n\n- Next.\n")
         second = release.promote("1.0.1", "2026-11-28", next_text, ["v1.0.0"])
-        self.assertIn("compare/v1.0.0...v1.0.1", second)
+        self.assertIn(
+            "[Unreleased]: https://github.com/basil-one/agency/compare/v1.0.1...HEAD", second
+        )
+        self.assertIn(
+            "[1.0.1]: https://github.com/basil-one/agency/compare/v1.0.0...v1.0.1", second
+        )
+        self.assertIn("[1.0.0]: https://github.com/basil-one/agency/releases/tag/v1.0.0", second)
         with self.assertRaises(release.ReleaseError):
             release.promote("1.0.1", "2026-11-28", next_text, [])
 
