@@ -43,7 +43,7 @@ Maintain reviewed fixed references in [site-performance-reference.json](site-per
 
 ## Sustaining coherence
 
-Common: Coherence Integrity runs the architectural contracts on pull requests and in Quality Pulse. It checks the capability inventory/order and job IDs; resolves direct script, Python module, unittest discovery, and package-script references; enforces domain script/test placement; and rejects production imports from tests. Common: Code Quality retains workflow correctness, source lint/complexity, and operational regression tests. Site Build verifies that the generated `_site` excludes repository scripts and tests. When changing a capability, consider its relationship to the whole: follow the existing conventions, update affected references and contracts, and make intentional exceptions explicit. Reviewers still judge conceptual simplicity, teaching clarity, and whether a boundary or exception earns its maintenance cost; these are not reducible to a score.
+Coherence Integrity protects repository organization and architectural relationships; Code Quality protects source and workflow correctness. Keep contracts focused on meaningful boundaries and behavior. Human judgment guides simplicity and intentional differences.
 
 ## Changelog and releases
 
