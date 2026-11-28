@@ -6,6 +6,8 @@ import test from 'node:test';
 import {
   discoverHtmlRoutes,
   discoverReflections,
+  responsiveViewports,
+  selectResponsiveRoutes,
   selectSmokeRoutes
 } from '../../scripts/site/routes.js';
 
@@ -43,6 +45,16 @@ test('discovers generated HTML routes and chronologically selects reflection smo
       '/origin/',
       '/reflections/old/',
       '/reflections/new/'
+    ]);
+    assert.deepEqual(responsiveViewports, [320, 768, 1280]);
+    assert.deepEqual(selectResponsiveRoutes(site), [
+      '/',
+      '/know-your-patterns/',
+      '/consulting/',
+      '/consulting/models/pattern-level-consultant/',
+      '/reflections/',
+      '/reflections/new/',
+      '/origin/'
     ]);
   } finally {
     rmSync(site, { recursive: true, force: true });

@@ -1,23 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { resolve } from 'node:path';
-import { discoverReflections } from '../../../scripts/site/routes.js';
+import { responsiveViewports, selectResponsiveRoutes } from '../../../scripts/site/routes.js';
 import { assertResponsivePage, assertResponsiveTarget } from './responsive.js';
 
 test.use({ hasTouch: true });
 
-const widths = [320, 768, 1280];
 const localOrigin = new URL('http://127.0.0.1:4173').origin;
-const reflections = discoverReflections(resolve(process.cwd(), '_site'));
-const latestReflection = reflections.at(-1);
-const routes = [
-  '/',
-  '/know-your-patterns/',
-  '/consulting/',
-  '/consulting/models/pattern-level-consultant/',
-  '/reflections/',
-  ...(latestReflection ? [latestReflection.route] : []),
-  '/origin/'
-];
+const routes = selectResponsiveRoutes(resolve(process.cwd(), '_site'));
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/*', (route) => {
@@ -27,7 +16,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const route of routes) {
-  for (const width of widths) {
+  for (const width of responsiveViewports) {
     test(`Responsive usability: ${route} at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await page.goto(route);

@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
 
+export const responsiveViewports = [320, 768, 1280];
+
 const coreSmokeRoutes = [
   '/',
   '/know-your-patterns/',
@@ -64,4 +66,17 @@ export function selectSmokeRoutes(siteDirectory) {
   const routes = new Set(coreSmokeRoutes);
   for (const reflection of selectedReflections) routes.add(reflection.route);
   return [...routes];
+}
+
+export function selectResponsiveRoutes(siteDirectory) {
+  const latestReflection = discoverReflections(siteDirectory).at(-1);
+  return [
+    '/',
+    '/know-your-patterns/',
+    '/consulting/',
+    '/consulting/models/pattern-level-consultant/',
+    '/reflections/',
+    ...(latestReflection ? [latestReflection.route] : []),
+    '/origin/'
+  ];
 }

@@ -3,124 +3,82 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { isCompleteSummary } from '../site/compare_performance.mjs';
 import {
   formatPerformanceValue,
-  performanceBudgets
+  performanceBudgets,
+  performanceMeasurementContexts
 } from '../site/performance_policy.mjs';
 
-function utcDate(value) {
-  return value.toISOString().slice(0, 10);
+const dimensions = [
+  ['common-code-quality', 'Common: Code Quality'],
+  ['common-coherence-integrity', 'Common: Coherence Integrity'],
+  ['common-dependency-security', 'Common: Dependency Security'],
+  ['site-build-integrity', 'Site: Build Integrity'],
+  ['site-link-integrity', 'Site: Link Integrity'],
+  ['site-seo-integrity', 'Site: SEO Integrity'],
+  ['site-rendering-integrity', 'Site: Rendering Integrity'],
+  ['site-performance-integrity', 'Site: Performance Integrity']
+];
+
+function performanceFinding(violation, confirmed) {
+  const { route, formFactor, metric, criterion, value, confirmationValue,
+    limit, referenceValue, delta, deltaPercentage } = violation ?? {};
+  if (!validText(route, 240) || !Object.hasOwn(performanceBudgets[formFactor] ?? {}, metric) ||
+      !Number.isFinite(value) || (confirmed && !Number.isFinite(confirmationValue))) return undefined;
+
+  const initial = formatPerformanceValue(metric, value);
+  const measurement = confirmed
+    ? `${initial} initially, ${formatPerformanceValue(metric, confirmationValue)} confirmed`
+    : `${initial} initially`;
+  if (criterion === 'absolute' && Number.isFinite(limit)) {
+    return `${route} (${formFactor}) ${metric}: ${measurement} vs ${formatPerformanceValue(metric, limit)} limit`;
+  }
+  if (criterion === 'reference-deterioration' && metric === 'largest-contentful-paint' &&
+      [referenceValue, delta, deltaPercentage].every(Number.isFinite)) {
+    return `${route} (${formFactor}) LCP: ${measurement} vs reference ${formatPerformanceValue(metric, referenceValue)} (Δ ${formatPerformanceValue(metric, delta)}, ${deltaPercentage > 0 ? '+' : ''}${deltaPercentage.toFixed(1)}%)`;
+  }
+  return undefined;
 }
 
-function timestamp(value) {
-  if (!value) return 'time unavailable';
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.valueOf())
-    ? 'time unavailable'
-    : `${parsed.toISOString().replace('T', ' ').replace(/Z$/, ' UTC')}`;
+function performanceFindings(violations, confirmed) {
+  if (!Array.isArray(violations)) return [];
+  const findings = [];
+  for (const violation of violations) {
+    const finding = performanceFinding(violation, confirmed);
+    if (finding) findings.push(finding);
+    if (findings.length === 3) break;
+  }
+  return findings;
 }
 
-function performanceDetail(result) {
-  const policyFinding = performancePolicyFailureDetail(result.policy);
-  if (policyFinding) return policyFinding;
-  if (result.state === 'failed') {
-    return result.detail ??
-      `Measurement failed or a later step failed; ${result.baseline ?? 'inspect the linked summary for measurement and baseline state.'}`;
-  }
-  if (result.state === 'skipped') {
-    return 'Measurement was skipped; no current samples or comparison are claimed.';
-  }
-  return `${result.detail} ${result.baseline ? `Baseline: ${result.baseline}.` : 'Fixed-reference and rolling-baseline state is available only in the linked run summary.'}`;
-}
-
-function performancePolicyFailureDetail(policy) {
-  if (!policy) return undefined;
-  if (['incomplete', 'confirmation-required', 'pending'].includes(policy.status)) {
-    const reason = typeof policy.confirmationReason === 'string'
-      ? policy.confirmationReason
-      : 'required confirmation evidence is unavailable';
-    const findings = (policy.confirmations ?? policy.initialViolations ?? []).map((violation) => {
-      const profile = `\`${violation.route}\`/${violation.formFactor}`;
-      const initial = formatPerformanceValue(violation.metric, violation.value);
-      if (violation.criterion === 'absolute') {
-        return `${profile} ${violation.metric}: ${initial} vs ${formatPerformanceValue(violation.metric, violation.limit)} limit; confirmation incomplete`;
-      }
-      if (
-        violation.criterion === 'reference-deterioration' &&
-        Number.isFinite(violation.referenceValue) &&
-        Number.isFinite(violation.delta) &&
-        Number.isFinite(violation.deltaPercentage)
-      ) {
-        return `${profile} LCP: ${initial} vs reference ${formatPerformanceValue(violation.metric, violation.referenceValue)} (Δ ${formatPerformanceValue(violation.metric, violation.delta)}, ${violation.deltaPercentage > 0 ? '+' : ''}${violation.deltaPercentage.toFixed(1)}%; requires both >500 ms and >25%); confirmation incomplete`;
-      }
-      return `${profile} ${violation.metric ?? 'performance criterion'}: ${initial}; confirmation incomplete`;
-    });
-    return `Performance confirmation incomplete (${reason}); ${findings.join('; ') || 'affected route/profile measurements are unavailable'}; no pass is inferred. Rerun Performance Integrity to obtain complete confirmation evidence.`;
-  }
-  if (policy.status === 'passed') return undefined;
-  if (policy.status !== 'failed') {
-    return 'Performance policy evidence is incomplete: its final outcome is missing or unrecognized. Inspect the linked run and rerun to obtain a valid safeguard result.';
-  }
-  const violations = policy.confirmedViolations;
-  const validViolations = Array.isArray(violations) &&
-    violations.length > 0 &&
-    violations.every((violation) => {
-      const metricAllowed = Object.hasOwn(
-        performanceBudgets[violation?.formFactor] ?? {},
-        violation?.metric
-      );
-      if (
-        typeof violation?.route !== 'string' ||
-        !metricAllowed ||
-        !Number.isFinite(violation.value) ||
-        !Number.isFinite(violation.confirmationValue)
-      ) return false;
-      if (violation.criterion === 'absolute') return Number.isFinite(violation.limit);
-      return violation.criterion === 'reference-deterioration' &&
-        violation.metric === 'largest-contentful-paint' &&
-        Number.isFinite(violation.referenceValue) &&
-        Number.isFinite(violation.delta) &&
-        Number.isFinite(violation.deltaPercentage);
-    });
-  if (!validViolations) {
-    return 'Performance policy evidence is incomplete: the job failed without a valid confirmed-violation record. Inspect the linked run and rerun if confirmation evidence is missing.';
-  }
-  const findings = violations.map((violation) => {
-    const profile = `\`${violation.route}\`/${violation.formFactor}`;
-    const initial = formatPerformanceValue(violation.metric, violation.value);
-    const confirmation = formatPerformanceValue(violation.metric, violation.confirmationValue);
-    if (violation.criterion === 'absolute') {
-      return `${profile} ${violation.metric}: ${initial} initially, ${confirmation} confirmed vs ${formatPerformanceValue(violation.metric, violation.limit)} limit`;
-    }
-    return `${profile} LCP: ${initial} initially, ${confirmation} confirmed vs reference ${formatPerformanceValue(violation.metric, violation.referenceValue)} (Δ ${formatPerformanceValue(violation.metric, violation.delta)}, ${violation.deltaPercentage > 0 ? '+' : ''}${violation.deltaPercentage.toFixed(1)}%; both >500 ms and >25% thresholds met)`;
-  });
-  return `Confirmed performance violation(s): ${findings.join('; ')}. Next step: correct the affected route/profile and rerun Performance Integrity.`;
-}
-
-function applyPerformancePolicyResult(result, policy) {
-  result.policy = policy;
-  const finding = performancePolicyFailureDetail(policy);
+function performancePolicyResult(result, policy) {
   if (policy?.status === 'failed') {
-    result.state = 'failed';
-    result.label = 'Failed';
-    result.detail = finding;
-  } else if (['incomplete', 'confirmation-required', 'pending'].includes(policy?.status)) {
-    result.state = 'incomplete';
-    result.label = 'Incomplete / confirmation unavailable';
-    result.detail = finding;
-  } else if (policy?.status !== 'passed' && result.state === 'passed') {
-    result.state = 'unknown';
-    result.label = 'Unknown / performance policy unavailable';
-    result.detail = finding ??
-      'Performance policy evidence is missing or invalid; no pass is inferred.';
+    const findings = performanceFindings(policy.confirmedViolations, true);
+    if (!findings.length) return unavailable(result, 'The policy reported failure without valid confirmed violations. Inspect the confirmation step.');
+    return {
+      state: 'failed',
+      detail: `Confirmed performance violations: ${findings.join('; ')}. Correct the affected profiles and rerun Performance Integrity.`
+    };
   }
-  return result;
+  if (['incomplete', 'confirmation-required', 'pending'].includes(policy?.status)) {
+    const reason = boundedText(policy.confirmationReason, 300) ?? 'required confirmation evidence is unavailable';
+    const findings = performanceFindings(policy.confirmations ?? policy.initialViolations, false);
+    const affected = findings.length ? ` Affected profiles: ${findings.join('; ')}.` : '';
+    return {
+      state: 'incomplete',
+      detail: `Performance confirmation incomplete (${reason}).${affected} Rerun Performance Integrity to complete confirmation.`
+    };
+  }
+  if (policy?.status !== 'passed') {
+    return unavailable(result, 'The final performance assessment is missing or invalid. Inspect the measurement or confirmation step.');
+  }
+  return result.state === 'failed'
+    ? { ...result, detail: 'The policy reported no confirmed violation, but another required step failed. Inspect the failed step.' }
+    : result;
 }
 
 function describePerformanceComparison(comparison) {
-  if (!comparison) {
-    return 'fixed reference: unknown; rolling baseline: unknown';
-  }
   const fixed = comparison.fixedReference;
   const fixedState = fixed?.available === true
     ? 'available'
@@ -128,7 +86,7 @@ function describePerformanceComparison(comparison) {
       ? 'unknown'
       : /different tool|runner environment/i.test(fixed.reason)
         ? 'incompatible'
-        : /no (?:versioned|reviewed) successful main reference/i.test(fixed.reason)
+        : /no (?:versioned successful|complete reviewed successful) main reference/i.test(fixed.reason)
           ? 'pending'
           : 'unknown';
   const rollingState = rollingBaselineState(comparison.history ?? {});
@@ -158,6 +116,7 @@ function rollingBaselineState(history) {
 
 function isPerformanceComparison(value) {
   return Boolean(value?.schemaVersion === 1 &&
+    (value.measurementContext === undefined || value.measurementContext === performanceMeasurementContexts.full) &&
     value.fixedReference &&
     typeof value.fixedReference === 'object' &&
     value.history &&
@@ -179,8 +138,6 @@ function formatTrendDelta(delta) {
 }
 
 function homepageTrendRows(comparison) {
-  const homepage = comparison.comparisons.find((item) => item.route === '/');
-  if (!homepage) return [];
   const fixedAvailable = comparison.fixedReference.available === true;
   const rollingAvailable = rollingBaselineState(comparison.history) === 'available 28/28';
   const measures = [
@@ -190,7 +147,7 @@ function homepageTrendRows(comparison) {
   ];
   return measures.flatMap(([formFactor, metric, label]) => {
     const result = comparison.comparisons.find(
-      (item) => item.route === homepage.route && item.formFactor?.toLowerCase() === formFactor
+      (item) => item?.route === '/' && String(item.formFactor).toLowerCase() === formFactor
     );
     if (!result || !Object.hasOwn(result.deltas ?? {}, metric)) return [];
     return [{
@@ -201,426 +158,249 @@ function homepageTrendRows(comparison) {
   });
 }
 
-function renderPerformanceTrends(result) {
-  const trends = result?.trends;
-  const lines = [
-    '## Performance Trends',
-    '',
-    'Lower is better for these lab metrics; positive deltas mean a higher measured value. Comparisons are informational and do not establish a sustained direction.'
-  ];
-  const canShowComparison = result?.state === 'passed' &&
-    isPerformanceComparison(trends?.comparison) &&
-    /^\d{4}-\d{2}-\d{2}$/.test(trends.measurementDate ?? '');
-  if (!canShowComparison) {
-    const reason = result?.state === 'failed'
-      ? 'see Findings for the captured performance detail'
-      : trends?.reason ??
-        (trends?.comparison
-          ? 'the measurement is not a dated successful current run'
-          : 'no successful measurement evidence is available.');
-    lines.push('', `Performance comparison unavailable: ${reason}`);
-    if (trends?.baseline) lines.push(`Baselines: ${trends.baseline}.`);
-    return lines;
-  }
+const successfulStates = ['passed', 'advisory'];
+const statuses = {
+  passed: 'Passed', advisory: 'Advisory', failed: 'Failed', unknown: 'Unknown',
+  missing: 'Missing', skipped: 'Skipped', cancelled: 'Cancelled',
+  incomplete: 'Incomplete'
+};
 
-  const measurement = trends.eventName === 'workflow_dispatch'
-    ? `Measurement — ${trends.measurementDate} UTC (manually dispatched cycle).`
-    : `Measurement — ${trends.measurementDate} UTC (scheduled cycle).`;
-  lines.push(
-    '',
-    `**${measurement}**`,
-    `**Baselines:** ${describePerformanceComparison(trends.comparison)}.`
-  );
-  const sources = [];
-  if (trends.artifactUrl) sources.push(`[comparison artifact](${trends.artifactUrl})`);
-  const fixedRunUrl = trends.comparison.fixedReference?.runUrl;
-  if (fixedRunUrl) sources.push(`[fixed reference run](${fixedRunUrl})`);
-  if (sources.length) lines.push(`**Evidence:** ${sources.join(' · ')}.`);
-  lines.push(
-    '',
-    '| Measure | vs. fixed reference | vs. rolling baseline |',
-    '| --- | --- | --- |'
-  );
-  const rows = homepageTrendRows(trends.comparison);
-  if (rows.length) {
-    for (const row of rows) lines.push(`| ${row.label} | ${row.fixed} | ${row.rolling} |`);
-  } else {
-    lines.push('| Homepage metrics | — | — |');
+function jobResult(job) {
+  if (!job) return { state: 'missing', detail: 'No result from the job in this cycle.' };
+  switch (job.result) {
+    case 'success': return { state: 'passed' };
+    case 'failure': return { state: 'failed', detail: 'Inspect the failed job.' };
+    case 'skipped': return { state: 'skipped', detail: 'Confirm the skip was intentional.' };
+    case 'cancelled': return { state: 'cancelled', detail: 'Rerun the incomplete check.' };
+    default: return { state: 'unknown', detail: 'Job outcome is unrecognized.' };
   }
-  lines.push('', 'Other pages and full metric details are in the linked Site: Performance Integrity summary.');
-  return lines;
 }
 
-async function fetchArtifactJson({
-  apiUrl,
-  repository,
-  token,
-  runId,
-  artifactName,
-  fileName,
-  fileNames,
-  fetchImpl,
-  includeMetadata = false,
-  unzipImpl = execFileSync
-}) {
+function validText(text, limit) {
+  return typeof text === 'string' && text.trim().length > 0 && text.length <= limit;
+}
+
+function boundedText(value, limit) {
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  return value.length > limit ? `${value.slice(0, limit - 1)}…` : value;
+}
+
+function validSha(value) {
+  return typeof value === 'string' && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(value);
+}
+
+function linkResult(job, result) {
+  const status = job?.outputs?.status;
+  if (status === 'failure') {
+    return {
+      state: 'failed',
+      detail: 'Confirmed link defects. Inspect the audit report.' +
+        (job.result === 'cancelled' ? ' The job was cancelled after the audit.'
+          : job.result !== 'failure' ? ' Job and audit outcomes disagree.' : '')
+    };
+  }
+  if (result.state === 'passed' && status === 'success') return result;
+  if (result.state === 'passed' && status === 'advisory') {
+    return { state: 'advisory', detail: 'Review uncertain external responses in the audit report.' };
+  }
+  if (result.state === 'failed' && [undefined, '', 'incomplete'].includes(status)) {
+    return { state: 'incomplete', detail: 'Link evidence is incomplete. Inspect the job and rerun.' };
+  }
+  return ['passed', 'failed'].includes(result.state)
+    ? { state: 'unknown', detail: 'Job and link-audit outcomes are missing or disagree.' }
+    : result;
+}
+
+async function readArtifact({
+  apiUrl, repository, token, runId, branch, validatorRevision, fetchImpl, unzipImpl
+}, name, fileNames = [`${name}.json`]) {
+  if (!token) throw new Error('GitHub Actions read token is unavailable');
   const headers = {
     Accept: 'application/vnd.github+json',
     Authorization: ['Bearer', token].join(' '),
     'X-GitHub-Api-Version': '2022-11-28'
   };
-  const artifactsUrl = new URL(
-    `/repos/${repository}/actions/runs/${runId}/artifacts`,
-    apiUrl
-  );
-  artifactsUrl.search = new URLSearchParams({ name: artifactName, per_page: '100' });
-  const listResponse = await fetchImpl(artifactsUrl, {
-    headers,
-    signal: AbortSignal.timeout(15_000)
-  });
-  if (!listResponse.ok) throw new Error(`Artifacts API returned HTTP ${listResponse.status}`);
-  const artifact = (await listResponse.json()).artifacts?.find(
-    (item) => item.name === artifactName && !item.expired
-  );
-  if (!artifact) throw new Error(`${artifactName} artifact is missing or expired`);
-  if (!Number.isInteger(artifact.id)) throw new Error(`${artifactName} artifact ID is invalid`);
-  const downloadUrl = new URL(
-    `/repos/${repository}/actions/artifacts/${artifact.id}/zip`,
-    apiUrl
-  );
-  const downloadResponse = await fetchImpl(downloadUrl, {
-    headers,
-    signal: AbortSignal.timeout(30_000)
-  });
-  if (!downloadResponse.ok) {
-    throw new Error(`${artifactName} artifact download returned HTTP ${downloadResponse.status}`);
+  const endpoint = new URL(`/repos/${repository}/actions/runs/${runId}/artifacts`, apiUrl);
+  endpoint.search = new URLSearchParams({ name, per_page: '100' });
+  const list = await fetchImpl(endpoint, { headers, signal: AbortSignal.timeout(15_000) });
+  if (!list.ok) throw new Error(`Artifacts API returned HTTP ${list.status}`);
+  const { artifacts } = await list.json();
+  if (!Array.isArray(artifacts)) throw new Error('Artifacts API returned an unreadable artifact list');
+  const matches = artifacts.filter((item) => item?.name === name && item.expired === false);
+  if (matches.length !== 1 || !Number.isSafeInteger(matches[0].id) || matches[0].id < 1) {
+    throw new Error(`${name} artifact is missing, expired or ambiguous`);
   }
-  const archive = Buffer.from(await downloadResponse.arrayBuffer());
-  if (archive.length > 10 * 1024 * 1024) {
-    throw new Error(`${artifactName} artifact exceeded the 10 MB safety limit`);
+  const { id, workflow_run: source, size_in_bytes: archiveSize } = matches[0];
+  if (source && (
+    String(source.id) !== String(runId) ||
+    source.head_branch !== branch ||
+    source.head_sha !== validatorRevision
+  )) {
+    throw new Error(`${name} artifact came from a different cycle, branch or revision`);
   }
+  const artifactUrl = `https://github.com/${repository}/actions/runs/${runId}/artifacts/${id}`;
+
+  const archiveLimit = 10 * 1024 * 1024;
+  if (archiveSize > archiveLimit) throw new Error(`${name} archive exceeded 10 MB`);
+  const download = await fetchImpl(new URL(`/repos/${repository}/actions/artifacts/${id}/zip`, apiUrl), {
+    headers, signal: AbortSignal.timeout(30_000)
+  });
+  if (!download.ok) throw new Error(`${name} download returned HTTP ${download.status}`);
+  const archive = Buffer.from(await download.arrayBuffer());
+  if (archive.length > archiveLimit) throw new Error(`${name} archive exceeded 10 MB`);
   const directory = mkdtempSync(join(tmpdir(), 'agency-quality-pulse-'));
-  const archivePath = join(directory, `${artifactName}.zip`);
   try {
-    writeFileSync(archivePath, archive);
-    const data = fileNames
-      ? Object.fromEntries(fileNames.map((name) => [
-        name,
-        JSON.parse(unzipImpl(
-          'unzip',
-          ['-p', archivePath, name],
-          { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
-        ))
-      ]))
-      : JSON.parse(unzipImpl(
-        'unzip',
-        ['-p', archivePath, fileName],
-        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
-      ));
-    return includeMetadata ? { data, artifact } : data;
+    const path = join(directory, `${name}.zip`);
+    writeFileSync(path, archive);
+    const files = fileNames.map((fileName) => JSON.parse(unzipImpl('unzip', ['-p', path, fileName], {
+      encoding: 'utf8', maxBuffer: 1_000_000, stdio: ['ignore', 'pipe', 'ignore']
+    })));
+    return { artifactUrl, files };
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
 }
 
-function applyDependencyPosture(result, posture) {
-  if (posture.status === 'unknown') {
-    if (result.state === 'failed') {
-      return {
-        ...result,
-        detail: `${result.detail} Dependency posture evidence is unavailable (${posture.detail ?? 'no detail'}); the reported review finding remains failed.`
-      };
-    }
-    return {
-      ...result,
-      state: 'unknown',
-      label: 'Unknown / API inaccessible',
-      detail: `${posture.detail ?? 'Dependency posture could not be read'}; no result is inferred.`
-    };
-  }
-  if (posture.status === 'passed' && result.state === 'failed') {
-    return {
-      ...result,
-      detail: `${result.detail} Dependency posture reported passed, contradicting the failed check; the reported review finding remains failed.`
-    };
-  }
-  if (posture.status === 'review') {
-    return {
-      ...result,
-      state: 'failed',
-      label: 'Review required',
-      detail: `${posture.detail}; open the linked run for alert findings.`
-    };
-  }
-  return result;
+function unavailable(result, detail) {
+  return {
+    ...result,
+    state: successfulStates.includes(result.state) ? 'unknown' : result.state,
+    detail: [successfulStates.includes(result.state) ? undefined : result.detail, detail]
+      .filter(Boolean).join(' ')
+  };
 }
 
-function renderPulse({
-  date,
-  generatedAt,
-  runUrl,
-  results,
-  sourceRevision = 'unavailable'
-}) {
-  const needsReview = results.filter(
-    (item) => !['passed', 'advisory'].includes(item.result.state)
-  );
-  const advisories = results.filter((item) => item.result.state === 'advisory');
-  const findings = [...needsReview, ...advisories];
-  const aggregate = needsReview.length
-    ? `Cycle incomplete — ${needsReview.length} of ${results.length} dimensions are not confirmed successful.`
-    : advisories.length
-      ? `Cycle successful with advisories — ${advisories.length} of ${results.length} dimensions require attention.`
-      : `All ${results.length} dimensions passed in this cycle.`;
-  const lines = [
-    '# Quality Pulse',
-    '',
-    `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}`,
-    '',
-    `**Cycle:** ${runUrl ? `[workflow run](${runUrl})` : 'unavailable'}`,
-    '',
-    `**Validator revision:** \`${sourceRevision || 'unavailable'}\``,
-    '',
-    `**Outcome:** ${aggregate} This summary reflects the same-cycle substantive job results and does not replace their check outcomes.`,
-    '',
-    '## Findings',
-    ''
-  ];
-  if (findings.length) {
-    for (const item of findings) {
-      const state = item.result.state;
-      const action = state === 'failed'
-        ? ''
-        : state === 'advisory'
-          ? ''
-          : state === 'unknown'
-            ? 'Check Actions/API access and inspect this cycle.'
-            : state === 'missing'
-              ? 'Inspect the orchestration run and confirm the missing check was invoked.'
-              : state === 'skipped'
-                ? 'Confirm the skip is expected and arrange a full verification if not.'
-                : 'Inspect the cancelled or incomplete job and rerun the cycle if appropriate.';
-      const detail = item.name === 'Site: Performance Integrity'
-        ? performanceDetail(item.result)
-        : item.result.detail;
-      const finding = `${detail} ${action}`.replace(/[\\|`<>]/g, '\\$&');
-      lines.push(`- **${item.name} — ${item.result.label}:** ${finding}`);
+async function dependencyResult(result, cycle) {
+  if (!['passed', 'failed'].includes(result.state)) return result;
+  try {
+    const { artifactUrl, files: [posture] } = await readArtifact(cycle, 'dependency-posture');
+    const detail = boundedText(posture?.detail, 2000);
+    switch (posture?.status) {
+      case 'passed': return {
+        ...result, artifactUrl,
+        detail: result.state === 'failed'
+          ? 'Posture reported a pass despite the failed job. Inspect the failed step.'
+          : detail ?? 'No open Dependabot alerts met the review threshold.'
+      };
+      case 'review': return {
+        state: 'failed', artifactUrl,
+        detail: detail ?? 'Review the Dependabot findings.'
+      };
+      case 'unknown': return {
+        state: 'unknown', artifactUrl,
+        detail: (detail ?? 'Dependency posture is unavailable.') +
+          (result.state === 'passed' ? ' Job succeeded despite the unknown API outcome.' : '')
+      };
+      default: throw new Error('invalid posture outcome');
     }
-  } else {
-    lines.push('No material failures or missing coverage were reported.');
+  } catch (error) {
+    return unavailable(result, `Dependency posture unavailable (${error.message}).`);
   }
-  const performance = results.find((item) => item.name === 'Site: Performance Integrity');
-  lines.push('', ...renderPerformanceTrends(performance?.result), '');
-  lines.push(
-    '',
-    '## Evidence',
-    '',
-    '**Outcomes below are the substantive job results for this cycle.**',
-    '',
-    '| Dimension | Outcome | Artifact |',
-    '| --- | --- | --- |'
-  );
-  for (const item of results) {
-    const result = item.result;
-    const artifact = result.artifactUrl
-      ? `[evidence artifact](${result.artifactUrl})`
-      : '—';
-    lines.push(
-      `| ${item.name} | ${result.label} | ${artifact} |`
+}
+
+async function performanceResult(result, cycle) {
+  if (!['passed', 'failed'].includes(result.state)) return result;
+  try {
+    const { artifactUrl, files: [comparison, summary] } = await readArtifact(
+      cycle, 'performance-summary', ['performance-comparison.json', 'performance-summary.json']
     );
+    const { measurementContext = performanceMeasurementContexts.full } = summary?.conditions ?? {};
+    if (
+      !isPerformanceComparison(comparison) ||
+      !isCompleteSummary(summary) ||
+      measurementContext !== performanceMeasurementContexts.full ||
+      summary.source?.eventName !== cycle.eventName ||
+      summary.source?.branch !== cycle.branch ||
+      !validSha(cycle.validatorRevision) || summary.source?.sha !== cycle.validatorRevision ||
+      String(summary.source?.runId) !== String(cycle.runId)
+    ) throw new Error('context or cycle provenance does not match');
+    const measurementDate = summary.capturedAt?.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(measurementDate ?? '')) {
+      throw new Error('measurement date is unavailable');
+    }
+
+    const outcome = performancePolicyResult(result, comparison.policy);
+    return outcome.state === 'passed'
+      ? { ...outcome, artifactUrl, comparison, measurementDate }
+      : { ...outcome, artifactUrl };
+  } catch (error) {
+    return unavailable(result, `Performance evidence unavailable (${error.message}). Inspect the measurement or confirmation step.`);
   }
-  lines.push('');
+}
+
+async function dimensionResult(id, job, cycle) {
+  const result = jobResult(job);
+  switch (id) {
+    case 'common-dependency-security': return dependencyResult(result, cycle);
+    case 'site-link-integrity': return linkResult(job, result);
+    case 'site-performance-integrity': return performanceResult(result, cycle);
+    default: return result;
+  }
+}
+
+function markdownText(value) {
+  return value.replace(/[\x00-\x1f\x7f]+/g, ' ')
+    .replace(/https?:|[&<>\\`*_[\]|~@]/gi, (match) =>
+      match.length > 1 ? `${match.slice(0, -1)}&#58;` : `&#${match.charCodeAt(0)};`);
+}
+
+function renderPulse(results, { runUrl, eventName, branch, validatorRevision, repository }) {
+  const passed = results.filter((item) => item.state === 'passed').length;
+  const advisories = results.filter((item) => item.state === 'advisory').length;
+  const attention = results.length - passed - advisories;
+  const outcome = attention ? `Review required for ${attention} of ${results.length} checks.`
+    : advisories ? `Cycle passed with advisories (${advisories} of ${results.length} checks).`
+      : `All ${passed} checks passed.`;
+  const lines = [
+    '# Quality Pulse', '',
+    `[Cycle](${runUrl}) · ${markdownText(eventName)} on ${markdownText(branch)} · revision ${markdownText(validatorRevision ?? 'unavailable')}`,
+    '', `**${outcome}**`, '',
+    '| Check | Outcome | Evidence and findings |',
+    '| --- | --- | --- |'
+  ];
+  for (const item of results) {
+    const detail = boundedText(item.detail, 8500);
+    const evidence = [detail && markdownText(detail), item.artifactUrl && `[Artifact](${item.artifactUrl})`].filter(Boolean);
+    lines.push(`| ${item.name} | ${statuses[item.state]} | ${evidence.join(' · ') || '—'} |`);
+  }
+
+  const performance = results.find((item) => item.id === 'site-performance-integrity');
+  if (performance?.comparison) {
+    const { comparison, measurementDate } = performance;
+    const fixed = comparison.fixedReference.runUrl;
+    const runPrefix = `https://github.com/${repository}/actions/runs/`;
+    const fixedSource = comparison.fixedReference.available && typeof fixed === 'string' &&
+      fixed.startsWith(runPrefix) && /^\d+$/.test(fixed.slice(runPrefix.length)) && fixed !== runUrl
+      ? ` · [Fixed reference run](${fixed})` : '';
+    lines.push(
+      '', '## Performance trends', '',
+      `Full-experience homepage, ${measurementDate} UTC. ${describePerformanceComparison(comparison)}${fixedSource}.`,
+      'Positive deltas mean higher values. Rolling history is informational.', '',
+      '| Measure | Fixed Δ | Rolling Δ |', '| --- | --- | --- |'
+    );
+    const rows = homepageTrendRows(comparison);
+    if (!rows.length) lines.push('| Homepage metrics | — | — |');
+    for (const row of rows) lines.push(`| ${row.label} | ${row.fixed} | ${row.rolling} |`);
+  }
   return `${lines.join('\n')}\n`;
 }
 
-function orchestratedJobResult(needs, jobId, name) {
-  if (!needs || !Object.hasOwn(needs, jobId)) {
-    return {
-      name,
-      result: {
-        state: 'missing',
-        label: 'Missing',
-        detail: `The orchestration did not provide a result for the ${jobId} job.`
-      }
-    };
-  }
-  const outcome = needs[jobId]?.result;
-  const outcomes = {
-    success: ['passed', 'Passed'],
-    failure: ['failed', 'Failed', 'The substantive check failed; inspect its job logs and artifacts.'],
-    skipped: ['skipped', 'Skipped', 'The substantive check was skipped; confirm whether the skip was intentional.'],
-    cancelled: ['incomplete', 'Incomplete / cancelled', 'The substantive check was cancelled before a result was established.']
-  };
-  const mapped = outcomes[outcome];
-  if (!mapped) {
-    return {
-      name,
-      result: {
-        state: 'unknown',
-        label: 'Unknown outcome',
-        detail: `The orchestration reported an unavailable or unrecognized ${jobId} result; no pass is inferred.`
-      }
-    };
-  }
-  if (jobId === 'site-link-integrity' && outcome === 'success') {
-    const linkStatus = needs[jobId]?.outputs?.status;
-    if (linkStatus === 'advisory') {
-      return {
-        name,
-        result: {
-          state: 'advisory',
-          label: 'Advisory — uncertain external responses',
-          detail: 'Internal links passed; uncertain external responses require review.'
-        }
-      };
-    }
-    if (linkStatus !== 'success') {
-      return {
-        name,
-        result: {
-          state: 'unknown',
-          label: 'Unknown / link evidence unavailable',
-          detail: 'The link workflow succeeded without a recognized audit status; no clean result is inferred.'
-        }
-      };
-    }
-  }
-  return {
-    name,
-    result: {
-      state: mapped[0],
-      label: mapped[1],
-      ...(mapped[2] ? { detail: mapped[2] } : {})
-    }
-  };
-}
-
 async function buildOrchestratedPulse({
-  apiUrl,
-  repository,
-  token,
-  needs,
-  runId,
-  runUrl,
-  eventName = 'schedule',
-  branch = 'main',
-  date,
-  generatedAt = new Date().toISOString(),
-  sourceRevision = 'unavailable',
-  fetchImpl = fetch,
-  unzipImpl = execFileSync
+  needs = {}, eventName = 'schedule', branch = 'main', fetchImpl = fetch,
+  unzipImpl = execFileSync, ...options
 }) {
-  const jobMap = [
-    ['common-code-quality', 'Common: Code Quality'],
-    ['common-coherence-integrity', 'Common: Coherence Integrity'],
-    ['common-dependency-security', 'Common: Dependency Security'],
-    ['site-build-integrity', 'Site: Build Integrity'],
-    ['site-link-integrity', 'Site: Link Integrity'],
-    ['site-seo-integrity', 'Site: SEO Integrity'],
-    ['site-rendering-integrity', 'Site: Rendering Integrity'],
-    ['site-performance-integrity', 'Site: Performance Integrity']
-  ];
-  const results = jobMap.map(([jobId, name]) =>
-    orchestratedJobResult(needs, jobId, name)
-  );
-  const artifactOptions = { apiUrl, repository, token, runId, fetchImpl, unzipImpl };
-  const performance = results.find((item) => item.name === 'Site: Performance Integrity');
-  if (['passed', 'failed'].includes(performance.result.state)) {
-    try {
-      const { data: files, artifact } = await fetchArtifactJson({
-        ...artifactOptions,
-        artifactName: 'performance-summary',
-        fileNames: ['performance-comparison.json', 'performance-summary.json'],
-        includeMetadata: true
-      });
-      const comparison = files['performance-comparison.json'];
-      const summary = files['performance-summary.json'];
-      if (
-        !isPerformanceComparison(comparison) ||
-        !['passed', 'failed', 'incomplete'].includes(comparison.policy?.status) ||
-        summary?.complete !== true ||
-        summary.source?.eventName !== eventName ||
-        summary.source?.branch !== branch ||
-        String(summary.source?.runId) !== String(runId) ||
-        summary.source?.sha !== sourceRevision
-      ) {
-        throw new Error('performance artifacts have incomplete or mismatched cycle provenance');
-      }
-      const measurementDate = summary.capturedAt?.slice(0, 10);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(measurementDate ?? '')) {
-        throw new Error('Performance Integrity summary has no valid measurement date');
-      }
-      performance.result.baseline = describePerformanceComparison(comparison);
-      applyPerformancePolicyResult(performance.result, comparison.policy);
-      performance.result.trends = {
-        measurementDate,
-        eventName: summary.source.eventName,
-        comparison,
-        artifactUrl: `https://github.com/${repository}/actions/runs/${runId}/artifacts/${artifact.id}`
-      };
-      performance.result.artifactUrl = performance.result.trends.artifactUrl;
-    } catch (error) {
-      if (performance.result.state === 'passed') {
-        performance.result.state = 'unknown';
-        performance.result.label = 'Unknown / performance evidence unavailable';
-      }
-      performance.result.detail = [
-        performance.result.detail,
-        `Performance evidence unavailable or invalid (${error.message}); no comparison is inferred.`
-      ].filter(Boolean).join(' ');
-      performance.result.baseline = 'fixed reference: unknown; rolling baseline: unknown';
-      performance.result.trends = {
-        reason: `comparison artifact unavailable or invalid (${error.message})`,
-        baseline: performance.result.baseline
-      };
-    }
-  } else {
-    performance.result.trends = {
-      reason: `this cycle's Performance Integrity result is ${performance.result.label.toLowerCase()}; no successful current trend is shown`
-    };
-  }
-
-  const dependency = results.find((item) => item.name === 'Common: Dependency Security');
-  if (['passed', 'failed'].includes(dependency.result.state)) {
-    try {
-      const { data: posture, artifact } = await fetchArtifactJson({
-        ...artifactOptions,
-        artifactName: 'dependency-posture',
-        fileName: 'dependency-posture.json',
-        includeMetadata: true
-      });
-      if (!['passed', 'review', 'unknown'].includes(posture?.status)) {
-        throw new Error('dependency posture artifact has an invalid outcome');
-      }
-      dependency.result = applyDependencyPosture(dependency.result, posture);
-      dependency.result.artifactUrl = `https://github.com/${repository}/actions/runs/${runId}/artifacts/${artifact.id}`;
-    } catch (error) {
-      if (dependency.result.state === 'passed') {
-        dependency.result.state = 'unknown';
-        dependency.result.label = 'Unknown / posture artifact unavailable';
-      }
-      dependency.result.detail = [
-        dependency.result.detail,
-        `Dependency posture evidence unavailable or invalid (${error.message}); no clean result is inferred.`
-      ].filter(Boolean).join(' ');
-    }
-  }
-
-  const markdown = renderPulse({
-    date,
-    generatedAt,
-    runUrl,
-    results,
-    sourceRevision
-  });
+  const cycle = { ...options, eventName, branch, fetchImpl, unzipImpl };
+  const results = await Promise.all(dimensions.map(async ([id, name]) => ({
+    id, name, ...await dimensionResult(id, needs?.[id], cycle)
+  })));
   return {
-    markdown,
-    successful: results.every((item) => item.result.state === 'passed'),
-    completed: results.every((item) => ['passed', 'advisory'].includes(item.result.state))
+    results,
+    markdown: renderPulse(results, cycle),
+    successful: results.every((item) => successfulStates.includes(item.state))
   };
 }
 
 async function main() {
-  const date = process.env.PULSE_DATE ?? utcDate(new Date());
   const pulse = await buildOrchestratedPulse({
     apiUrl: process.env.GITHUB_API_URL ?? 'https://api.github.com',
     repository: process.env.GITHUB_REPOSITORY,
@@ -628,30 +408,17 @@ async function main() {
     needs: JSON.parse(process.env.PULSE_RESULTS_JSON ?? '{}'),
     runId: process.env.PULSE_RUN_ID,
     runUrl: process.env.PULSE_RUN_URL,
-    eventName: process.env.PULSE_EVENT_NAME ?? 'schedule',
-    branch: process.env.PULSE_RUN_BRANCH ?? 'main',
-    date,
-    generatedAt: process.env.PULSE_GENERATED_AT ?? new Date().toISOString(),
-    sourceRevision: process.env.PULSE_SOURCE_REVISION ?? 'unavailable'
+    eventName: process.env.PULSE_EVENT_NAME,
+    branch: process.env.PULSE_RUN_BRANCH,
+    validatorRevision: process.env.PULSE_SOURCE_REVISION
   });
-  if (process.env.GITHUB_STEP_SUMMARY) {
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, pulse.markdown);
-  }
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, pulse.markdown);
   process.stdout.write(pulse.markdown);
-  if (!pulse.completed) process.exitCode = 1;
+  if (!pulse.successful) process.exitCode = 1;
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
   await main();
 }
 
-export {
-  applyDependencyPosture,
-  buildOrchestratedPulse,
-  describePerformanceComparison,
-  formatTrendDelta,
-  homepageTrendRows,
-  isPerformanceComparison,
-  renderPerformanceTrends,
-  renderPulse
-};
+export { buildOrchestratedPulse };
