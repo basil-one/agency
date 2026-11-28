@@ -19,4 +19,4 @@ For licensing, see `LICENSE.md`.
 - Separated controlled performance checks on changes from full-experience monitoring over time.
 - Strengthened site accessibility, link integrity, SEO, and dependency security checks.
 - Organized workflows, supporting scripts, and tests around consistent ownership boundaries.
-- Retired superseded Pulse history discovery and consolidated rendering evidence reporting.
+- Simplified quality automation and reporting while preserving substantive safeguards.
