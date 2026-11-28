@@ -19,7 +19,6 @@ function collectTests(suites, tests) {
           status: ['passed', 'failed', 'timedOut', 'skipped'].includes(status)
             ? status
             : 'not completed',
-          annotations: test.annotations ?? [],
           axeScanned: test.annotations?.some(
             (annotation) => annotation.type === 'axe-scan-complete'
           ) ?? false,
@@ -49,11 +48,19 @@ function readTestResults(report) {
 
 function statusCounts(tests) {
   return {
+    total: tests.length,
     passed: tests.filter((test) => test.status === 'passed').length,
     failed: tests.filter((test) => ['failed', 'timedOut'].includes(test.status)).length,
     skipped: tests.filter((test) => test.status === 'skipped').length,
     incomplete: tests.filter((test) => test.status === 'not completed').length
   };
+}
+
+function formatCounts(counts, includeTotal = true) {
+  const passed = includeTotal
+    ? `${counts.passed}/${counts.total} passed`
+    : `${counts.passed} passed`;
+  return `${passed}, ${counts.failed} failed, ${counts.skipped} skipped, ${counts.incomplete} incomplete`;
 }
 
 function summarizeRendering({
@@ -108,9 +115,9 @@ function summarizeRendering({
     const responsiveCounts = statusCounts(responsiveTests);
     const scansCompleted = axeTests.filter((test) => test.axeScanned).length;
     lines.push(
-      `- Smoke routes: **${routeCounts.passed}/${routeTests.length} passed, ${routeCounts.failed} failed, ${routeCounts.skipped} skipped, ${routeCounts.incomplete} incomplete**.`,
-      `- Axe scans: **${scansCompleted}/${axeTests.length} completed; ${axeCounts.passed} passed, ${axeCounts.failed} failed, ${axeCounts.skipped} skipped, ${axeCounts.incomplete} incomplete**.`,
-      `- Responsive checks: **${responsiveCounts.passed}/${responsiveTests.length} passed, ${responsiveCounts.failed} failed, ${responsiveCounts.skipped} skipped, ${responsiveCounts.incomplete} incomplete** across ${responsiveRoutes.length} route${responsiveRoutes.length === 1 ? '' : 's'} and ${responsiveViewports.length} viewport${responsiveViewports.length === 1 ? '' : 's'} (${responsiveViewports.length ? responsiveViewports.map((width) => `${width}px`).join(', ') : 'unavailable'}).`
+      `- Smoke routes: **${formatCounts(routeCounts)}**.`,
+      `- Axe scans: **${scansCompleted}/${axeTests.length} completed; ${formatCounts(axeCounts, false)}**.`,
+      `- Responsive checks: **${formatCounts(responsiveCounts)}** across ${responsiveRoutes.length} route${responsiveRoutes.length === 1 ? '' : 's'} and ${responsiveViewports.length} viewport${responsiveViewports.length === 1 ? '' : 's'} (${responsiveViewports.length ? responsiveViewports.map((width) => `${width}px`).join(', ') : 'unavailable'}).`
     );
 
     const coverageComplete = routeTests.length > 0 &&

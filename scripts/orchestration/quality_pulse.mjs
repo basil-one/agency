@@ -20,16 +20,9 @@ function timestamp(value) {
     : `${parsed.toISOString().replace('T', ' ').replace(/Z$/, ' UTC')}`;
 }
 
-function runLink(run) {
-  return run?.html_url ?? '';
-}
-
 function performanceDetail(result) {
   const policyFinding = performancePolicyFailureDetail(result.policy);
   if (policyFinding) return policyFinding;
-  if (result.state === 'fresh') {
-    return `Lighthouse measurement executed; ${result.baseline ?? 'fixed-reference and rolling-baseline state are in the linked run summary.'}`;
-  }
   if (result.state === 'failed') {
     return `Measurement failed or a later step failed; ${result.baseline ?? 'inspect the linked summary for measurement and baseline state.'}`;
   }
@@ -114,7 +107,7 @@ function applyPerformancePolicyResult(result, policy) {
     result.state = 'incomplete';
     result.label = 'Incomplete / confirmation unavailable';
     result.detail = finding;
-  } else if (!['passed'].includes(policy?.status) && result.state === 'fresh') {
+  } else if (policy?.status !== 'passed' && result.state === 'passed') {
     result.state = 'unknown';
     result.label = 'Unknown / performance policy unavailable';
     result.detail = finding ??
@@ -214,7 +207,7 @@ function renderPerformanceTrends(result) {
     '',
     'Lower is better for these lab metrics; positive deltas mean a higher measured value. Comparisons are informational and do not establish a sustained direction.'
   ];
-  const canShowComparison = trends?.state === 'fresh' &&
+  const canShowComparison = result?.state === 'passed' &&
     isPerformanceComparison(trends?.comparison) &&
     /^\d{4}-\d{2}-\d{2}$/.test(trends.measurementDate ?? '');
   if (!canShowComparison) {
@@ -229,7 +222,7 @@ function renderPerformanceTrends(result) {
 
   const measurement = trends.eventName === 'workflow_dispatch'
     ? `Measurement — ${trends.measurementDate} UTC (manually dispatched cycle).`
-    : `Measurement — ${trends.measurementDate} UTC (fresh scheduled run).`;
+    : `Measurement — ${trends.measurementDate} UTC (scheduled cycle).`;
   lines.push(
     '',
     `**${measurement}**`,
@@ -351,14 +344,8 @@ function applyDependencyPosture(result, posture) {
     return {
       ...result,
       state: 'failed',
-      label: 'Fresh — review required',
+      label: 'Review required',
       detail: `${posture.detail}; open the linked run for alert findings.`
-    };
-  }
-  if (posture.status === 'passed' && result.state === 'fresh') {
-    return {
-      ...result,
-      detail: 'Open Dependabot alerts were checked across enabled ecosystems; none met the review threshold.'
     };
   }
   return result;
@@ -367,15 +354,15 @@ function applyDependencyPosture(result, posture) {
 function renderPulse({
   date,
   generatedAt,
+  runUrl,
   results,
   sourceRevision = 'unavailable'
 }) {
   const needsReview = results.filter(
-    (item) => !['fresh', 'advisory'].includes(item.result.state)
+    (item) => !['passed', 'advisory'].includes(item.result.state)
   );
   const advisories = results.filter((item) => item.result.state === 'advisory');
   const findings = [...needsReview, ...advisories];
-  const cycleRun = results.find((item) => runLink(item.result.run))?.result.run;
   const aggregate = needsReview.length
     ? `Cycle incomplete — ${needsReview.length} of ${results.length} dimensions are not confirmed successful.`
     : advisories.length
@@ -386,7 +373,7 @@ function renderPulse({
     '',
     `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}`,
     '',
-    `**Cycle:** ${cycleRun ? `[workflow run](${runLink(cycleRun)})` : 'unavailable'}`,
+    `**Cycle:** ${runUrl ? `[workflow run](${runUrl})` : 'unavailable'}`,
     '',
     `**Validator revision:** \`${sourceRevision || 'unavailable'}\``,
     '',
@@ -442,21 +429,20 @@ function renderPulse({
   return `${lines.join('\n')}\n`;
 }
 
-function orchestratedJobResult(needs, jobId, name, run) {
+function orchestratedJobResult(needs, jobId, name) {
   if (!needs || !Object.hasOwn(needs, jobId)) {
     return {
       name,
       result: {
         state: 'missing',
         label: 'Missing',
-        run,
         detail: `The orchestration did not provide a result for the ${jobId} job.`
       }
     };
   }
   const outcome = needs[jobId]?.result;
   const outcomes = {
-    success: ['fresh', 'Passed', 'The substantive check completed successfully in this cycle.'],
+    success: ['passed', 'Passed'],
     failure: ['failed', 'Failed', 'The substantive check failed; inspect its job logs and artifacts.'],
     skipped: ['skipped', 'Skipped', 'The substantive check was skipped; confirm whether the skip was intentional.'],
     cancelled: ['incomplete', 'Incomplete / cancelled', 'The substantive check was cancelled before a result was established.']
@@ -468,7 +454,6 @@ function orchestratedJobResult(needs, jobId, name, run) {
       result: {
         state: 'unknown',
         label: 'Unknown outcome',
-        run,
         detail: `The orchestration reported an unavailable or unrecognized ${jobId} result; no pass is inferred.`
       }
     };
@@ -481,7 +466,6 @@ function orchestratedJobResult(needs, jobId, name, run) {
         result: {
           state: 'advisory',
           label: 'Advisory — uncertain external responses',
-          run,
           detail: 'Internal links passed; uncertain external responses require review.'
         }
       };
@@ -492,7 +476,6 @@ function orchestratedJobResult(needs, jobId, name, run) {
         result: {
           state: 'unknown',
           label: 'Unknown / link evidence unavailable',
-          run,
           detail: 'The link workflow succeeded without a recognized audit status; no clean result is inferred.'
         }
       };
@@ -500,7 +483,11 @@ function orchestratedJobResult(needs, jobId, name, run) {
   }
   return {
     name,
-    result: { state: mapped[0], label: mapped[1], run, detail: mapped[2] }
+    result: {
+      state: mapped[0],
+      label: mapped[1],
+      ...(mapped[2] ? { detail: mapped[2] } : {})
+    }
   };
 }
 
@@ -519,11 +506,6 @@ async function buildOrchestratedPulse({
   fetchImpl = fetch,
   unzipImpl = execFileSync
 }) {
-  const run = {
-    id: runId,
-    html_url: runUrl,
-    cycle: true
-  };
   const jobMap = [
     ['common-code-quality', 'Common: Code Quality'],
     ['common-coherence-integrity', 'Common: Coherence Integrity'],
@@ -535,11 +517,11 @@ async function buildOrchestratedPulse({
     ['site-performance-integrity', 'Site: Performance Integrity']
   ];
   const results = jobMap.map(([jobId, name]) =>
-    orchestratedJobResult(needs, jobId, name, run)
+    orchestratedJobResult(needs, jobId, name)
   );
   const artifactOptions = { apiUrl, repository, token, runId, fetchImpl, unzipImpl };
   const performance = results.find((item) => item.name === 'Site: Performance Integrity');
-  if (['fresh', 'failed'].includes(performance.result.state)) {
+  if (['passed', 'failed'].includes(performance.result.state)) {
     try {
       const { data: files, artifact } = await fetchArtifactJson({
         ...artifactOptions,
@@ -567,36 +549,35 @@ async function buildOrchestratedPulse({
       performance.result.baseline = describePerformanceComparison(comparison);
       applyPerformancePolicyResult(performance.result, comparison.policy);
       performance.result.trends = {
-        state: performance.result.state,
         measurementDate,
         eventName: summary.source.eventName,
         comparison,
-        runUrl,
         artifactUrl: `https://github.com/${repository}/actions/runs/${runId}/artifacts/${artifact.id}`
       };
       performance.result.artifactUrl = performance.result.trends.artifactUrl;
     } catch (error) {
-      if (performance.result.state === 'fresh') {
+      if (performance.result.state === 'passed') {
         performance.result.state = 'unknown';
         performance.result.label = 'Unknown / performance evidence unavailable';
       }
-      performance.result.detail += ` Performance evidence unavailable or invalid (${error.message}); no comparison is inferred.`;
+      performance.result.detail = [
+        performance.result.detail,
+        `Performance evidence unavailable or invalid (${error.message}); no comparison is inferred.`
+      ].filter(Boolean).join(' ');
       performance.result.baseline = 'fixed reference: unknown; rolling baseline: unknown';
       performance.result.trends = {
         reason: `comparison artifact unavailable or invalid (${error.message})`,
-        baseline: performance.result.baseline,
-        runUrl
+        baseline: performance.result.baseline
       };
     }
   } else {
     performance.result.trends = {
-      reason: `this cycle's Performance Integrity result is ${performance.result.label.toLowerCase()}; no successful current trend is shown`,
-      runUrl
+      reason: `this cycle's Performance Integrity result is ${performance.result.label.toLowerCase()}; no successful current trend is shown`
     };
   }
 
   const dependency = results.find((item) => item.name === 'Common: Dependency Security');
-  if (['fresh', 'failed'].includes(dependency.result.state)) {
+  if (['passed', 'failed'].includes(dependency.result.state)) {
     try {
       const { data: posture, artifact } = await fetchArtifactJson({
         ...artifactOptions,
@@ -610,24 +591,28 @@ async function buildOrchestratedPulse({
       dependency.result = applyDependencyPosture(dependency.result, posture);
       dependency.result.artifactUrl = `https://github.com/${repository}/actions/runs/${runId}/artifacts/${artifact.id}`;
     } catch (error) {
-      if (dependency.result.state === 'fresh') {
+      if (dependency.result.state === 'passed') {
         dependency.result.state = 'unknown';
         dependency.result.label = 'Unknown / posture artifact unavailable';
       }
-      dependency.result.detail += ` Dependency posture evidence unavailable or invalid (${error.message}); no clean result is inferred.`;
+      dependency.result.detail = [
+        dependency.result.detail,
+        `Dependency posture evidence unavailable or invalid (${error.message}); no clean result is inferred.`
+      ].filter(Boolean).join(' ');
     }
   }
 
   const markdown = renderPulse({
     date,
     generatedAt,
+    runUrl,
     results,
     sourceRevision
   });
   return {
     markdown,
-    successful: results.every((item) => item.result.state === 'fresh'),
-    completed: results.every((item) => ['fresh', 'advisory'].includes(item.result.state))
+    successful: results.every((item) => item.result.state === 'passed'),
+    completed: results.every((item) => ['passed', 'advisory'].includes(item.result.state))
   };
 }
 

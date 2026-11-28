@@ -187,17 +187,19 @@ function collectCoherenceFailures(repository) {
   ) {
     failures.push('performance workflow does not use the canonical domain reference');
   }
-  if (
-    !performanceWorkflow.includes('Confirm initially violating route profiles') ||
-    !performanceWorkflow.includes('compare_performance.mjs --finalize') ||
-    !performanceWorkflow.includes('PERFORMANCE_PROFILES_JSON:')
-  ) {
+  if (!performanceWorkflow.includes('compare_performance.mjs --finalize')) {
     failures.push('performance workflow does not measure and enforce route/profile confirmation');
   }
-  const confirmationStep = performanceWorkflow.split('id: confirmation')[1]?.split(
-    '- name: Enforce confirmed performance safeguards'
-  )[0] ?? '';
-  if (!confirmationStep.includes('GITHUB_SHA: ${{ github.sha }}')) {
+  const confirmationStart = performanceWorkflow.indexOf('        id: confirmation\n');
+  const nextStep = performanceWorkflow.indexOf('\n      - name:', confirmationStart);
+  const confirmationStep = confirmationStart < 0
+    ? ''
+    : performanceWorkflow.slice(confirmationStart, nextStep < 0 ? undefined : nextStep);
+  if (
+    !confirmationStep.includes('run: npm run measure:performance') ||
+    !confirmationStep.includes('PERFORMANCE_PROFILES_JSON:') ||
+    !confirmationStep.includes('GITHUB_SHA: ${{ github.sha }}')
+  ) {
     failures.push('performance confirmation does not preserve the checked-out source revision');
   }
   if (
@@ -332,6 +334,30 @@ test('rejects missing release identity, test wiring, or changelog exclusion', ()
     writeFileSync(file, readFileSync(file, 'utf8').replace('  - CHANGELOG.md\n', ''));
   });
   assert.ok(missingExclusion.includes('Jekyll does not exclude the changelog and repository scripts and tests'));
+});
+
+test('performance confirmation protects source revision independently of its display title', () => {
+  const renamedStep = fixture((directory) => {
+    const file = join(directory, '.github/workflows/site-performance-integrity.yml');
+    writeFileSync(file, readFileSync(file, 'utf8').replace(
+      'Confirm initially violating route profiles',
+      'Measure selected profiles'
+    ));
+  });
+  assert.equal(renamedStep.includes(
+    'performance confirmation does not preserve the checked-out source revision'
+  ), false);
+
+  const missingSource = fixture((directory) => {
+    const file = join(directory, '.github/workflows/site-performance-integrity.yml');
+    writeFileSync(file, readFileSync(file, 'utf8').replace(
+      /(id: confirmation[\s\S]*?)GITHUB_SHA: \$\{\{ github\.sha \}\}/,
+      '$1GITHUB_SHA: ${{ github.ref_name }}'
+    ));
+  });
+  assert.ok(missingSource.includes(
+    'performance confirmation does not preserve the checked-out source revision'
+  ));
 });
 
 test('rejects missing Site production paths and production imports from tests', () => {

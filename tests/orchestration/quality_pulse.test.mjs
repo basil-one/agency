@@ -152,13 +152,13 @@ test('Pulse escapes Markdown delimiters in evidence details', () => {
   const markdown = renderPulse({
     date,
     generatedAt: `${date}T18:17:00Z`,
+    runUrl,
     results: [{
       name: 'Site: Build Integrity',
       result: {
         state: 'failed',
         label: 'Failed',
-        detail: String.raw`untrusted\| detail`,
-        run: { cycle: true, html_url: runUrl }
+        detail: String.raw`untrusted\| detail`
       }
     }]
   });
@@ -166,7 +166,7 @@ test('Pulse escapes Markdown delimiters in evidence details', () => {
 });
 
 test('dependency posture keeps unavailable evidence, findings, and clean checks distinct', () => {
-  const passed = { state: 'fresh', label: 'Passed', detail: 'The check passed.' };
+  const passed = { state: 'passed', label: 'Passed' };
   const unknown = applyDependencyPosture(passed, {
     status: 'unknown',
     detail: 'Dependabot alerts API returned HTTP 403'
@@ -181,8 +181,7 @@ test('dependency posture keeps unavailable evidence, findings, and clean checks 
   assert.equal(review.state, 'failed');
 
   const clean = applyDependencyPosture(passed, { status: 'passed' });
-  assert.equal(clean.state, 'fresh');
-  assert.match(clean.detail, /none met the review threshold/);
+  assert.deepEqual(clean, passed);
 
   const knownFinding = {
     state: 'failed',
@@ -213,12 +212,10 @@ test('homepage trends use only available homepage values and compatible history'
   assert.equal(formatTrendDelta(null), '—');
 
   const markdown = renderPerformanceTrends({
-    state: 'fresh',
+    state: 'passed',
     trends: {
-      state: 'fresh',
       measurementDate: date,
       comparison: performanceComparison,
-      runUrl,
       artifactUrl: `${runUrl}/artifacts/456`
     }
   }).join('\n');
