@@ -8,29 +8,8 @@ import {
   performanceBudgets
 } from '../site/performance_policy.mjs';
 
-const dimensions = [
-  { name: 'Common: Code Quality', file: 'common-code-quality.yml' },
-  { name: 'Common: Coherence Integrity', file: 'common-coherence-integrity.yml' },
-  { name: 'Common: Dependency Security', file: 'common-dependency-security.yml' },
-  { name: 'Site: Build Integrity', file: 'site-build-integrity.yml' },
-  { name: 'Site: Link Integrity', file: 'site-link-integrity.yml' },
-  { name: 'Site: SEO Integrity', file: 'site-seo-integrity.yml' },
-  { name: 'Site: Rendering Integrity', file: 'site-rendering-integrity.yml' },
-  { name: 'Site: Performance Integrity', file: 'site-performance-integrity.yml' }
-];
-
-const cutoffTime = '18:00:00Z';
-const priorDays = 90;
-const staleAfterDays = 2;
-
 function utcDate(value) {
   return value.toISOString().slice(0, 10);
-}
-
-function dateDaysAgo(date, days) {
-  const value = new Date(`${date}T00:00:00Z`);
-  value.setUTCDate(value.getUTCDate() - days);
-  return utcDate(value);
 }
 
 function timestamp(value) {
@@ -41,225 +20,12 @@ function timestamp(value) {
     : `${parsed.toISOString().replace('T', ' ').replace(/Z$/, ' UTC')}`;
 }
 
-function runTime(run) {
-  if (run.cycle) return 'Same-cycle job result';
-  if (run.completionEvidence?.completedAt) {
-    return `Completed ${timestamp(run.completionEvidence.completedAt)}`;
-  }
-  if (run.run_started_at) return `Started ${timestamp(run.run_started_at)}`;
-  if (run.created_at) return `Created ${timestamp(run.created_at)}`;
-  return 'run time unavailable';
-}
-
-function runLink(run) {
-  return run?.html_url ?? '';
-}
-
-function completionEvidenceFromJobs(jobs) {
-  if (!Array.isArray(jobs) || jobs.length === 0) {
-    return { status: 'unknown', reason: 'No workflow job completion records were returned.' };
-  }
-  if (jobs.some((job) => job.status !== 'completed')) {
-    return { status: 'incomplete', reason: 'One or more workflow jobs are still incomplete.' };
-  }
-  const executedJobs = jobs.filter((job) => job.conclusion !== 'skipped');
-  if (executedJobs.length === 0) {
-    return { status: 'unknown', reason: 'No workflow job ran to completion.' };
-  }
-  if (executedJobs.some((job) => !['success', 'neutral', 'failure', 'timed_out', 'cancelled'].includes(job.conclusion))) {
-    return { status: 'unknown', reason: 'Workflow job conclusions are unavailable or invalid.' };
-  }
-  const completionTimes = executedJobs.map((job) =>
-    typeof job.completed_at === 'string' ? Date.parse(job.completed_at) : Number.NaN
-  );
-  if (completionTimes.some((value) => !Number.isFinite(value))) {
-    return { status: 'unknown', reason: 'Workflow job completion timestamps are unavailable or invalid.' };
-  }
-  const completedAt = new Date(Math.max(...completionTimes)).toISOString();
-  return {
-    status: 'completed',
-    completedAt,
-    successful: executedJobs.every((job) => ['success', 'neutral'].includes(job.conclusion))
-  };
-}
-
-function evaluateRuns(runs, date, cutoff = cutoffTime, completionByRunId = new Map()) {
-  const dailyRuns = runs
-    .filter((run) => run.created_at?.slice(0, 10) === date)
-    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
-  const cutoffAt = new Date(`${date}T${cutoff}`);
-  const today = dailyRuns[0];
-  if (today) {
-    const todayEvidenceRun = {
-      ...today,
-      completionEvidence: completionByRunId.get(today.id)
-    };
-    if (today.conclusion === 'failure' || today.conclusion === 'timed_out') {
-      return {
-        state: 'failed',
-        label: 'Fresh — failed',
-        run: todayEvidenceRun,
-        detail: 'Open the workflow run for findings and the next corrective action.'
-      };
-    }
-    if (today.conclusion === 'cancelled') {
-      return {
-        state: 'failed',
-        label: 'Cancelled',
-        run: todayEvidenceRun,
-        detail: 'The scheduled verification was cancelled; inspect the run and rerun if appropriate.'
-      };
-    }
-    if (today.conclusion === 'skipped') {
-      return {
-        state: 'skipped',
-        label: 'Skipped',
-        run: todayEvidenceRun,
-        detail: 'The daily verification was skipped; confirm whether the skip was intentional.'
-      };
-    }
-    if (today.status !== 'completed') {
-      return {
-        state: 'late',
-        label: 'Late / incomplete',
-        run: todayEvidenceRun,
-        detail: `The scheduled run was still ${today.status ?? 'incomplete'} at the ${cutoff} cutoff.`
-      };
-    }
-    if (today.conclusion === 'success') {
-      const completion = completionByRunId.get(today.id);
-      if (completion?.status !== 'completed' || completion.successful !== true) {
-        return {
-          state: 'unknown',
-          label: 'Unknown completion time',
-          run: today,
-          detail: `${completion?.reason ?? 'Workflow job completion evidence does not establish a successful finished check'} The run is not marked fresh.`
-        };
-      }
-      if (Date.parse(completion.completedAt) > cutoffAt.valueOf()) {
-        return {
-          state: 'late',
-          label: 'Late',
-          run: todayEvidenceRun,
-          detail: `The latest workflow job completed after the ${cutoff} cutoff; today's result is late.`
-        };
-      }
-      return {
-        state: 'fresh',
-        label: 'Fresh — passed',
-        run: todayEvidenceRun,
-        detail: 'All workflow jobs completed by the cutoff.'
-      };
-    }
-    return {
-      state: 'unknown',
-      label: 'Unknown outcome',
-      run: todayEvidenceRun,
-      detail: `The workflow reported ${today.conclusion ?? 'no conclusion'}; inspect the run.`
-    };
-  }
-
-  const previous = runs
-    .filter(
-      (run) =>
-        run.conclusion === 'success' &&
-        run.created_at?.slice(0, 10) < date
-    )
-    .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
-  if (!previous) {
-    return {
-      state: 'missing',
-      label: 'Missing',
-      detail: 'No scheduled main run today or earlier successful verification was found.'
-    };
-  }
-  const ageDays = Math.floor(
-    (Date.parse(`${date}T00:00:00Z`) -
-      Date.parse(`${previous.created_at.slice(0, 10)}T00:00:00Z`)) /
-      86_400_000
-  );
-  if (ageDays <= staleAfterDays) {
-    return {
-      state: 'prior',
-      label: 'Prior verification',
-      run: { ...previous, completionEvidence: completionByRunId.get(previous.id) },
-      detail: `No fresh run today. Last successful verification was ${ageDays} day(s) earlier; do not treat it as today's check.`
-    };
-  }
-  return {
-    state: 'stale',
-    label: 'Stale',
-    run: { ...previous, completionEvidence: completionByRunId.get(previous.id) },
-    detail: `No fresh run today. Last successful verification was ${ageDays} days earlier; inspect schedule health and rerun.`
-  };
-}
-
-async function fetchRuns({ apiUrl, repository, workflow, token, date, fetchImpl }) {
-  if (!token) throw new Error('GitHub Actions read token is unavailable');
-  const url = new URL(
-    `/repos/${repository}/actions/workflows/${workflow.file}/runs`,
-    apiUrl
-  );
-  url.search = new URLSearchParams({
-    branch: 'main',
-    event: 'schedule',
-    created: `${dateDaysAgo(date, priorDays)}..${date}`,
-    per_page: '100',
-    sort: 'created',
-    direction: 'desc'
-  });
-  const response = await fetchImpl(url, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: ['Bearer', token].join(' '),
-      'X-GitHub-Api-Version': '2022-11-28'
-    },
-    signal: AbortSignal.timeout(15_000)
-  });
-  if (!response.ok) throw new Error(`GitHub Actions API returned HTTP ${response.status}`);
-  const data = await response.json();
-  if (!Array.isArray(data.workflow_runs)) {
-    throw new Error('GitHub Actions API returned an unreadable workflow-run list');
-  }
-  return data.workflow_runs;
-}
-
-async function fetchRunCompletion({ apiUrl, repository, runId, token, fetchImpl }) {
-  const url = new URL(
-    `/repos/${repository}/actions/runs/${runId}/jobs`,
-    apiUrl
-  );
-  url.search = new URLSearchParams({ per_page: '100', page: '1' });
-  const response = await fetchImpl(url, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-      Authorization: ['Bearer', token].join(' '),
-      'X-GitHub-Api-Version': '2022-11-28'
-    },
-    signal: AbortSignal.timeout(15_000)
-  });
-  if (!response.ok) {
-    return { status: 'unknown', reason: `GitHub Actions Jobs API returned HTTP ${response.status}.` };
-  }
-  const data = await response.json();
-  if (
-    !Array.isArray(data.jobs) ||
-    !Number.isInteger(data.total_count) ||
-    data.total_count > data.jobs.length
-  ) {
-    return { status: 'unknown', reason: 'GitHub Actions Jobs API returned incomplete job records.' };
-  }
-  return completionEvidenceFromJobs(data.jobs);
-}
-
 function performanceDetail(result) {
   const policyFinding = performancePolicyFailureDetail(result.policy);
   if (policyFinding) return policyFinding;
-  if (result.state === 'fresh') {
-    return `Lighthouse measurement executed; ${result.baseline ?? 'fixed-reference and rolling-baseline state are in the linked run summary.'}`;
-  }
   if (result.state === 'failed') {
-    return `Measurement failed or a later step failed; ${result.baseline ?? 'inspect the linked summary for measurement and baseline state.'}`;
+    return result.detail ??
+      `Measurement failed or a later step failed; ${result.baseline ?? 'inspect the linked summary for measurement and baseline state.'}`;
   }
   if (result.state === 'skipped') {
     return 'Measurement was skipped; no current samples or comparison are claimed.';
@@ -342,7 +108,7 @@ function applyPerformancePolicyResult(result, policy) {
     result.state = 'incomplete';
     result.label = 'Incomplete / confirmation unavailable';
     result.detail = finding;
-  } else if (!['passed'].includes(policy?.status) && result.state === 'fresh') {
+  } else if (policy?.status !== 'passed' && result.state === 'passed') {
     result.state = 'unknown';
     result.label = 'Unknown / performance policy unavailable';
     result.detail = finding ??
@@ -442,32 +208,30 @@ function renderPerformanceTrends(result) {
     '',
     'Lower is better for these lab metrics; positive deltas mean a higher measured value. Comparisons are informational and do not establish a sustained direction.'
   ];
-  const canShowComparison = ['fresh', 'prior'].includes(trends?.state) &&
+  const canShowComparison = result?.state === 'passed' &&
     isPerformanceComparison(trends?.comparison) &&
     /^\d{4}-\d{2}-\d{2}$/.test(trends.measurementDate ?? '');
   if (!canShowComparison) {
-    const reason = trends?.reason ??
-      (trends?.comparison
-        ? 'the measurement is not a dated successful current or prior run'
-        : 'no successful measurement evidence is available.');
+    const reason = result?.state === 'failed'
+      ? 'see Findings for the captured performance detail'
+      : trends?.reason ??
+        (trends?.comparison
+          ? 'the measurement is not a dated successful current run'
+          : 'no successful measurement evidence is available.');
     lines.push('', `Performance comparison unavailable: ${reason}`);
-    if (trends?.runUrl) lines.push(`Source: [Site: Performance Integrity run](${trends.runUrl}).`);
     if (trends?.baseline) lines.push(`Baselines: ${trends.baseline}.`);
     return lines;
   }
 
-  const measurement = trends.state === 'prior'
-    ? `Prior successful measurement — ${trends.measurementDate}; not today's verification.`
-    : trends.eventName === 'workflow_dispatch'
-      ? `Measurement — ${trends.measurementDate} UTC (manually dispatched cycle).`
-      : `Measurement — ${trends.measurementDate} UTC (fresh scheduled run).`;
+  const measurement = trends.eventName === 'workflow_dispatch'
+    ? `Measurement — ${trends.measurementDate} UTC (manually dispatched cycle).`
+    : `Measurement — ${trends.measurementDate} UTC (scheduled cycle).`;
   lines.push(
     '',
     `**${measurement}**`,
     `**Baselines:** ${describePerformanceComparison(trends.comparison)}.`
   );
   const sources = [];
-  if (trends.runUrl) sources.push(`[Site: Performance Integrity run](${trends.runUrl})`);
   if (trends.artifactUrl) sources.push(`[comparison artifact](${trends.artifactUrl})`);
   const fixedRunUrl = trends.comparison.fixedReference?.runUrl;
   if (fixedRunUrl) sources.push(`[fixed reference run](${fixedRunUrl})`);
@@ -583,14 +347,8 @@ function applyDependencyPosture(result, posture) {
     return {
       ...result,
       state: 'failed',
-      label: 'Fresh — review required',
+      label: 'Review required',
       detail: `${posture.detail}; open the linked run for alert findings.`
-    };
-  }
-  if (posture.status === 'passed' && result.state === 'fresh') {
-    return {
-      ...result,
-      detail: 'Open Dependabot alerts were checked across enabled ecosystems; none met the review threshold.'
     };
   }
   return result;
@@ -599,36 +357,30 @@ function applyDependencyPosture(result, posture) {
 function renderPulse({
   date,
   generatedAt,
+  runUrl,
   results,
-  cutoff = cutoffTime,
-  orchestrated = false,
   sourceRevision = 'unavailable'
 }) {
   const needsReview = results.filter(
-    (item) => !['fresh', 'advisory'].includes(item.result.state)
+    (item) => !['passed', 'advisory'].includes(item.result.state)
   );
   const advisories = results.filter((item) => item.result.state === 'advisory');
   const findings = [...needsReview, ...advisories];
   const aggregate = needsReview.length
-    ? orchestrated
-      ? `Cycle incomplete — ${needsReview.length} of ${results.length} dimensions are not confirmed successful.`
-      : `Review required — ${needsReview.length} of ${results.length} dimensions are not freshly successful.`
-    : orchestrated && advisories.length
+    ? `Cycle incomplete — ${needsReview.length} of ${results.length} dimensions are not confirmed successful.`
+    : advisories.length
       ? `Cycle successful with advisories — ${advisories.length} of ${results.length} dimensions require attention.`
-      : orchestrated
-        ? `All ${results.length} dimensions passed in this cycle.`
-        : `All ${results.length} dimensions have fresh successful scheduled checks.`;
+      : `All ${results.length} dimensions passed in this cycle.`;
   const lines = [
     '# Quality Pulse',
     '',
-    `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}${orchestrated ? '' : `  ·  **Cutoff:** ${date} ${cutoff}`}`,
-    ...(orchestrated
-      ? ['', `**Validator revision:** \`${sourceRevision || 'unavailable'}\``]
-      : []),
+    `**Reporting date:** ${date} UTC  ·  **Generated:** ${timestamp(generatedAt)}`,
     '',
-    `**Outcome:** ${aggregate} ${orchestrated
-      ? 'This summary reflects the same-cycle substantive job results and does not replace their check outcomes.'
-      : 'This is an informational review summary, not a required PR check or remediation verdict.'}`,
+    `**Cycle:** ${runUrl ? `[workflow run](${runUrl})` : 'unavailable'}`,
+    '',
+    `**Validator revision:** \`${sourceRevision || 'unavailable'}\``,
+    '',
+    `**Outcome:** ${aggregate} This summary reflects the same-cycle substantive job results and does not replace their check outcomes.`,
     '',
     '## Findings',
     ''
@@ -637,26 +389,21 @@ function renderPulse({
     for (const item of findings) {
       const state = item.result.state;
       const action = state === 'failed'
-        ? item.name === 'Site: Performance Integrity' && item.result.run?.cycle
-          ? ''
-          : 'Open the run and address the reported failure.'
+        ? ''
         : state === 'advisory'
-          ? 'Review the reported external uncertainty.'
+          ? ''
           : state === 'unknown'
-            ? 'Check Actions/API access and inspect the last available workflow run.'
-            : state === 'missing' || state === 'stale'
-              ? 'Check whether the scheduled workflow ran; dispatch it manually if needed.'
-              : state === 'prior'
-                ? "Check today's schedule; an earlier pass is not today's verification."
-                : state === 'skipped'
-                  ? 'Confirm the skip is expected and arrange a full verification if not.'
-                  : state === 'incomplete'
-                    ? 'Inspect the cancelled or incomplete job and rerun the cycle if appropriate.'
-                    : 'Wait for completion or inspect the late run; rerun if it does not finish.';
+            ? 'Check Actions/API access and inspect this cycle.'
+            : state === 'missing'
+              ? 'Inspect the orchestration run and confirm the missing check was invoked.'
+              : state === 'skipped'
+                ? 'Confirm the skip is expected and arrange a full verification if not.'
+                : 'Inspect the cancelled or incomplete job and rerun the cycle if appropriate.';
       const detail = item.name === 'Site: Performance Integrity'
         ? performanceDetail(item.result)
         : item.result.detail;
-      lines.push(`- **${item.name} — ${item.result.label}:** ${detail} ${action}`);
+      const finding = `${detail} ${action}`.replace(/[\\|`<>]/g, '\\$&');
+      lines.push(`- **${item.name} — ${item.result.label}:** ${finding}`);
     }
   } else {
     lines.push('No material failures or missing coverage were reported.');
@@ -667,47 +414,39 @@ function renderPulse({
     '',
     '## Evidence',
     '',
-    '| Dimension | Outcome | Measurement / run time (UTC) | Source / run | Useful detail or next action |',
-    '| --- | --- | --- | --- | --- |'
+    '**Outcomes below are the substantive job results for this cycle.**',
+    '',
+    '| Dimension | Outcome | Artifact |',
+    '| --- | --- | --- |'
   );
   for (const item of results) {
     const result = item.result;
-    const sources = [];
-    if (result.run && runLink(result.run)) {
-      sources.push(`[${orchestrated ? 'same-cycle run' : 'main scheduled run'}](${runLink(result.run)})`);
-    }
-    if (result.artifactUrl) sources.push(`[evidence artifact](${result.artifactUrl})`);
-    const source = sources.length ? sources.join(' · ') : 'No run link available';
-    const detail = item.name === 'Site: Performance Integrity'
-      ? performanceDetail(result)
-      : result.detail;
+    const artifact = result.artifactUrl
+      ? `[evidence artifact](${result.artifactUrl})`
+      : '—';
     lines.push(
-      `| ${item.name} | ${result.label} | ${result.run ? runTime(result.run) : 'not measured today'} | ${source} | ${detail.replace(/[\\|`<>]/g, '\\$&')} |`
+      `| ${item.name} | ${result.label} | ${artifact} |`
     );
   }
   lines.push('');
-  lines.push(orchestrated
-    ? 'Each outcome below comes from the corresponding job in this run. No fixed wall-clock completion cutoff is applied.'
-    : `Daily workflow runs are queried from \`main\` with \`schedule\` provenance. Runs must complete by ${cutoff} UTC to count as fresh; late or missing runs are not replaced with prior green results.`);
   return `${lines.join('\n')}\n`;
 }
 
-function orchestratedJobResult(needs, jobId, name, run) {
+function orchestratedJobResult(needs, jobId, name) {
   if (!needs || !Object.hasOwn(needs, jobId)) {
     return {
       name,
       result: {
         state: 'missing',
         label: 'Missing',
-        run,
         detail: `The orchestration did not provide a result for the ${jobId} job.`
       }
     };
   }
   const outcome = needs[jobId]?.result;
   const outcomes = {
-    success: ['fresh', 'Passed', 'The substantive check completed successfully in this cycle.'],
-    failure: ['failed', 'Failed', 'The substantive check failed in this cycle; inspect its job logs and artifacts.'],
+    success: ['passed', 'Passed'],
+    failure: ['failed', 'Failed', 'The substantive check failed; inspect its job logs and artifacts.'],
     skipped: ['skipped', 'Skipped', 'The substantive check was skipped; confirm whether the skip was intentional.'],
     cancelled: ['incomplete', 'Incomplete / cancelled', 'The substantive check was cancelled before a result was established.']
   };
@@ -718,7 +457,6 @@ function orchestratedJobResult(needs, jobId, name, run) {
       result: {
         state: 'unknown',
         label: 'Unknown outcome',
-        run,
         detail: `The orchestration reported an unavailable or unrecognized ${jobId} result; no pass is inferred.`
       }
     };
@@ -731,8 +469,7 @@ function orchestratedJobResult(needs, jobId, name, run) {
         result: {
           state: 'advisory',
           label: 'Advisory — uncertain external responses',
-          run,
-          detail: 'Internal links passed; uncertain external responses are listed in the linked audit evidence.'
+          detail: 'Internal links passed; uncertain external responses require review.'
         }
       };
     }
@@ -742,7 +479,6 @@ function orchestratedJobResult(needs, jobId, name, run) {
         result: {
           state: 'unknown',
           label: 'Unknown / link evidence unavailable',
-          run,
           detail: 'The link workflow succeeded without a recognized audit status; no clean result is inferred.'
         }
       };
@@ -750,7 +486,11 @@ function orchestratedJobResult(needs, jobId, name, run) {
   }
   return {
     name,
-    result: { state: mapped[0], label: mapped[1], run, detail: mapped[2] }
+    result: {
+      state: mapped[0],
+      label: mapped[1],
+      ...(mapped[2] ? { detail: mapped[2] } : {})
+    }
   };
 }
 
@@ -769,11 +509,6 @@ async function buildOrchestratedPulse({
   fetchImpl = fetch,
   unzipImpl = execFileSync
 }) {
-  const run = {
-    id: runId,
-    html_url: runUrl,
-    cycle: true
-  };
   const jobMap = [
     ['common-code-quality', 'Common: Code Quality'],
     ['common-coherence-integrity', 'Common: Coherence Integrity'],
@@ -785,11 +520,11 @@ async function buildOrchestratedPulse({
     ['site-performance-integrity', 'Site: Performance Integrity']
   ];
   const results = jobMap.map(([jobId, name]) =>
-    orchestratedJobResult(needs, jobId, name, run)
+    orchestratedJobResult(needs, jobId, name)
   );
   const artifactOptions = { apiUrl, repository, token, runId, fetchImpl, unzipImpl };
   const performance = results.find((item) => item.name === 'Site: Performance Integrity');
-  if (['fresh', 'failed'].includes(performance.result.state)) {
+  if (['passed', 'failed'].includes(performance.result.state)) {
     try {
       const { data: files, artifact } = await fetchArtifactJson({
         ...artifactOptions,
@@ -817,36 +552,35 @@ async function buildOrchestratedPulse({
       performance.result.baseline = describePerformanceComparison(comparison);
       applyPerformancePolicyResult(performance.result, comparison.policy);
       performance.result.trends = {
-        state: performance.result.state,
         measurementDate,
         eventName: summary.source.eventName,
         comparison,
-        runUrl,
         artifactUrl: `https://github.com/${repository}/actions/runs/${runId}/artifacts/${artifact.id}`
       };
       performance.result.artifactUrl = performance.result.trends.artifactUrl;
     } catch (error) {
-      if (performance.result.state === 'fresh') {
+      if (performance.result.state === 'passed') {
         performance.result.state = 'unknown';
         performance.result.label = 'Unknown / performance evidence unavailable';
       }
-      performance.result.detail += ` Performance evidence unavailable or invalid (${error.message}); no comparison is inferred.`;
+      performance.result.detail = [
+        performance.result.detail,
+        `Performance evidence unavailable or invalid (${error.message}); no comparison is inferred.`
+      ].filter(Boolean).join(' ');
       performance.result.baseline = 'fixed reference: unknown; rolling baseline: unknown';
       performance.result.trends = {
         reason: `comparison artifact unavailable or invalid (${error.message})`,
-        baseline: performance.result.baseline,
-        runUrl
+        baseline: performance.result.baseline
       };
     }
   } else {
     performance.result.trends = {
-      reason: `this cycle's Performance Integrity result is ${performance.result.label.toLowerCase()}; no successful current trend is shown`,
-      runUrl
+      reason: `this cycle's Performance Integrity result is ${performance.result.label.toLowerCase()}; no successful current trend is shown`
     };
   }
 
   const dependency = results.find((item) => item.name === 'Common: Dependency Security');
-  if (['fresh', 'failed'].includes(dependency.result.state)) {
+  if (['passed', 'failed'].includes(dependency.result.state)) {
     try {
       const { data: posture, artifact } = await fetchArtifactJson({
         ...artifactOptions,
@@ -860,207 +594,29 @@ async function buildOrchestratedPulse({
       dependency.result = applyDependencyPosture(dependency.result, posture);
       dependency.result.artifactUrl = `https://github.com/${repository}/actions/runs/${runId}/artifacts/${artifact.id}`;
     } catch (error) {
-      if (dependency.result.state === 'fresh') {
+      if (dependency.result.state === 'passed') {
         dependency.result.state = 'unknown';
         dependency.result.label = 'Unknown / posture artifact unavailable';
       }
-      dependency.result.detail += ` Dependency posture evidence unavailable or invalid (${error.message}); no clean result is inferred.`;
+      dependency.result.detail = [
+        dependency.result.detail,
+        `Dependency posture evidence unavailable or invalid (${error.message}); no clean result is inferred.`
+      ].filter(Boolean).join(' ');
     }
   }
 
   const markdown = renderPulse({
     date,
     generatedAt,
+    runUrl,
     results,
-    orchestrated: true,
     sourceRevision
   });
   return {
     markdown,
-    successful: results.every((item) => item.result.state === 'fresh'),
-    completed: results.every((item) => ['fresh', 'advisory'].includes(item.result.state))
+    successful: results.every((item) => item.result.state === 'passed'),
+    completed: results.every((item) => ['passed', 'advisory'].includes(item.result.state))
   };
-}
-
-async function buildPulse({
-  apiUrl,
-  repository,
-  token,
-  date,
-  generatedAt = new Date().toISOString(),
-  sourceRevision = 'unavailable',
-  fetchImpl = fetch,
-  unzipImpl = execFileSync
-}) {
-  const results = await Promise.all(
-    dimensions.map(async (dimension) => {
-      try {
-        const runs = await fetchRuns({
-          apiUrl,
-          repository,
-          workflow: dimension,
-          token,
-          date,
-          fetchImpl
-        });
-        const todayRun = runs
-          .filter((run) => run.created_at?.slice(0, 10) === date)
-          .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
-        const previousRun = runs
-          .filter(
-            (run) =>
-              run.conclusion === 'success' &&
-              run.created_at?.slice(0, 10) < date
-          )
-          .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
-        const evidenceRun = todayRun ?? previousRun;
-        const completionByRunId = new Map();
-        if (evidenceRun?.id && evidenceRun.status === 'completed') {
-          completionByRunId.set(
-            evidenceRun.id,
-            await fetchRunCompletion({
-              apiUrl,
-              repository,
-              runId: evidenceRun.id,
-              token,
-              fetchImpl
-            })
-          );
-        }
-        return {
-          name: dimension.name,
-          result: evaluateRuns(runs, date, cutoffTime, completionByRunId)
-        };
-      } catch (error) {
-        return {
-          name: dimension.name,
-          result: {
-            state: 'unknown',
-            label: 'Unknown / API inaccessible',
-            detail: `${error.message}; no result is inferred.`
-          }
-        };
-      }
-    })
-  );
-  const performance = results.find((item) => item.name === 'Site: Performance Integrity');
-  if (
-    performance?.result.run?.id &&
-    performance.result.run.status === 'completed' &&
-    ['fresh', 'prior', 'failed'].includes(performance.result.state) &&
-    ['success', 'failure'].includes(performance.result.run.conclusion)
-  ) {
-    try {
-      const { data: files, artifact } = await fetchArtifactJson({
-        apiUrl,
-        repository,
-        token,
-        runId: performance.result.run.id,
-        artifactName: 'performance-summary',
-        fileNames: ['performance-comparison.json', 'performance-summary.json'],
-        fetchImpl,
-        includeMetadata: true,
-        unzipImpl
-      });
-      const comparison = files['performance-comparison.json'];
-      const summary = files['performance-summary.json'];
-      if (!isPerformanceComparison(comparison)) {
-        throw new Error('performance-comparison.json has an unsupported or incomplete structure');
-      }
-      if (
-        summary?.complete !== true ||
-        summary.source?.eventName !== performance.result.run.event ||
-        summary.source?.branch !== performance.result.run.head_branch ||
-        String(summary.source?.runId) !== String(performance.result.run.id) ||
-        summary.source?.sha !== performance.result.run.head_sha
-      ) {
-        throw new Error('performance artifacts have incomplete or mismatched run provenance');
-      }
-      const measurementDate = summary.capturedAt?.slice(0, 10);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(measurementDate ?? '')) {
-        throw new Error('Performance Integrity run has no valid measurement date');
-      }
-      performance.result.baseline = describePerformanceComparison(comparison);
-      if (comparison.policy) {
-        applyPerformancePolicyResult(performance.result, comparison.policy);
-      } else if (performance.result.state === 'fresh') {
-        performance.result.state = 'unknown';
-        performance.result.label = 'Unknown / performance policy unavailable';
-        performance.result.detail = 'Performance policy evidence is missing from this successful run; no current safeguard pass is inferred.';
-      }
-      const artifactUrl = `https://github.com/${repository}/actions/runs/${performance.result.run.id}/artifacts/${artifact.id}`;
-      performance.result.artifactUrl = artifactUrl;
-      performance.result.trends = ['fresh', 'prior'].includes(performance.result.state)
-        ? {
-            state: performance.result.state,
-            measurementDate,
-            eventName: summary.source.eventName,
-            comparison,
-            runUrl: runLink(performance.result.run),
-            artifactUrl
-          }
-        : {
-            state: performance.result.state,
-            reason: `the performance check is ${performance.result.label.toLowerCase()}; no successful current trend is shown`,
-            baseline: performance.result.baseline,
-            runUrl: runLink(performance.result.run)
-          };
-    } catch (error) {
-      if (performance.result.state === 'fresh') {
-        performance.result.state = 'unknown';
-        performance.result.label = 'Unknown / performance evidence unavailable';
-        performance.result.detail = `${error.message}; no performance pass is inferred.`;
-      } else {
-        performance.result.detail += ` Performance evidence unavailable or invalid (${error.message}); the failed outcome remains failed.`;
-      }
-      performance.result.baseline = `fixed reference: unknown; rolling baseline: unknown`;
-      performance.result.trends = {
-        reason: `comparison artifact unavailable or invalid (${error.message})`,
-        baseline: performance.result.baseline,
-        runUrl: runLink(performance.result.run)
-      };
-    }
-  } else if (performance) {
-    const result = performance.result;
-    performance.result.trends = {
-      reason: result.state === 'prior'
-        ? 'no prior successful comparison artifact is available'
-        : `today's Performance Integrity result is ${result.label.toLowerCase()}; no successful current trend is shown`,
-      runUrl: runLink(result.run)
-    };
-  }
-  const dependency = results.find((item) => item.name === 'Common: Dependency Security');
-  if (
-    dependency?.result.run?.id &&
-    dependency.result.run.status === 'completed' &&
-    ['success', 'failure'].includes(dependency.result.run.conclusion)
-  ) {
-    try {
-      const posture = await fetchArtifactJson({
-        apiUrl,
-        repository,
-        token,
-        runId: dependency.result.run.id,
-        artifactName: 'dependency-posture',
-        fileName: 'dependency-posture.json',
-        fetchImpl
-      });
-      dependency.result = applyDependencyPosture(dependency.result, posture);
-    } catch (error) {
-      dependency.result = dependency.result.state === 'failed'
-        ? {
-          ...dependency.result,
-          detail: `${dependency.result.detail} Dependency posture artifact unavailable (${error.message}); the reported review finding remains failed.`
-        }
-        : {
-          ...dependency.result,
-          state: 'unknown',
-          label: 'Unknown / posture artifact unavailable',
-          detail: `${error.message}; no clean dependency result is inferred.`
-        };
-    }
-  }
-  return renderPulse({ date, generatedAt, results, sourceRevision });
 }
 
 async function main() {
@@ -1092,10 +648,7 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
 export {
   applyDependencyPosture,
   buildOrchestratedPulse,
-  buildPulse,
-  completionEvidenceFromJobs,
   describePerformanceComparison,
-  evaluateRuns,
   formatTrendDelta,
   homepageTrendRows,
   isPerformanceComparison,

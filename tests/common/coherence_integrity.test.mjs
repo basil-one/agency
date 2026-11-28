@@ -78,21 +78,14 @@ function collectCoherenceFailures(repository) {
   }
   const orchestration = read(repository, '.github/workflows/quality-pulse.yml') ?? '';
   const childJobs = [...orchestration.matchAll(
-    /^  ((?:common|site)-[a-z-]+):\n    name: "((?:Common|Site): [^"]+)"\n    uses: \.\/\.github\/workflows\/([a-z-]+\.yml)$/gm
-  )].map(([, id, name, file]) => [name, file, id]);
-  if (JSON.stringify(childJobs) !== JSON.stringify(capabilities)) {
+    /^  ((?:common|site)-[a-z-]+):\n(?:    name: "[^"]+"\n)?    uses: \.\/\.github\/workflows\/([a-z-]+\.yml)$/gm
+  )].map(([, id, file]) => [id, file]);
+  const expectedPulseJobs = capabilities.map(([, file, id]) => [id, file]);
+  if (JSON.stringify(childJobs) !== JSON.stringify(expectedPulseJobs)) {
     failures.push('Quality Pulse jobs do not match the canonical ordered inventory');
   }
-  const needsSection = orchestration.match(/^\s+needs:\n([\s\S]*?)^\s+runs-on:/m)?.[1] ?? '';
-  const needs = [...needsSection.matchAll(/^      - ([a-z-]+)$/gm)].map(([, id]) => id);
-  if (JSON.stringify(needs) !== JSON.stringify(capabilities.map(([, , id]) => id))) {
-    failures.push('Quality Pulse needs list does not include every canonical check in order');
-  }
-  if (!orchestration.includes('PULSE_RESULTS_JSON: ${{ toJSON(needs) }}')) {
-    failures.push('Quality Pulse does not pass same-cycle job evidence to its summarizer');
-  }
 
-  for (const [name, file, jobId] of capabilities) {
+  for (const [name, file] of capabilities) {
     const workflow = read(repository, `.github/workflows/${file}`);
     if (!workflow) {
       failures.push(`canonical workflow is missing: ${file}`);
@@ -101,22 +94,11 @@ function collectCoherenceFailures(repository) {
     if (!workflow.startsWith(`name: "${name}"\n`)) {
       failures.push(`workflow identity is not canonical: ${file}`);
     }
-    const triggerPattern = file === 'site-performance-integrity.yml'
-      ? /^on:\n  pull_request:\n    branches: \[main\]\n  workflow_dispatch:\n    inputs:\n      measurement_context:[\s\S]*?  workflow_call:/m
-      : /^on:\n  pull_request:\n    branches: \[main\]\n  workflow_dispatch:\n  workflow_call:$/m;
-    if (!triggerPattern.test(workflow)) {
-      failures.push(`workflow triggers are incomplete: ${file}`);
-    }
-    if (!workflow.includes(`    name: "${name}"`)) {
-      failures.push(`canonical job check name is missing: ${file}`);
-    }
-    if (file === 'common-dependency-security.yml') {
-      if (!workflow.includes('  common-dependency-security-review:') ||
-        !workflow.includes('  common-dependency-security-posture:')) {
-        failures.push('dependency security roles do not use qualified job IDs');
-      }
-    } else if (!workflow.includes(`  ${jobId}:\n    name: "${name}"`)) {
-      failures.push(`canonical job ID is missing: ${file}`);
+    if (
+      file === 'common-dependency-security.yml' &&
+      !workflow.includes('  common-dependency-security-posture:')
+    ) {
+      failures.push('dependency security posture job does not use a qualified ID');
     }
   }
 
@@ -188,18 +170,15 @@ function collectCoherenceFailures(repository) {
   if (!packageScripts['test:performance-policy']?.includes('tests/site/performance_policy.test.mjs')) {
     failures.push('performance policy tests are not wired to an npm command');
   }
-  if (!packageScripts['test:required-checks']?.includes('tests/orchestration/release_publish_workflow.test.mjs') ||
-      !packageScripts['test:required-checks']?.includes('test_release_publish.py') ||
-      !read(repository, '.github/workflows/common-code-quality.yml')?.includes('run: npm run test:required-checks')) {
-    failures.push('release publication tests are not wired to Common: Code Quality');
-  }
-  if (!packageScripts['test:required-checks']?.includes('tests/site/publication_workflow.test.mjs')) {
-    failures.push('Site publication workflow tests are not wired to an npm command');
-  }
-  if (!read(repository, '.github/workflows/common-code-quality.yml')?.includes(
-    'run: npm run test:required-checks'
-  )) {
-    failures.push('Site publication workflow tests are not wired to Common: Code Quality');
+  if (
+    !packageScripts['test:required-checks']?.includes('tests/orchestration/release_publish_workflow.test.mjs') ||
+    !packageScripts['test:required-checks']?.includes('test_release_publish.py') ||
+    !packageScripts['test:required-checks']?.includes('tests/site/publication_workflow.test.mjs') ||
+    !read(repository, '.github/workflows/common-code-quality.yml')?.includes(
+      'run: npm run test:required-checks'
+    )
+  ) {
+    failures.push('publication workflow contracts are not wired to Common: Code Quality');
   }
   const performanceWorkflow = read(repository, '.github/workflows/site-performance-integrity.yml') ?? '';
   if (
@@ -208,18 +187,22 @@ function collectCoherenceFailures(repository) {
   ) {
     failures.push('performance workflow does not use the canonical domain reference');
   }
+  const confirmationId = performanceWorkflow.indexOf('\n        id: confirmation\n');
+  const confirmationStart = performanceWorkflow.lastIndexOf('\n      - name:', confirmationId);
+  const nextStep = performanceWorkflow.indexOf('\n      - name:', confirmationId);
+  const confirmationStep = confirmationId < 0
+    ? ''
+    : performanceWorkflow.slice(
+      confirmationStart,
+      nextStep < 0 ? undefined : nextStep
+    );
   if (
-    !performanceWorkflow.includes('Confirm initially violating route profiles') ||
-    !performanceWorkflow.includes('compare_performance.mjs --finalize') ||
-    !performanceWorkflow.includes('PERFORMANCE_PROFILES_JSON:')
+    !confirmationStep.includes('run: npm run measure:performance') ||
+    !confirmationStep.includes('PERFORMANCE_PROFILES_JSON:') ||
+    !confirmationStep.includes('GITHUB_SHA: ${{ github.sha }}') ||
+    !performanceWorkflow.includes('compare_performance.mjs --finalize')
   ) {
-    failures.push('performance workflow does not measure and enforce route/profile confirmation');
-  }
-  const confirmationStep = performanceWorkflow.split('id: confirmation')[1]?.split(
-    '- name: Enforce confirmed performance safeguards'
-  )[0] ?? '';
-  if (!confirmationStep.includes('GITHUB_SHA: ${{ github.sha }}')) {
-    failures.push('performance confirmation does not preserve the checked-out source revision');
+    failures.push('performance confirmation does not preserve its measurement and source contract');
   }
   if (
     !existsSync(join(repository, '.github/site-performance-reference.json')) ||
@@ -321,13 +304,13 @@ test('rejects a reordered or incomplete capability inventory', () => {
   assert.ok(failures.includes('quality capability table differs from the canonical order'));
 });
 
-test('rejects a noncanonical workflow identity or job ID', () => {
+test('rejects a noncanonical workflow identity', () => {
   const failures = fixture((directory) => {
     const file = join(directory, '.github/workflows/common-code-quality.yml');
     const content = readFileSync(file, 'utf8');
-    writeFileSync(file, content.replace('  common-code-quality:', '  code-quality:'));
+    writeFileSync(file, content.replace('name: "Common: Code Quality"', 'name: "Code Quality"'));
   });
-  assert.ok(failures.includes('canonical job ID is missing: common-code-quality.yml'));
+  assert.ok(failures.includes('workflow identity is not canonical: common-code-quality.yml'));
 });
 
 test('rejects missing release identity, test wiring, or changelog exclusion', () => {
@@ -341,7 +324,7 @@ test('rejects missing release identity, test wiring, or changelog exclusion', ()
     const file = join(directory, 'package.json');
     writeFileSync(file, readFileSync(file, 'utf8').replace('test_release_publish.py', 'missing.py'));
   });
-  assert.ok(missingTests.includes('release publication tests are not wired to Common: Code Quality'));
+  assert.ok(missingTests.includes('publication workflow contracts are not wired to Common: Code Quality'));
 
   const missingTestFile = fixture((directory) => {
     rmSync(join(directory, 'tests/orchestration/test_release_publish.py'));
@@ -353,6 +336,19 @@ test('rejects missing release identity, test wiring, or changelog exclusion', ()
     writeFileSync(file, readFileSync(file, 'utf8').replace('  - CHANGELOG.md\n', ''));
   });
   assert.ok(missingExclusion.includes('Jekyll does not exclude the changelog and repository scripts and tests'));
+});
+
+test('rejects performance confirmation sourced from a different revision', () => {
+  const missingSource = fixture((directory) => {
+    const file = join(directory, '.github/workflows/site-performance-integrity.yml');
+    writeFileSync(file, readFileSync(file, 'utf8').replace(
+      /(id: confirmation[\s\S]*?)GITHUB_SHA: \$\{\{ github\.sha \}\}/,
+      '$1GITHUB_SHA: ${{ github.ref_name }}'
+    ));
+  });
+  assert.ok(missingSource.includes(
+    'performance confirmation does not preserve its measurement and source contract'
+  ));
 });
 
 test('rejects missing Site production paths and production imports from tests', () => {

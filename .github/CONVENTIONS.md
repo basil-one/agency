@@ -14,13 +14,17 @@ Use workflow filenames as capability IDs. A workflow with one substantive job us
 
 Production helpers live under `scripts/{common,site,orchestration}/`; automated tests live under matching `tests/` domains. Browser test support stays under `tests/site/browser/`, while production route discovery and matrices live in `scripts/site/`.
 
-## Workflow anatomy and intentional differences
+## Workflow conventions
 
 Make the checked-out revision and task context clear; prepare only the needed environment; generate artifacts when required; run the check and focused tests; preserve named evidence; summarize passed, advisory, failed, incomplete, unknown, and skipped outcomes without inferring success from missing evidence.
 
 Use release version tags for external actions and one version of each shared dependency across workflows, unless a documented compatibility constraint requires otherwise. Agency currently pins jactionlint to the commit for v2.6.0.
 
-The order is purposeful, not a template: Site Publish validates and deploys a same-run Pages artifact; Dependency Security separates pull-request review from scheduled/manual alert posture. Performance keeps classification, initial measurement, confirmation, and artifact evidence distinct. Only Quality Pulse owns the daily schedule; proposed-change safeguards retain pull-request checks, and verification workflows support manual diagnostics. Keep permissions narrow and preserve ordinary pull-request protection.
+Workflow steps follow their purpose, not a fixed template. Keep permissions narrow and preserve pull-request protection. Only Quality Pulse owns the daily schedule; verification workflows support manual runs.
+
+## Capability-specific conventions
+
+Site Publish validates and deploys a same-run Pages artifact. Dependency Security separates pull-request review from ongoing alert posture.
 
 Site Link Integrity reports uncertain external responses as nonblocking advisories; known defects retain failure precedence.
 
@@ -37,12 +41,13 @@ Maintain reviewed fixed references in [site-performance-reference.json](site-per
 - `npm run test:required-checks` — required workflow triggers/jobs and Site and Release publication contracts.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
 - `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks; run `npm run test:performance-cli` after `npm ci` to verify Lighthouse option parsing.
+- `npm run test:rendering-summary` — rendering evidence and coverage reporting.
 - `npm run test:site-routes` — generated-route discovery. The browser suite needs a built `_site` and the installed Playwright browser.
 - `bundle exec jekyll build --trace` — production site build.
 
 ## Sustaining coherence
 
-Common: Coherence Integrity runs the architectural contracts on pull requests and in Quality Pulse. It checks the capability inventory/order and job IDs; resolves direct script, Python module, unittest discovery, and package-script references; enforces domain script/test placement; and rejects production imports from tests. Common: Code Quality retains workflow correctness, source lint/complexity, and operational regression tests. Site Build verifies that the generated `_site` excludes repository scripts and tests. When changing a capability, consider its relationship to the whole: follow the existing conventions, update affected references and contracts, and make intentional exceptions explicit. Reviewers still judge conceptual simplicity, teaching clarity, and whether a boundary or exception earns its maintenance cost; these are not reducible to a score.
+Coherence Integrity protects repository organization and architectural relationships; Code Quality protects source and workflow correctness. Keep contracts focused on meaningful boundaries and behavior.
 
 ## Changelog and releases
 
