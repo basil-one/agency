@@ -57,6 +57,13 @@ for (const route of htmlRoutes) {
   });
 }
 
+test('accessibility check rejects a missing image alternative', async ({ page }) => {
+  await page.setContent('<main><h1>Fixture</h1><img></main>');
+  await expect(
+    assertNoAccessibilityViolations(page, 'in-memory fixture')
+  ).rejects.toThrow();
+});
+
 test('the reflections index links to a selected article', async ({ page }) => {
   test.skip(reflections.length === 0, 'No published reflections are available.');
   const latestReflection = reflections.at(-1);

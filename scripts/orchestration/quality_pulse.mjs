@@ -20,8 +20,8 @@ function timestamp(value) {
     : `${parsed.toISOString().replace('T', ' ').replace(/Z$/, ' UTC')}`;
 }
 
-function runTime(run) {
-  return run.cycle ? 'Same-cycle job result' : 'run time unavailable';
+function runTime() {
+  return 'Same-cycle job result';
 }
 
 function runLink(run) {
@@ -410,7 +410,7 @@ function renderPulse({
           : state === 'unknown'
             ? 'Check Actions/API access and inspect the last available workflow run.'
             : state === 'missing'
-              ? 'Check whether the scheduled workflow ran; dispatch it manually if needed.'
+              ? 'Inspect the orchestration run and confirm the missing check was invoked.'
               : state === 'skipped'
                 ? 'Confirm the skip is expected and arrange a full verification if not.'
                 : 'Inspect the cancelled or incomplete job and rerun the cycle if appropriate.';
@@ -443,7 +443,7 @@ function renderPulse({
       ? performanceDetail(result)
       : result.detail;
     lines.push(
-      `| ${item.name} | ${result.label} | ${result.run ? runTime(result.run) : 'not measured today'} | ${source} | ${detail.replace(/[\\|`<>]/g, '\\$&')} |`
+      `| ${item.name} | ${result.label} | ${result.run ? runTime() : 'not measured today'} | ${source} | ${detail.replace(/[\\|`<>]/g, '\\$&')} |`
     );
   }
   lines.push('');

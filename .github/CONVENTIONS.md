@@ -37,6 +37,7 @@ Maintain reviewed fixed references in [site-performance-reference.json](site-per
 - `npm run test:required-checks` — required workflow triggers/jobs and Site and Release publication contracts.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
 - `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks; run `npm run test:performance-cli` after `npm ci` to verify Lighthouse option parsing.
+- `npm run test:rendering-summary` — rendering evidence and coverage reporting.
 - `npm run test:site-routes` — generated-route discovery. The browser suite needs a built `_site` and the installed Playwright browser.
 - `bundle exec jekyll build --trace` — production site build.
 

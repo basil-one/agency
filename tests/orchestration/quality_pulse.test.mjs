@@ -90,6 +90,7 @@ function artifactHarness({
   comparison = performanceComparison,
   summaryEvent = 'schedule',
   branch = 'main',
+  summarySha = 'revision-123',
   missingArtifacts = false
 } = {}) {
   const performanceSummary = {
@@ -98,7 +99,7 @@ function artifactHarness({
     source: {
       eventName: summaryEvent,
       branch,
-      sha: 'revision-123',
+      sha: summarySha,
       runId
     }
   };
@@ -129,7 +130,7 @@ function artifactHarness({
   return { fetchImpl, unzipImpl };
 }
 
-function buildPulse(overrides = {}) {
+function buildCycle(overrides = {}) {
   const { fetchImpl, unzipImpl } = artifactHarness(overrides);
   return buildOrchestratedPulse({
     apiUrl: 'https://api.github.com',
@@ -231,7 +232,7 @@ test('homepage trends use only available homepage values and compatible history'
 });
 
 test('orchestrated Pulse reports same-cycle outcomes and validated evidence', async () => {
-  const pulse = await buildPulse();
+  const pulse = await buildCycle();
 
   assert.equal(pulse.successful, true);
   assert.equal(pulse.completed, true);
@@ -243,7 +244,7 @@ test('orchestrated Pulse reports same-cycle outcomes and validated evidence', as
   assert.match(pulse.markdown, /actions\/runs\/888\/artifacts\/457/);
   assert.match(pulse.markdown, /\| Mobile LCP \| \+1\.50 s/);
 
-  const manual = await buildPulse({
+  const manual = await buildCycle({
     eventName: 'workflow_dispatch',
     branch: 'copilot/change',
     summaryEvent: 'workflow_dispatch'
@@ -257,7 +258,7 @@ test('orchestrated Pulse reports same-cycle outcomes and validated evidence', as
       outputs: { status: 'advisory' }
     }
   };
-  const advisory = await buildPulse({ needs: advisoryNeeds });
+  const advisory = await buildCycle({ needs: advisoryNeeds });
   assert.equal(advisory.successful, false);
   assert.equal(advisory.completed, true);
   assert.match(advisory.markdown, /Cycle successful with advisories/);
@@ -276,7 +277,7 @@ test('orchestrated Pulse reports same-cycle outcomes and validated evidence', as
       limit: 300
     }]
   };
-  const failed = await buildPulse({
+  const failed = await buildCycle({
     needs: { ...needs, 'site-performance-integrity': { result: 'failure' } },
     comparison: failedComparison
   });
@@ -287,7 +288,7 @@ test('orchestrated Pulse reports same-cycle outcomes and validated evidence', as
 });
 
 test('Pulse preserves failed, skipped, cancelled, missing, and unknown job outcomes', async () => {
-  const incomplete = await buildPulse({
+  const incomplete = await buildCycle({
     needs: {
       'common-code-quality': { result: 'failure' },
       'common-coherence-integrity': { result: 'skipped' },
@@ -306,7 +307,7 @@ test('Pulse preserves failed, skipped, cancelled, missing, and unknown job outco
   assert.match(incomplete.markdown, /\| Site: Link Integrity \| Skipped \|/);
   assert.match(incomplete.markdown, /\| Site: SEO Integrity \| Incomplete \/ cancelled \|/);
 
-  const missing = await buildPulse({
+  const missing = await buildCycle({
     needs: {},
     fetchImpl: async () => {
       throw new Error('No artifact should be requested for an unexecuted job');
@@ -314,8 +315,9 @@ test('Pulse preserves failed, skipped, cancelled, missing, and unknown job outco
   });
   assert.equal(missing.successful, false);
   assert.match(missing.markdown, /\| Site: Build Integrity \| Missing \|/);
+  assert.match(missing.markdown, /Inspect the orchestration run and confirm the missing check was invoked/);
 
-  const unknownLink = await buildPulse({
+  const unknownLink = await buildCycle({
     needs: { 'site-link-integrity': { result: 'success' } },
     fetchImpl: async () => {
       throw new Error('No artifact should be requested for an unexecuted job');
@@ -325,11 +327,16 @@ test('Pulse preserves failed, skipped, cancelled, missing, and unknown job outco
 });
 
 test('missing same-cycle artifacts remain unknown rather than successful', async () => {
-  const pulse = await buildPulse({ missingArtifacts: true });
+  const pulse = await buildCycle({ missingArtifacts: true });
 
   assert.equal(pulse.successful, false);
   assert.match(pulse.markdown, /\| Common: Dependency Security \| Unknown \/ posture artifact unavailable \|/);
   assert.match(pulse.markdown, /\| Site: Performance Integrity \| Unknown \/ performance evidence unavailable \|/);
   assert.match(pulse.markdown, /no clean result is inferred/);
   assert.match(pulse.markdown, /no comparison is inferred/);
+
+  const mismatched = await buildCycle({ summarySha: 'another-revision' });
+  assert.equal(mismatched.successful, false);
+  assert.match(mismatched.markdown, /Unknown \/ performance evidence unavailable/);
+  assert.doesNotMatch(mismatched.markdown, /\| Mobile LCP \|/);
 });

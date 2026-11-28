@@ -112,6 +112,12 @@ for (const route of routes) {
   }
 }
 
+test('responsive check rejects whole-page horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.setContent('<main><h1>Fixture</h1><div style="width: 640px">Overflow</div></main>');
+  await expect(assertResponsivePage(page, 'in-memory fixture', 320)).rejects.toThrow();
+});
+
 test('intentional local horizontal scrolling is not page overflow', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.setContent(`<!doctype html>
