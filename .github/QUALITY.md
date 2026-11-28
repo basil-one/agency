@@ -60,7 +60,7 @@ Sustain conceptual integrity across workflows, code, tests, and documentation. E
 
 The website is published automatically following an approved merge.
 
-An intentional versioned milestone is published separately by human-initiated [Release Publish](workflows/release-publish.yml). A human reviews and merges its changelog-only PR through the Quality Gate; the workflow verifies the reviewed revision before publishing. Release Publish is not an additional quality dimension.
+Versioned milestones are published separately by human initiation and approval through the Quality Gate.
 
 ## Quality Pulse
 
