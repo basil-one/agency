@@ -7,6 +7,7 @@ import {
   loadDailyHistory,
   referenceIsReady
 } from '../../scripts/site/compare_performance.mjs';
+import { finalizePerformanceAssessment } from '../../scripts/site/performance_policy.mjs';
 
 const metricKeys = [
   'first-contentful-paint',
@@ -67,7 +68,9 @@ function makeSummary({
             ? lcp
             : key === 'cumulative-layout-shift'
               ? 0
-              : 500
+              : key === 'total-blocking-time'
+                ? 50
+                : 500
         ]))
       }))
     )
@@ -183,6 +186,63 @@ test('separates controlled measurements from full-experience references and hist
   assert.match(withoutReference.fixedReference.reason, /pr-controlled context/);
   assert.match(withoutReference.policy.referenceReason, /absolute budgets remain active/);
   assert.equal(withoutReference.deltasAvailable, false);
+});
+
+test('a controlled first-party TBT regression remains blocking without a reference or complete confirmation', () => {
+  const current = makeSummary({
+    eventName: 'pull_request',
+    branch: 'copilot/change',
+    measurementContext: 'pr-controlled'
+  });
+  current.results[0].values['total-blocking-time'] = 301;
+
+  const { comparison } = buildComparison(current, undefined, makeHistory([]));
+  assert.equal(comparison.measurementContext, 'pr-controlled');
+  assert.equal(comparison.fixedReference.available, false);
+  assert.equal(comparison.policy.status, 'confirmation-required');
+  assert.deepEqual(comparison.policy.confirmationProfiles, [
+    { route: '/', formFactor: 'mobile' }
+  ]);
+  assert.deepEqual(comparison.policy.initialViolations.map(({ criterion }) => criterion), ['absolute']);
+
+  const incomplete = finalizePerformanceAssessment(
+    comparison.policy,
+    {
+      complete: false,
+      coverage: { runCount: 2, routeProfiles: 1, measurementCount: 2 },
+      results: [{
+        route: '/',
+        formFactor: 'mobile',
+        values: {
+          'largest-contentful-paint': 1_000,
+          'total-blocking-time': 301,
+          'cumulative-layout-shift': 0
+        }
+      }]
+    },
+    { compatible: true }
+  );
+  assert.equal(incomplete.status, 'incomplete');
+
+  const confirmed = finalizePerformanceAssessment(
+    comparison.policy,
+    {
+      complete: true,
+      coverage: { runCount: 3, routeProfiles: 1, measurementCount: 3 },
+      results: [{
+        route: '/',
+        formFactor: 'mobile',
+        values: {
+          'largest-contentful-paint': 1_000,
+          'total-blocking-time': 301,
+          'cumulative-layout-shift': 0
+        }
+      }]
+    },
+    { compatible: true }
+  );
+  assert.equal(confirmed.status, 'failed');
+  assert.equal(confirmed.confirmedViolations[0].criterion, 'absolute');
 });
 
 test('keeps legacy summaries without a context field compatible as full-experience evidence', () => {

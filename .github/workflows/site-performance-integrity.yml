@@ -85,6 +85,9 @@ jobs:
         id: dependencies
         if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
         run: npm ci
+      - name: Verify Lighthouse CLI option parsing
+        if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
+        run: npm run test:performance-cli
       - name: Install Chromium
         id: chromium
         if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'

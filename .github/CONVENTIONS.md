@@ -28,7 +28,7 @@ Pull-request measurements use the `pr-controlled` context, which blocks Google T
 
 The controlled fixed reference is `.github/site-performance-reference-controlled.json`; until a reviewed reference exists, controlled runs retain absolute budgets and report relative comparison as unavailable. To capture evidence for human review, dispatch **Site: Performance Integrity** from `main` with `measurement_context: pr-controlled`; after a complete successful run, review the `performance-summary` artifact and propose its summary as that reference in a later change. Do not copy partial, failed, or mismatched-context evidence. The ordinary `.github/site-performance-reference.json` remains the full-experience reference.
 
-Agency retains its reflection-text-only skip classification and missing-route diagnostic.
+PR performance skips are limited to text-only reflection edits and direct `LICENSES/*` changes while `_config.yml` explicitly excludes `LICENSES` from the generated site. Jekyll renders reflections and serves assets, so other content/config/layout/asset changes require measurement. Although Jekyll excludes `scripts`, `tests`, and `Gemfile*`, those paths can change the measurement or build itself; workflow changes can change what runs. Uncertain changes fail open. Keep the missing-route diagnostic.
 
 ## Run and maintain checks
 
@@ -36,7 +36,7 @@ Agency retains its reflection-text-only skip classification and missing-route di
 - `npm run test:coherence-integrity` — capability inventory/order, workflow IDs, repository boundaries, script/test placement, reference traceability, and negative fixtures.
 - `npm run test:required-checks` — required workflow triggers/jobs and publication contracts.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
-- `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks.
+- `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks; run `npm run test:performance-cli` after `npm ci` to verify Lighthouse option parsing.
 - `npm run test:site-routes` — generated-route discovery. The browser suite needs a built `_site` and the installed Playwright browser.
 - `bundle exec jekyll build --trace` — production site build.
 

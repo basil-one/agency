@@ -146,7 +146,28 @@ function parseChangedFiles(output) {
   return files;
 }
 
+function jekyllExcludesLicenses(revision, cwd) {
+  let config;
+  try {
+    config = git(['show', `${revision}:_config.yml`], cwd);
+  } catch {
+    return false;
+  }
+  const excludeBlock = /^exclude:\s*\r?\n((?:[ \t]+-[^\r\n]*(?:\r?\n|$))*)/m.exec(config);
+  return Boolean(
+    excludeBlock?.[1].split(/\r?\n/).some((line) => /^\s+-\s+LICENSES\s*$/.test(line))
+  );
+}
+
 function classifyFile(file, baseSha, headSha, cwd) {
+  if (
+    /^LICENSES\/[^/]+$/.test(file.path) &&
+    ['A', 'M', 'D'].includes(file.status)
+  ) {
+    return jekyllExcludesLicenses(headSha, cwd)
+      ? undefined
+      : 'Jekyll does not explicitly exclude LICENSES';
+  }
   if (!['A', 'M'].includes(file.status)) return `unsupported file status ${file.status}`;
   if (!/^_reflections\/[^/]+\.md$/.test(file.path)) return 'changed paths include files outside _reflections/*.md';
 
@@ -220,7 +241,7 @@ function classifyChanges({ baseSha, headSha, eventName, cwd = process.cwd() }) {
 
   return {
     skip: true,
-    reason: 'all changed files are added or edited text-only Markdown reflections',
+    reason: 'all changed files are Jekyll-excluded license files or text-only Markdown reflections',
     paths: files.map(({ path }) => path)
   };
 }

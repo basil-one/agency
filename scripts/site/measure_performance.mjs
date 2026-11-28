@@ -2,6 +2,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { discoverReflections } from './routes.js';
 import {
@@ -200,6 +201,23 @@ function loadMetric(report, key) {
   return value;
 }
 
+export function buildLighthouseArgs({ url, outputPath, formFactor, measurementContext }) {
+  if (!['mobile', 'desktop'].includes(formFactor)) {
+    throw new Error(`Unknown Lighthouse form factor: ${formFactor}.`);
+  }
+  return [
+    url,
+    '--only-categories=performance',
+    '--output=json',
+    `--output-path=${outputPath}`,
+    ...(formFactor === 'desktop' ? ['--preset=desktop'] : []),
+    ...analyticsBlockPatterns(resolveMeasurementContext(measurementContext))
+      .flatMap((pattern) => ['--blocked-url-patterns', pattern]),
+    '--chrome-flags=--headless --no-sandbox --disable-dev-shm-usage',
+    '--quiet'
+  ];
+}
+
 function renderSummary(
   results,
   assetInventory,
@@ -309,14 +327,12 @@ async function main() {
         const outputPath = reportFileName(route, formFactor, run);
         await runCommand(process.execPath, [
           lighthousePath,
-          `${origin}${route}`,
-          '--only-categories=performance',
-          '--output=json',
-          `--output-path=${outputPath}`,
-          ...(formFactor === 'desktop' ? ['--preset=desktop'] : []),
-          ...blockedUrlPatterns.flatMap((pattern) => ['--blocked-url-patterns', pattern]),
-          '--chrome-flags=--headless --no-sandbox --disable-dev-shm-usage',
-          '--quiet'
+          ...buildLighthouseArgs({
+            url: `${origin}${route}`,
+            outputPath,
+            formFactor,
+            measurementContext
+          })
         ], { ...process.env, CHROME_PATH: chromePath });
         const report = JSON.parse(readFileSync(outputPath, 'utf8'));
         if (report.lighthouseVersion === undefined) {
@@ -416,7 +432,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}
