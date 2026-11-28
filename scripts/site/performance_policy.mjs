@@ -16,6 +16,33 @@ export const lcpDeteriorationPolicy = Object.freeze({
   minimumMilliseconds: 500
 });
 
+export const performanceMeasurementContexts = Object.freeze({
+  controlled: 'pr-controlled',
+  full: 'full-experience'
+});
+
+export function resolveMeasurementContext(value = process.env.PERFORMANCE_CONTEXT) {
+  const context = value ?? performanceMeasurementContexts.full;
+  if (!Object.values(performanceMeasurementContexts).includes(context)) {
+    throw new Error(`Unknown performance measurement context: ${context}.`);
+  }
+  return context;
+}
+
+export function analyticsBlockPatterns(context) {
+  const collectionPattern = '*google-analytics.com/*/collect*';
+  if (context === performanceMeasurementContexts.controlled) {
+    return [
+      collectionPattern,
+      '*googletagmanager.com/*',
+      '*google-analytics.com/*',
+      '*doubleclick.net/*'
+    ];
+  }
+  if (context === performanceMeasurementContexts.full) return [collectionPattern];
+  throw new Error(`Unknown performance measurement context: ${context}.`);
+}
+
 export function median(values) {
   const ordered = [...values].sort((left, right) => left - right);
   if (!ordered.length || ordered.some((value) => !Number.isFinite(value))) {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import test from 'node:test';
@@ -111,6 +111,15 @@ test('classifies the complete change range across multiple PR commits', () => {
     }
   });
   assert.equal(result.skip, true, result.reason);
+});
+
+test('runs the full baseline for excluded tooling, dependencies, and configuration changes', () => {
+  for (const path of ['scripts/site/measure_performance.mjs', 'tests/site/example.test.mjs', 'Gemfile', '_config.yml']) {
+    const result = scenario({
+      head: { [path]: 'change\n' }
+    });
+    assert.equal(result.skip, false, `${path} must fail open`);
+  }
 });
 
 test('runs the full baseline for mixed reflection and site changes', () => {

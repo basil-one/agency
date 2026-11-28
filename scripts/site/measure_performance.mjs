@@ -2,9 +2,15 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright';
 import { discoverReflections } from './routes.js';
-import { selectMeasurementProfiles } from './performance_policy.mjs';
+import {
+  analyticsBlockPatterns,
+  performanceMeasurementContexts,
+  resolveMeasurementContext,
+  selectMeasurementProfiles
+} from './performance_policy.mjs';
 
 const root = process.cwd();
 const siteDirectory = resolve(root, '_site');
@@ -195,6 +201,23 @@ function loadMetric(report, key) {
   return value;
 }
 
+export function buildLighthouseArgs({ url, outputPath, formFactor, measurementContext }) {
+  if (!['mobile', 'desktop'].includes(formFactor)) {
+    throw new Error(`Unknown Lighthouse form factor: ${formFactor}.`);
+  }
+  return [
+    url,
+    '--only-categories=performance',
+    '--output=json',
+    `--output-path=${outputPath}`,
+    ...(formFactor === 'desktop' ? ['--preset=desktop'] : []),
+    ...analyticsBlockPatterns(resolveMeasurementContext(measurementContext))
+      .flatMap((pattern) => ['--blocked-url-patterns', pattern]),
+    '--chrome-flags=--headless --no-sandbox --disable-dev-shm-usage',
+    '--quiet'
+  ];
+}
+
 function renderSummary(
   results,
   assetInventory,
@@ -207,12 +230,16 @@ function renderSummary(
   elapsedSeconds,
   machineSummary
 ) {
+  const measurementContext = machineSummary.conditions.measurementContext;
+  const analyticsExecution = measurementContext === performanceMeasurementContexts.controlled
+    ? 'Google Analytics script execution is blocked for its tag-manager and analytics domains'
+    : 'external scripts are allowed';
   const lines = [
     '# Performance integrity',
     '',
     `- **Mode:** ${process.env.PERFORMANCE_EVENT_NAME ?? 'local'} run on \`${process.env.PERFORMANCE_SOURCE_BRANCH ?? 'local'}\`; measurements provide evidence for the separate safeguard evaluation.`,
     `- **Tools:** Lighthouse ${lighthouseVersion}; ${chromeVersion}; ${rubyVersion}; ${jekyllVersion}; Node ${process.version}.`,
-    `- **Conditions:** ${process.env.PERFORMANCE_RUNNER ?? `local ${process.platform}/${process.arch}`}; Jekyll production build served locally; Lighthouse default mobile configuration and desktop preset; ${runCount} fresh-browser runs per route and form factor; medians shown; external scripts are allowed but Google Analytics collection requests are blocked to avoid synthetic visits. These are lab measurements, not field data or real-user Core Web Vitals.`,
+    `- **Conditions:** ${process.env.PERFORMANCE_RUNNER ?? `local ${process.platform}/${process.arch}`}; Jekyll production build served locally; Lighthouse default mobile configuration and desktop preset; ${runCount} fresh-browser runs per route and form factor; medians shown; ${measurementContext} context (${analyticsExecution}); Google Analytics collection requests are blocked to avoid synthetic visits. These are lab measurements, not field data or real-user Core Web Vitals.`,
     `- **Coverage:** ${machineSummary.coverage.routeProfiles} route/profile pairs × ${runCount} runs.`,
     `- **Measurement runtime:** ${elapsedSeconds.toFixed(1)} seconds, excluding workflow setup, build, dependency/browser installation, missing-route verification, and artifact upload; total Actions job duration is shown in the run overview.`,
     '',
@@ -241,6 +268,8 @@ function renderSummary(
 }
 
 async function main() {
+  const measurementContext = resolveMeasurementContext();
+  const blockedUrlPatterns = analyticsBlockPatterns(measurementContext);
   if (!existsSync(resolve(siteDirectory, 'index.html'))) {
     throw new Error(`Generated site not found at ${siteDirectory}; build it before measuring performance.`);
   }
@@ -298,14 +327,12 @@ async function main() {
         const outputPath = reportFileName(route, formFactor, run);
         await runCommand(process.execPath, [
           lighthousePath,
-          `${origin}${route}`,
-          '--only-categories=performance',
-          '--output=json',
-          `--output-path=${outputPath}`,
-          ...(formFactor === 'desktop' ? ['--preset=desktop'] : []),
-          '--blocked-url-patterns=*google-analytics.com/*/collect*',
-          '--chrome-flags=--headless --no-sandbox --disable-dev-shm-usage',
-          '--quiet'
+          ...buildLighthouseArgs({
+            url: `${origin}${route}`,
+            outputPath,
+            formFactor,
+            measurementContext
+          })
         ], { ...process.env, CHROME_PATH: chromePath });
         const report = JSON.parse(readFileSync(outputPath, 'utf8'));
         if (report.lighthouseVersion === undefined) {
@@ -372,6 +399,10 @@ async function main() {
         site: 'Jekyll production build served locally',
         mobile: 'Lighthouse default mobile configuration',
         desktop: 'Lighthouse desktop preset',
+        measurementContext,
+        analyticsBlockedUrlPatterns: blockedUrlPatterns,
+        externalAnalyticsScriptsBlocked:
+          measurementContext === performanceMeasurementContexts.controlled,
         analyticsCollectionBlocked: true,
         labOnly: true
       },
@@ -401,7 +432,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  main().catch((error) => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}

@@ -94,8 +94,12 @@ function baselineLines(comparison) {
   const history = comparison.history ?? {};
   const fixedStatus = fixed?.available
     ? `[available](${fixed.runUrl})`
-    : fixed?.reason?.includes('different tool')
-      ? 'not comparable; tool or runner environment differs'
+    : fixed?.reason?.includes('different measurement context')
+      ? 'not comparable; measurement context differs'
+      : fixed?.reason?.includes('pr-controlled context')
+        ? 'pending controlled reference review; absolute budgets remain active'
+        : fixed?.reason?.includes('different tool')
+          ? 'not comparable; tool or runner environment differs'
       : 'pending confirmation and review of a complete successful `main` measurement';
   let rollingStatus;
   if (history.status === 'available' && history.availableDailySamples >= history.requiredDailySamples) {
@@ -230,7 +234,7 @@ function technicalDetails(summary, comparison, inputs) {
       '### Environment and conditions',
       '',
       `- Lighthouse ${env.lighthouse ?? 'unknown'}; ${env.chrome ?? 'Chrome version unknown'}; Node ${env.node ?? 'unknown'}; ${env.ruby ?? 'Ruby version unknown'}; ${env.jekyll ?? 'Jekyll version unknown'}; runner ${env.runner ?? 'unknown'}.`,
-      `- ${conditions.site ?? 'Site build conditions unavailable'}; mobile: ${conditions.mobile ?? 'unknown'}; desktop: ${conditions.desktop ?? 'unknown'}; Analytics collection blocked: ${conditions.analyticsCollectionBlocked === true ? 'yes' : 'unknown'}; lab-only: ${conditions.labOnly === true ? 'yes' : 'unknown'}.`,
+      `- ${conditions.site ?? 'Site build conditions unavailable'}; context: ${conditions.measurementContext ?? 'unknown'}; mobile: ${conditions.mobile ?? 'unknown'}; desktop: ${conditions.desktop ?? 'unknown'}; external analytics scripts blocked: ${conditions.externalAnalyticsScriptsBlocked === true ? 'yes' : conditions.externalAnalyticsScriptsBlocked === false ? 'no' : 'unknown'}; Analytics URL patterns blocked: ${(conditions.analyticsBlockedUrlPatterns ?? []).join(', ') || 'unknown'}; Analytics collection blocked: ${conditions.analyticsCollectionBlocked === true ? 'yes' : 'unknown'}; lab-only: ${conditions.labOnly === true ? 'yes' : 'unknown'}.`,
       `- Captured: ${summary.capturedAt ?? 'unknown'}; source SHA: \`${summary.source?.sha ?? 'unknown'}\`; source run: ${summary.source?.runUrl ?? 'not available'}.`,
       `- Timing: ${Number.isFinite(summary.timing?.measurementSeconds) ? `${summary.timing.measurementSeconds.toFixed(1)} seconds for measurement` : 'measurement duration unavailable'}; total Actions duration is shown in the run overview.`
     );
@@ -294,10 +298,11 @@ function renderPerformanceSummary(inputs) {
   ];
   if (skipped) {
     lines.push(
-      '**Intentionally skipped — reflection text only**',
+      '**Lighthouse measurement intentionally skipped**',
       '',
       '- Informational lab measurement; this is not a performance pass, field Core Web Vitals result, or regression gate.',
-      `- Reason: ${inputs.skip.reason ?? 'all changed files are added or edited text-only Markdown reflections'}.`,
+      `- Selected measurement context: **${inputs.measurementContext ?? 'unknown'}**; Lighthouse was not run.`,
+      `- Reason: ${inputs.skip.reason ?? 'all changed files are text-only Markdown reflections'}.`,
       `- Changed paths (${inputs.skip.paths?.length ?? 0}): ${inputs.skip.paths?.length ? inputs.skip.paths.map((path) => `\`${path}\``).join(', ') : 'none reported'}.`,
       '- Lighthouse samples collected: **0**.',
       '- No metrics, baseline comparison, or artifacts were produced.',
@@ -326,6 +331,10 @@ function renderPerformanceSummary(inputs) {
     : '- No complete measurement or safeguard pass is reported. Partial output and missing confirmation evidence are not treated as clean.',
     `- Run: \`${inputs.eventName ?? 'unknown'}\` on ref \`${inputs.ref ?? 'unknown'}\`; job status: ${job}.`
   );
+  const measurementContext = summary?.conditions?.measurementContext ?? inputs.measurementContext;
+  if (measurementContext) {
+    lines.push(`- Measurement context: **${measurementContext}**; only same-context references and history are eligible for comparison.`);
+  }
   if (complete) {
     lines.push(`- Coverage: ${summary.coverage.routeCount} generated routes × mobile/desktop × ${summary.coverage.runCount} runs.`);
     if (Number.isFinite(summary.timing?.measurementSeconds)) {
@@ -390,6 +399,7 @@ function main() {
     jobStatus: process.env.JOB_STATUS,
     eventName: process.env.TRIGGER_NAME,
     ref: process.env.TRIGGER_REF,
+    measurementContext: process.env.PERFORMANCE_CONTEXT,
     runUrl: process.env.RUN_URL,
     skip: {
       measurement: process.env.SKIP_MEASUREMENT === 'true',

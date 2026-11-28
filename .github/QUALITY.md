@@ -49,7 +49,7 @@ Domain-specific workflows follow the naming convention `Domain: Capability`. Cro
 
 Required checks protect against known defects before changes are merged. Quality safeguards that verify proposed changes are required; safeguards that verify existing published experiences run over time.
 
-Performance Integrity protects against confirmed budget violations and substantial loading regressions against a compatible reviewed reference. Rolling comparisons inform human judgment.
+Performance Integrity protects against meaningful deterioration. Quality Gate evaluates proposed changes under controlled conditions. Quality Pulse observes the broader experience over time. Comparisons use compatible measurement conditions.
 
 ## Coherence Integrity
 
@@ -64,5 +64,3 @@ The website is published automatically following an approved merge.
 A [daily workflow](workflows/quality-pulse.yml) coordinates the Common and Site safeguards in a single verification cycle and provides a coherent view of quality. It can also be run on demand.
 
 Passed checks, nonblocking advisories, confirmed failures, incomplete checks, and unavailable evidence remain distinguishable. Findings bring actionable evidence to human judgment. A cycle with advisories may succeed, but is not reported as an unconditional pass.
-
-Performance measurements are compared against a reviewed reference and recent compatible measurements.
