@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { renderPerformanceSummary } from '../../scripts/site/render_performance_summary.mjs';
 
@@ -30,6 +31,8 @@ function makeSummary() {
       site: 'Jekyll production build served locally',
       mobile: 'Lighthouse default mobile configuration',
       desktop: 'Lighthouse desktop preset',
+      measurementContext: 'full-experience',
+      externalAnalyticsScriptsBlocked: false,
       analyticsCollectionBlocked: true,
       labOnly: true
     },
@@ -95,6 +98,7 @@ function makeInputs(overrides = {}) {
     jobStatus: 'success',
     eventName: 'pull_request',
     ref: 'copilot/change',
+    measurementContext: 'full-experience',
     runUrl: 'https://github.com/basil-one/agency/actions/runs/99',
     skip: { measurement: false, paths: [] },
     reports: { outcome: 'success', url: 'https://github.com/basil-one/agency/actions/runs/99/artifacts/1' },
@@ -130,6 +134,54 @@ test('puts completed informational outcome first and summarizes representative L
     /Latest reflection route: `\/reflections\/example\/` \(selected dynamically\)\./
   );
   assert.match(report, /264\.1 seconds/);
+  assert.match(report, /Measurement context: \*\*full-experience\*\*; only same-context references and history are eligible/);
+  assert.match(report, /context: full-experience; mobile: Lighthouse default mobile configuration; desktop: Lighthouse desktop preset; external analytics scripts blocked: no/);
+});
+
+test('renders controlled context explicitly without implying external analytics scripts ran', () => {
+  const summary = makeSummary();
+  summary.conditions.measurementContext = 'pr-controlled';
+  summary.conditions.externalAnalyticsScriptsBlocked = true;
+  summary.conditions.analyticsBlockedUrlPatterns = [
+    '*google-analytics.com/*/collect*',
+    '*googletagmanager.com/*',
+    '*google-analytics.com/*',
+    '*doubleclick.net/*'
+  ];
+  const report = renderPerformanceSummary(makeInputs({ summary }));
+
+  assert.match(report, /Measurement context: \*\*pr-controlled\*\*/);
+  assert.match(report, /context: pr-controlled; mobile: Lighthouse default mobile configuration; desktop: Lighthouse desktop preset; external analytics scripts blocked: yes; Analytics URL patterns blocked: .*googletagmanager\.com/);
+});
+
+test('reports an unavailable controlled reference without relative deltas or weakening budgets', () => {
+  const summary = makeSummary();
+  summary.conditions.measurementContext = 'pr-controlled';
+  const comparison = makeComparison();
+  comparison.fixedReference.reason =
+    'No reviewed successful main reference is available for the pr-controlled context; absolute budgets remain active.';
+  comparison.policy.referenceReason =
+    'No reviewed successful main reference is available for the pr-controlled context; absolute budgets remain active.';
+  const report = renderPerformanceSummary(makeInputs({
+    summary,
+    comparison
+  }));
+
+  assert.match(report, /pending controlled reference review; absolute budgets remain active/);
+  assert.match(report, /Relative deterioration gate unavailable: No reviewed successful main reference is available for the pr-controlled context; absolute budgets remain enforced/);
+  assert.match(report, /Absolute mobile\/desktop budgets apply/);
+  assert.doesNotMatch(report, /^\| Page \| Profile \| Fixed LCP/m);
+});
+
+test('offers controlled measurement only as an explicit manual option and defaults it to full experience', () => {
+  const workflow = readFileSync(
+    new URL('../../.github/workflows/site-performance-integrity.yml', import.meta.url),
+    'utf8'
+  );
+
+  assert.match(workflow, /workflow_dispatch:\n    inputs:\n      measurement_context:[\s\S]*?default: full-experience[\s\S]*?options:\n          - full-experience\n          - pr-controlled/);
+  assert.match(workflow, /github\.event_name == 'pull_request' && 'pr-controlled'/);
+  assert.match(workflow, /site-performance-reference-controlled\.json/);
 });
 
 test('reports pending fixed anchor and collecting rolling history without an empty comparison table', () => {
@@ -239,22 +291,25 @@ test('does not imply a comparison file exists when only the summary was produced
   assert.match(report, /Machine-readable performance summary \(comparison unavailable\)/);
 });
 
-test('uses the same hierarchy for intentional reflection-only skips without measurement claims', () => {
+test('reports reflection-only skips neutrally without measurement claims', () => {
   const report = renderPerformanceSummary(makeInputs({
     summary: undefined,
     comparison: undefined,
     skip: {
       measurement: true,
-      reason: 'all changes are editorial reflection text',
+      reason: 'all changed files are text-only Markdown reflections',
       paths: ['_reflections/new.md']
     },
+    measurementContext: 'pr-controlled',
     reports: { outcome: 'skipped' },
     machineArtifact: { outcome: 'skipped' },
     steps: { measure: 'skipped' }
   }));
 
-  assert.match(report, /^# Site: Performance Integrity\n\n\*\*Intentionally skipped — reflection text only\*\*/);
+  assert.match(report, /^# Site: Performance Integrity\n\n\*\*Lighthouse measurement intentionally skipped\*\*/);
+  assert.match(report, /Reason: all changed files are text-only Markdown reflections/);
   assert.match(report, /Changed paths \(1\): `_reflections\/new\.md`/);
+  assert.match(report, /Selected measurement context: \*\*pr-controlled\*\*; Lighthouse was not run/);
   assert.match(report, /Lighthouse samples collected: \*\*0\*\*/);
   assert.match(report, /No metrics, baseline comparison, or artifacts were produced/);
   assert.doesNotMatch(report, /24\/24|Mobile LCP|Fixed LCP Δ/);

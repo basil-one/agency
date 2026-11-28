@@ -7,6 +7,7 @@ import {
   loadDailyHistory,
   referenceIsReady
 } from '../../scripts/site/compare_performance.mjs';
+import { finalizePerformanceAssessment } from '../../scripts/site/performance_policy.mjs';
 
 const metricKeys = [
   'first-contentful-paint',
@@ -21,6 +22,7 @@ function makeSummary({
   branch = 'main',
   lcp = 1_000,
   capturedAt = '2026-11-16T00:00:00.000Z',
+  measurementContext = 'full-experience',
   reviewAssessment
 } = {}) {
   const routes = ['/', '/know-your-patterns/', '/reflections/', '/reflections/latest/'];
@@ -54,6 +56,7 @@ function makeSummary({
       successful: 8,
       medianTransferBytes: 180_000
     }],
+    conditions: { measurementContext },
     reviewAssessment,
     results: routes.flatMap((route) =>
       ['mobile', 'desktop'].map((formFactor) => ({
@@ -65,7 +68,9 @@ function makeSummary({
             ? lcp
             : key === 'cumulative-layout-shift'
               ? 0
-              : 500
+              : key === 'total-blocking-time'
+                ? 50
+                : 500
         ]))
       }))
     )
@@ -149,6 +154,108 @@ test('renders a comparison table when the fixed reference is available', () => {
   assert.match(lines.join('\n'), /^\| `\/` \| mobile \|/m);
   assert.equal(comparison.fixedReference.available, true);
   assert.equal(comparison.deltasAvailable, true);
+});
+
+test('separates controlled measurements from full-experience references and history', () => {
+  const current = makeSummary({
+    eventName: 'pull_request',
+    branch: 'copilot/change',
+    measurementContext: 'pr-controlled'
+  });
+  const fixed = makeSummary();
+  const history = makeHistory([makeSummary()]);
+  const { lines, comparison } = buildComparison(current, fixed, history);
+
+  assert.equal(comparison.measurementContext, 'pr-controlled');
+  assert.equal(comparison.fixedReference.available, false);
+  assert.match(comparison.fixedReference.reason, /different measurement context/);
+  assert.equal(comparison.history.availableDailySamples, 0);
+  assert.equal(comparison.deltasAvailable, false);
+  assert.equal(comparison.policy.referenceAvailable, false);
+  assert.ok(comparison.conditions.includes('measurement context differs'));
+  assert.match(lines.join('\n'), /pr-controlled context/);
+  assert.match(lines.join('\n'), /not comparable; measurement context differs from the versioned reference/);
+  assert.match(lines.join('\n'), /No comparison\/deltas available yet/);
+
+  const { lines: withoutReferenceLines, comparison: withoutReference } = buildComparison(
+    current,
+    undefined,
+    makeHistory([])
+  );
+  assert.match(withoutReferenceLines.join('\n'), /pending review of a complete successful controlled main measurement/);
+  assert.match(withoutReference.fixedReference.reason, /pr-controlled context/);
+  assert.match(withoutReference.policy.referenceReason, /absolute budgets remain active/);
+  assert.equal(withoutReference.deltasAvailable, false);
+});
+
+test('a controlled first-party TBT regression remains blocking without a reference or complete confirmation', () => {
+  const current = makeSummary({
+    eventName: 'pull_request',
+    branch: 'copilot/change',
+    measurementContext: 'pr-controlled'
+  });
+  current.results[0].values['total-blocking-time'] = 301;
+
+  const { comparison } = buildComparison(current, undefined, makeHistory([]));
+  assert.equal(comparison.measurementContext, 'pr-controlled');
+  assert.equal(comparison.fixedReference.available, false);
+  assert.equal(comparison.policy.status, 'confirmation-required');
+  assert.deepEqual(comparison.policy.confirmationProfiles, [
+    { route: '/', formFactor: 'mobile' }
+  ]);
+  assert.deepEqual(comparison.policy.initialViolations.map(({ criterion }) => criterion), ['absolute']);
+
+  const incomplete = finalizePerformanceAssessment(
+    comparison.policy,
+    {
+      complete: false,
+      coverage: { runCount: 2, routeProfiles: 1, measurementCount: 2 },
+      results: [{
+        route: '/',
+        formFactor: 'mobile',
+        values: {
+          'largest-contentful-paint': 1_000,
+          'total-blocking-time': 301,
+          'cumulative-layout-shift': 0
+        }
+      }]
+    },
+    { compatible: true }
+  );
+  assert.equal(incomplete.status, 'incomplete');
+
+  const confirmed = finalizePerformanceAssessment(
+    comparison.policy,
+    {
+      complete: true,
+      coverage: { runCount: 3, routeProfiles: 1, measurementCount: 3 },
+      results: [{
+        route: '/',
+        formFactor: 'mobile',
+        values: {
+          'largest-contentful-paint': 1_000,
+          'total-blocking-time': 301,
+          'cumulative-layout-shift': 0
+        }
+      }]
+    },
+    { compatible: true }
+  );
+  assert.equal(confirmed.status, 'failed');
+  assert.equal(confirmed.confirmedViolations[0].criterion, 'absolute');
+});
+
+test('keeps legacy summaries without a context field compatible as full-experience evidence', () => {
+  const current = makeSummary({ eventName: 'pull_request', branch: 'copilot/change' });
+  const reference = makeSummary();
+  delete current.conditions.measurementContext;
+  delete reference.conditions.measurementContext;
+
+  const { comparison } = buildComparison(current, reference, makeHistory([reference]));
+
+  assert.equal(comparison.fixedReference.available, true);
+  assert.equal(comparison.history.availableDailySamples, 1);
+  assert.equal(comparison.measurementContext, 'full-experience');
 });
 
 test('keeps 28-sample rolling history informational while the fixed-reference policy requires confirmation', () => {

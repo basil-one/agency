@@ -22,9 +22,13 @@ Use release version tags for external actions and one version of each shared dep
 
 The order is purposeful, not a template: Site Publish validates and deploys a same-run Pages artifact; Dependency Security separates pull-request review from scheduled/manual alert posture. Performance keeps classification, initial measurement, confirmation, and artifact evidence distinct. Only Quality Pulse owns the daily schedule; proposed-change safeguards retain pull-request checks, and verification workflows support manual diagnostics. Keep permissions narrow and preserve ordinary pull-request protection.
 
-Site Link Integrity reports uncertain external responses as nonblocking advisories; known defects retain failure precedence. Site Performance Integrity measures four representative routes on mobile and desktop with three-run Lighthouse medians and confirms initial violations with three new measurements per affected route/profile. Incomplete confirmation is not a pass. The executable policy defines the budgets and substantial deterioration criteria; the canonical fixed reference is [site-performance-reference.json](site-performance-reference.json). Use complete, successful, compatible main evidence after human review; only successful scheduled-main evidence contributes to informational rolling history. Retain compatible historical readers.
+Site Link Integrity reports uncertain external responses as nonblocking advisories; known defects retain failure precedence.
 
-Agency retains its reflection-text-only skip classification and missing-route diagnostic.
+Site Performance Integrity measures four representative routes on mobile and desktop using three-run Lighthouse medians. Confirm initial violations with three new measurements per affected route/profile; incomplete confirmation is not a pass. The executable policy defines absolute budgets and substantial deterioration criteria. PRs skip only text-only reflection edits; retain the missing-route diagnostic.
+
+Pull requests use `pr-controlled`, excluding external analytics execution; Pulse and ordinary manual runs use `full-experience`. Both block analytics collection. Compare only compatible contexts; historical summaries without a context are full-experience evidence. Rolling history is informational and uses successful scheduled-main runs.
+
+Maintain reviewed fixed references in [site-performance-reference.json](site-performance-reference.json) (full experience) and `.github/site-performance-reference-controlled.json` (controlled). Capture controlled evidence by dispatching **Site: Performance Integrity** from `main` with `measurement_context: pr-controlled`; review the complete successful `performance-summary` artifact before updating the reference. Without a compatible reference, absolute budgets remain active.
 
 ## Run and maintain checks
 
@@ -32,7 +36,7 @@ Agency retains its reflection-text-only skip classification and missing-route di
 - `npm run test:coherence-integrity` — capability inventory/order, workflow IDs, repository boundaries, script/test placement, reference traceability, and negative fixtures.
 - `npm run test:required-checks` — required workflow triggers/jobs and Site and Release publication contracts.
 - `python3 -m unittest discover -s tests/site -p 'test_*.py' -v` — Site link, SEO, and SVG tests.
-- `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks.
+- `npm run test:performance-history`, `npm run test:performance-policy`, `npm run test:performance-skip`, and `npm run test:performance-summary` — focused Site Performance checks; run `npm run test:performance-cli` after `npm ci` to verify Lighthouse option parsing.
 - `npm run test:site-routes` — generated-route discovery. The browser suite needs a built `_site` and the installed Playwright browser.
 - `bundle exec jekyll build --trace` — production site build.
 

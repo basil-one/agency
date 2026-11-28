@@ -220,7 +220,7 @@ function classifyChanges({ baseSha, headSha, eventName, cwd = process.cwd() }) {
 
   return {
     skip: true,
-    reason: 'all changed files are added or edited text-only Markdown reflections',
+    reason: 'all changed files are text-only Markdown reflections',
     paths: files.map(({ path }) => path)
   };
 }

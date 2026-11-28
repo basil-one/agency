@@ -3,9 +3,12 @@ import test from 'node:test';
 import {
   assessPerformance,
   finalizePerformanceAssessment,
+  analyticsBlockPatterns,
   lcpDeteriorationPolicy,
   median,
   performanceBudgets,
+  performanceMeasurementContexts,
+  resolveMeasurementContext,
   selectMeasurementProfiles
 } from '../../scripts/site/performance_policy.mjs';
 
@@ -59,6 +62,27 @@ test('uses three-run medians and strict profile-specific absolute budget boundar
       );
     }
   }
+});
+
+test('isolates analytics execution only in the controlled context', () => {
+  assert.equal(
+    resolveMeasurementContext(performanceMeasurementContexts.controlled),
+    'pr-controlled'
+  );
+  assert.equal(
+    resolveMeasurementContext(performanceMeasurementContexts.full),
+    'full-experience'
+  );
+  assert.deepEqual(analyticsBlockPatterns('pr-controlled'), [
+    '*google-analytics.com/*/collect*',
+    '*googletagmanager.com/*',
+    '*google-analytics.com/*',
+    '*doubleclick.net/*'
+  ]);
+  assert.deepEqual(analyticsBlockPatterns('full-experience'), [
+    '*google-analytics.com/*/collect*'
+  ]);
+  assert.throws(() => resolveMeasurementContext('unknown'));
 });
 
 test('requires both strict LCP deterioration thresholds against a compatible fixed reference', () => {

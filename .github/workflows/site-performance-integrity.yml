@@ -4,12 +4,26 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      measurement_context:
+        description: Measurement context (controlled is for reference diagnostics only)
+        required: true
+        type: choice
+        default: full-experience
+        options:
+          - full-experience
+          - pr-controlled
   workflow_call:
     inputs:
       caller_event_name:
         description: Event that started the orchestration workflow
         required: false
         type: string
+      measurement_context:
+        description: Measurement context; defaults to full experience for Pulse
+        required: false
+        type: string
+        default: full-experience
 
 permissions:
   actions: read
@@ -24,6 +38,9 @@ jobs:
     name: "Site: Performance Integrity"
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    env:
+      PERFORMANCE_CONTEXT: ${{ github.event_name == 'pull_request' && 'pr-controlled' || inputs.measurement_context || 'full-experience' }}
+      PERFORMANCE_REFERENCE_PATH: ${{ (github.event_name == 'pull_request' || inputs.measurement_context == 'pr-controlled') && '.github/site-performance-reference-controlled.json' || '.github/site-performance-reference.json' }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -68,6 +85,9 @@ jobs:
         id: dependencies
         if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
         run: npm ci
+      - name: Verify Lighthouse CLI option parsing
+        if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
+        run: npm run test:performance-cli
       - name: Install Chromium
         id: chromium
         if: steps.classify.outcome == 'failure' || steps.classify.outputs.skip_measurement != 'true'
@@ -99,7 +119,6 @@ jobs:
         env:
           PERFORMANCE_REPORT_DIR: ${{ runner.temp }}/performance-reports
           PERFORMANCE_HISTORY_PATH: ${{ runner.temp }}/performance-history.json
-          PERFORMANCE_REFERENCE_PATH: .github/site-performance-reference.json
           PERFORMANCE_EVENT_NAME: ${{ inputs.caller_event_name || github.event_name }}
           PERFORMANCE_SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
       - name: Confirm initially violating route profiles

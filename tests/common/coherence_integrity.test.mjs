@@ -101,7 +101,10 @@ function collectCoherenceFailures(repository) {
     if (!workflow.startsWith(`name: "${name}"\n`)) {
       failures.push(`workflow identity is not canonical: ${file}`);
     }
-    if (!/^on:\n  pull_request:\n    branches: \[main\]\n  workflow_dispatch:\n  workflow_call:$/m.test(workflow)) {
+    const triggerPattern = file === 'site-performance-integrity.yml'
+      ? /^on:\n  pull_request:\n    branches: \[main\]\n  workflow_dispatch:\n    inputs:\n      measurement_context:[\s\S]*?  workflow_call:/m
+      : /^on:\n  pull_request:\n    branches: \[main\]\n  workflow_dispatch:\n  workflow_call:$/m;
+    if (!triggerPattern.test(workflow)) {
       failures.push(`workflow triggers are incomplete: ${file}`);
     }
     if (!workflow.includes(`    name: "${name}"`)) {
@@ -199,7 +202,10 @@ function collectCoherenceFailures(repository) {
     failures.push('Site publication workflow tests are not wired to Common: Code Quality');
   }
   const performanceWorkflow = read(repository, '.github/workflows/site-performance-integrity.yml') ?? '';
-  if (!performanceWorkflow.includes('PERFORMANCE_REFERENCE_PATH: .github/site-performance-reference.json')) {
+  if (
+    !performanceWorkflow.includes("'.github/site-performance-reference-controlled.json'") ||
+    !performanceWorkflow.includes("'.github/site-performance-reference.json'")
+  ) {
     failures.push('performance workflow does not use the canonical domain reference');
   }
   if (

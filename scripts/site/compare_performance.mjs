@@ -109,7 +109,12 @@ function sameMeasurementEnvironment(current, baseline) {
     current.environment[key] === baseline.environment?.[key]
   );
   return exactMatches &&
+    measurementContext(current) === measurementContext(baseline) &&
     ['ruby', 'node'].every((key) => runtimeCompatibility(current, baseline, key) === 'compatible');
+}
+
+function measurementContext(summary) {
+  return summary?.conditions?.measurementContext ?? 'full-experience';
 }
 
 async function githubRequest(path, token, fetchImpl = fetch, { notFoundIsEmpty = false } = {}) {
@@ -383,6 +388,9 @@ function writeComparisonOutputs(comparison) {
 
 function conditionDifferences(current, baseline) {
   const differences = [];
+  if (measurementContext(current) !== measurementContext(baseline)) {
+    differences.push('measurement context differs');
+  }
   for (const [key, label] of Object.entries({
     runner: 'runner',
     lighthouse: 'Lighthouse',
@@ -486,8 +494,10 @@ function buildComparison(current, reference, history) {
   const referenceReason = readyReference
     ? undefined
     : referenceReady
-      ? 'The reviewed fixed reference uses a different tool or runner environment.'
-      : 'No reviewed successful main reference is available; absolute budgets remain active.';
+      ? measurementContext(current) !== measurementContext(referenceReady)
+        ? 'The reviewed fixed reference uses a different measurement context; absolute budgets remain active.'
+        : 'The reviewed fixed reference uses a different tool or runner environment.'
+      : `No reviewed successful main reference is available for the ${measurementContext(current)} context; absolute budgets remain active.`;
   const policy = assessPerformance(
     [...currentResults.values()],
     [...referenceResults.values()],
@@ -502,16 +512,21 @@ function buildComparison(current, reference, history) {
   }));
   const deltasAvailable = Boolean(readyReference || rolling.size);
   const historyReason = comparisonHistory.reason?.replace(/[.!?]+$/, '') ?? 'history lookup failed';
+  const fixedReferenceStatus = readyReference
+    ? `[reviewed main run](${readyReference.source.runUrl})`
+    : referenceReady
+      ? measurementContext(current) !== measurementContext(referenceReady)
+        ? 'not comparable; measurement context differs from the versioned reference'
+        : 'not comparable; tool or runner versions differ from the versioned reference'
+      : measurementContext(current) === 'pr-controlled'
+        ? 'pending review of a complete successful controlled main measurement'
+        : 'pending review of a complete successful main measurement';
   const lines = [
     '',
     '## Baseline comparison',
     '',
-    `- **Run:** ${current.source.eventName} on \`${current.source.branch ?? 'unknown'}\`; ${current.coverage.routeCount} routes × mobile/desktop × ${current.coverage.runCount} runs; tools: Lighthouse ${current.environment.lighthouse}, Chrome ${current.environment.chrome}, Node ${current.environment.node}.`,
-    `- **Fixed reference:** ${readyReference
-      ? `[reviewed main run](${readyReference.source.runUrl})`
-      : referenceReady
-        ? 'not comparable; tool or runner versions differ from the versioned reference'
-        : 'pending review of a complete successful main measurement'}.`,
+    `- **Run:** ${current.source.eventName} on \`${current.source.branch ?? 'unknown'}\`; ${measurementContext(current)} context; ${current.coverage.routeCount} routes × mobile/desktop × ${current.coverage.runCount} runs; tools: Lighthouse ${current.environment.lighthouse}, Chrome ${current.environment.chrome}, Node ${current.environment.node}.`,
+    `- **Fixed reference:** ${fixedReferenceStatus}.`,
     `- **Rolling daily-main baseline:** ${comparisonHistory.status === 'unavailable'
       ? `unavailable (${historyReason})`
       : comparisonHistory.status === 'available'
@@ -573,6 +588,7 @@ function buildComparison(current, reference, history) {
 
   const comparison = {
     schemaVersion: 1,
+    measurementContext: measurementContext(current),
     policy,
     history: {
       status: comparisonHistory.status,
@@ -587,9 +603,7 @@ function buildComparison(current, reference, history) {
       ? { available: true, runUrl: readyReference.source.runUrl }
       : {
           available: false,
-          reason: referenceReady
-            ? 'The versioned reference uses a different tool or runner environment.'
-            : 'No versioned successful main reference has been established.'
+          reason: referenceReason
         },
     deltasAvailable,
     conditions: differences,
