@@ -8,6 +8,9 @@ For licensing, see `LICENSE.md`.
 
 ## [Unreleased]
 
+### Fixed
+- Report progress while Release Publish waits for human review and merge.
+
 ## [0.1.0] - 2026-11-28
 
 ### Added

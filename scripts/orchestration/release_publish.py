@@ -642,7 +642,9 @@ def main():
                 )
         deadline = time.monotonic() + 1800
         while True:
-            if pr.get("state") != "open":
+            if pr.get("state") == "open":
+                print(f"Waiting for PR #{pr['number']}: awaiting human merge.", flush=True)
+            else:
                 try:
                     publisher.release(args.version, pr)
                     break
