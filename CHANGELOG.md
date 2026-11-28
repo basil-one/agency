@@ -8,6 +8,8 @@ For licensing, see `LICENSE.md`.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-28
+
 ### Added
 - Established a quality practice across the Common and Site domains, with pull-request safeguards and a daily Quality Pulse.
 - Added Coherence Integrity to sustain repository organization and architectural relationships.
@@ -20,3 +22,6 @@ For licensing, see `LICENSE.md`.
 - Strengthened site accessibility, link integrity, SEO, and dependency security checks.
 - Organized workflows, supporting scripts, and tests around consistent ownership boundaries.
 - Simplified quality automation and reporting while preserving substantive safeguards.
+
+[Unreleased]: https://github.com/basil-one/agency/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/basil-one/agency/releases/tag/v0.1.0
