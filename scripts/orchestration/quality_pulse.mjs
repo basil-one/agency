@@ -24,7 +24,8 @@ function performanceDetail(result) {
   const policyFinding = performancePolicyFailureDetail(result.policy);
   if (policyFinding) return policyFinding;
   if (result.state === 'failed') {
-    return `Measurement failed or a later step failed; ${result.baseline ?? 'inspect the linked summary for measurement and baseline state.'}`;
+    return result.detail ??
+      `Measurement failed or a later step failed; ${result.baseline ?? 'inspect the linked summary for measurement and baseline state.'}`;
   }
   if (result.state === 'skipped') {
     return 'Measurement was skipped; no current samples or comparison are claimed.';
@@ -211,10 +212,12 @@ function renderPerformanceTrends(result) {
     isPerformanceComparison(trends?.comparison) &&
     /^\d{4}-\d{2}-\d{2}$/.test(trends.measurementDate ?? '');
   if (!canShowComparison) {
-    const reason = trends?.reason ??
-      (trends?.comparison
-        ? 'the measurement is not a dated successful current run'
-        : 'no successful measurement evidence is available.');
+    const reason = result?.state === 'failed'
+      ? 'see Findings for the captured performance detail'
+      : trends?.reason ??
+        (trends?.comparison
+          ? 'the measurement is not a dated successful current run'
+          : 'no successful measurement evidence is available.');
     lines.push('', `Performance comparison unavailable: ${reason}`);
     if (trends?.baseline) lines.push(`Baselines: ${trends.baseline}.`);
     return lines;

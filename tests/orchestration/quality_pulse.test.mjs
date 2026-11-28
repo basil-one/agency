@@ -283,6 +283,20 @@ test('orchestrated Pulse reports same-cycle outcomes and validated evidence', as
   assert.match(failed.markdown, /Site: Performance Integrity \| Failed/);
   assert.match(failed.markdown, /337 ms initially, 321 ms confirmed vs 300 ms limit/);
   assert.match(failed.markdown, /correct the affected route\/profile/);
+
+  const failedWithoutEvidence = await buildCycle({
+    needs: { ...needs, 'site-performance-integrity': { result: 'failure' } },
+    missingArtifacts: true
+  });
+  assert.match(failedWithoutEvidence.markdown, /performance-summary artifact is missing or expired/);
+  assert.equal(
+    (failedWithoutEvidence.markdown.match(/performance-summary artifact is missing or expired/g) ?? []).length,
+    1
+  );
+  assert.match(
+    failedWithoutEvidence.markdown,
+    /Performance comparison unavailable: see Findings for the captured performance detail/
+  );
 });
 
 test('Pulse preserves failed, skipped, cancelled, missing, and unknown job outcomes', async () => {
