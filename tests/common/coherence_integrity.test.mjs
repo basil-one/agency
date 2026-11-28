@@ -215,10 +215,15 @@ function collectCoherenceFailures(repository) {
     read(repository, `.github/workflows/${file}`) ?? ''
   ]);
   for (const [file, workflow] of workflowContents) {
+    const reportsRevision = file === 'site-rendering-integrity.yml'
+      ? workflow.split(/^      - /m).some((step) =>
+          step.includes('run: node scripts/site/summarize_rendering.mjs') &&
+          step.includes('SOURCE_SHA: ${{ steps.revision.outputs.sha }}'))
+      : workflow.includes('Checked-out revision:');
     if (
       !['quality-pulse.yml', 'site-publish.yml'].includes(file) &&
       /uses:\s+actions\/checkout@/.test(workflow) &&
-      (!workflow.includes('git rev-parse HEAD') || !workflow.includes('Checked-out revision:'))
+      (!workflow.includes('git rev-parse HEAD') || !reportsRevision)
     ) {
       failures.push(`checked-out revision is not reported by ${file}`);
     }
@@ -232,8 +237,7 @@ function collectCoherenceFailures(repository) {
   }
   if (
     !orchestration.includes('git rev-parse HEAD') ||
-    !orchestration.includes('PULSE_SOURCE_REVISION:') ||
-    !read(repository, 'scripts/orchestration/quality_pulse.mjs')?.includes('Validator revision:')
+    !orchestration.includes('PULSE_SOURCE_REVISION: ${{ steps.revision.outputs.sha }}')
   ) {
     failures.push('Quality Pulse summary does not report its validator revision');
   }

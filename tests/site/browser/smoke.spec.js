@@ -5,6 +5,11 @@ import { expect, test } from '@playwright/test';
 import { assertNoAccessibilityViolations } from './accessibility.js';
 import { discoverHtmlRoutes, discoverReflections, selectSmokeRoutes } from '../../../scripts/site/routes.js';
 
+async function openRoute(page, route) {
+  const response = await page.goto(route);
+  expect(response?.status(), `Expected ${route} to return HTTP 200`).toBe(200);
+}
+
 const siteDirectory = resolve(process.cwd(), '_site');
 const localOrigin = new URL('http://127.0.0.1:4173').origin;
 const htmlRoutes = discoverHtmlRoutes(siteDirectory);
@@ -35,8 +40,7 @@ for (const route of smokeRoutes) {
     const expectedOutputFile = article?.filePath ?? outputFile;
     expect(existsSync(expectedOutputFile), `Jekyll did not generate ${route} at ${expectedOutputFile}`).toBe(true);
 
-    const response = await page.goto(route);
-    expect(response?.status(), `Expected ${route} to return HTTP 200`).toBe(200);
+    await openRoute(page, route);
     await expect(page.locator('main')).toBeVisible();
     const heading = page.locator('main h1').first();
     await expect(heading).toBeVisible();
@@ -52,7 +56,7 @@ for (const route of smokeRoutes) {
 
 for (const route of htmlRoutes) {
   test(`${route} has no detectable accessibility violations`, async ({ page }) => {
-    await page.goto(route);
+    await openRoute(page, route);
     await assertNoAccessibilityViolations(page, route, test.info());
   });
 }

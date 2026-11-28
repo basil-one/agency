@@ -8,6 +8,9 @@ For licensing, see `LICENSE.md`.
 
 ## [Unreleased]
 
+### Changed
+- Verified expected browser coverage and consolidated same-cycle quality reporting.
+
 ## [0.1.1] - 2026-11-28
 
 ### Fixed
